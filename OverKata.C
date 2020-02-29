@@ -1,31 +1,36 @@
 #include <iocslib.h>
+#include <interrupt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <doslib.h>
 #include <io.h>
 #include <math.h>
 
+#define WIDTH		(256)
+#define HEIGHT		(256)
+
 /* Ｘ，Ｙ座標の最大と最小 */
+#define X_MIN_DRAW	(0)
+#define X_MAX_DRAW	(511)
 #define X_OFFSET	(128)
 #define X_MIN		X_OFFSET
 #define X_MAX		(WIDTH+X_OFFSET)
 #define X_MAX_H		((WIDTH>>1)+X_OFFSET)
-#define X_MIN_DRAW	(0)
-#define X_MAX_DRAW	(511)
-#define WIDTH		(256)
 
+#define Y_MIN_DRAW	(0)
+#define Y_MAX_DRAW	(511)
 #define Y_OFFSET	(128)
 #define Y_MIN		Y_OFFSET
 #define Y_MAX		(HEIGHT+Y_OFFSET)
 #define Y_MAX_H		((HEIGHT>>1)+Y_OFFSET)
-#define Y_HORIZON	(Y_MAX_H+64)
-#define Y_MIN_DRAW	(0)
-#define Y_MAX_DRAW	(511)
-#define HEIGHT		(256)
+#define Y_HORIZON	(Y_MAX_H)
 
-/* ラスタ情報 */
-#define RASTER_ST	(Y_HORIZON-Y_OFFSET+16-1)
-#define RASTER_SIZE	(64)
+/* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
+#define RASTER_NEXT	(24)
+#define RASTER_SIZE	(256)
+#define RASTER_MIN	(40)
+#define RASTER_MAX	(RASTER_MIN + 512)
+#define RASTER_ST	(Y_MAX_H+RASTER_MIN-20-2)
 #define RASTER_ED	(RASTER_ST+RASTER_SIZE)
 
 /* ジョイスティック１のその１ */
@@ -55,12 +60,23 @@
 
 /* ボタンのデータ */
 static short key;
-static unsigned short NowTime;
-static unsigned short moni;
-static unsigned short moni_MAX;
-static int speed;
-static unsigned short ras_count;
+static volatile unsigned short NowTime;
+static volatile unsigned short moni;
+static volatile unsigned short moni_MAX;
+static volatile int speed;
+static volatile unsigned short ras_count;
+static volatile unsigned short Hsync_count;
 
+enum{
+	DST_none,
+	DST_1us,
+	DST_2p5us,
+	DST_4us,
+	DST_12p5us,
+	DST_16us,
+	DST_25us,
+	DST_50us,
+};
 /*
         Mmax - 最大値取得 -
 */
@@ -85,6 +101,11 @@ static unsigned short ras_count;
  */
 #define Mmin(a, b) ((a) < (b) ? (a) : (b))
 
+/* 関数のプロトタイプ宣言 */
+void interrupt Timer_D_Func(void);
+void interrupt Hsync_Func(void);
+void interrupt Raster_Func(void);
+void interrupt Vsync_Func(void);
 
 unsigned short SetRGB(unsigned short R, unsigned short G, unsigned short B)
 {
@@ -204,65 +225,75 @@ short get_key( void )
 void interrupt Timer_D_Func(void)
 {
 	NowTime++;
-	return;
+
+	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
 void interrupt Hsync_Func(void)
 {
-	static unsigned short ras_val = 0;
-	static unsigned short ras_cal = 0;
-	//unsigned short *vram = (unsigned short *)0xC00000;
-	unsigned short *scroll_x = (unsigned short *)0xE80018;
-	
-	HSYNCST((void *)0);			/* stop */
+	HSYNCST((void *)0);		/* stop */
+	HSYNCST(Hsync_Func);	/* H-Sync割り込み */
 
-	moni = ras_count;
-	ras_count++;
-
-	ras_val = X_MIN;
-	
-	if(ras_count <= RASTER_ST)
-	{
-		/* 並行領域 */
-		ras_val += (speed >> 3);
-//		ras_val = Mmin(X_MAX_DRAW, Mmax(ras_val, X_MIN_DRAW)); 
-		HSYNCST(Hsync_Func);	/* restart */
-	}
-	else if( ras_count < RASTER_ED ){
-		/* ラスタ領域 */
-		ras_cal = ras_count - RASTER_ST;
-		ras_val += speed * RASTER_SIZE / (ras_cal + 1);
-//		ras_val = Mmin(X_MAX_DRAW, Mmax(ras_val, X_MIN_DRAW)); 
-		HSYNCST(Hsync_Func);	/* restart */
-	}
-	else{
-		/* 何もしない */
-//		HSYNCST((void *)0);		/* stop */
-	}
-
-	*(scroll_x) = ras_val;
-	return;
+	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
 void interrupt Raster_Func(void)
 {
-	CRTCRAS((void *)0, 0);	/* stop */
+	static volatile unsigned short ras_cal = 0;
+	static volatile unsigned short ras_val = 0;
+	volatile unsigned short *scroll_x = (unsigned short *)0xE80018;
+	volatile unsigned short *raster_add = (unsigned short *)0xE80012;
+	
+//	CRTCRAS((void *)0, 0);	/* stop */
+	
+	ras_count += RASTER_NEXT;
+	ras_val = X_MIN;
 
-	ras_count = RASTER_ST;
+	/* ラスタ領域 */
+	if((ras_count >= RASTER_ST) && (ras_count <= (RASTER_ST + 20)))
+	{
+		ras_val += speed;
+	}
+	else if(ras_count < RASTER_MAX)
+	{
+		ras_val += speed * ( RASTER_SIZE  / (float)(Mmax((ras_count - RASTER_ST), 1)) );
+	}
+	else
+	{
+		ras_count = RASTER_ST;
+	}
 
-	HSYNCST(Hsync_Func);	/* restart */
+	*(scroll_x) = ras_val;
+
+	moni = ras_count;
+	
+//	CRTCRAS(Raster_Func, ras_count);	/* ラスター割り込み */
+	*raster_add = ras_count;
+	
+	if(Hsync_count != 0U)
+	{
+		ras_cal++;
+	}
+	else{
+		ras_cal = 0;
+	}
+	
+	if(ras_cal > 32)
+	{
+		ras_cal = 0;
+	}
+	moni_MAX = ras_cal;
+	
+	Hsync_count = 1;
+
+	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
 void interrupt Vsync_Func(void)
 {
-	static unsigned short PalAnime = 0;
+	static volatile unsigned short PalAnime = 0;
 
 	VDISPST((void *)0, 0, 0);	/* stop */
-	CRTCRAS((void *)0, 0);		/* stop */
-	HSYNCST((void *)0);			/* stop */
-
-	moni_MAX = Mmax(moni_MAX, moni);
-	ras_count = 0;
 	
 	if((PalAnime % 10) < 5)
 	{
@@ -288,13 +319,18 @@ void interrupt Vsync_Func(void)
 	}
 	PalAnime++;
 
+	//moni_MAX = Mmax(moni_MAX, moni);
+
+	Hsync_count = 0;
+//	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
 	VDISPST(Vsync_Func, 0, 1);
-	CRTCRAS(Raster_Func, RASTER_ST);	/* ラスター割り込み */
+
+	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
 int vwait(int count)				/* 約count／60秒待つ	*/
 {
-	char *mfp = (char *)0xe88001;
+	volatile char *mfp = (char *)0xe88001;
 	
 	while(count--){
 		while(!((*mfp) & 0b00010000));	/* 垂直表示期間待ち	*/
@@ -315,7 +351,6 @@ void main(void)
 	int RD[1024];
 	int time_cal = 0;
 	int time_cal_PH = 0;
-	void (*pFunc)(void);
 	
 	/* スーパーバイザーモード開始 */
 	/*ＤＯＳのスーパーバイザーモード開始*/
@@ -327,7 +362,7 @@ void main(void)
 	}
 	
 	/*画面の初期設定*/
-	crtmod = CRTMOD(11);
+	crtmod = CRTMOD(10);	/* 偶数：標準解像度、奇数：標準 */
 	G_CLR_ON();
 	VPAGE(1);
 	APAGE(0);
@@ -340,10 +375,7 @@ void main(void)
 
 	/*Timer-Dセット*/
 	NowTime = 0;
-	pFunc = Timer_D_Func;
-#if 0
-	TIMERDST(Timer_D_Func, 5, 1);	/* 16us,1count = 16us */
-#endif
+
 	px1 = X_MAX_H;
 	px2 = X_MAX_H;
 	speed = 0;
@@ -390,7 +422,7 @@ void main(void)
 	/* 建物 */
 	for(e = 0; e < 8; e++)
 	{
-		Draw_Fill((e << 6) + X_MIN, Y_HORIZON-16-1, (e << 6) + X_MIN + 10, Y_HORIZON-1, 14);
+		Draw_Fill((e << 6), 0/*Y_HORIZON-16-1*/, (e << 6) + 10, Y_HORIZON-1, 14);
 	}
 
 	/* 画面の描画 */
@@ -444,14 +476,16 @@ void main(void)
 #endif
 	}
 	
-	CRTCRAS(Raster_Func, RASTER_ST);	/* ラスター割り込み */
+	CRTCRAS(Raster_Func, (RASTER_MAX - RASTER_MIN)/2 );	/* ラスター割り込み */
 	VDISPST(Vsync_Func, 0, 1);
 	
 	loop = 1;
 	do
 	{
+#if 0		
 		unsigned short time;
 		time = NowTime;
+#endif
 
 		if( ( BITSNS( 2 ) & 0x02 ) != 0 ) loop = 0;	/* Ｑで終了 */
 		if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
@@ -460,8 +494,8 @@ void main(void)
 #if 1
 		if(get_key() == KEY_RIGHT)	speed += 1; 
 		if(get_key() == KEY_LEFT)	speed -= 1; 
-		if(speed >  X_MAX_H)speed =  X_MAX_H;
-		if(speed < -X_MAX_H)speed = -X_MAX_H;
+		if(speed >=  32767)speed =  32767;
+		if(speed <= -32768)speed = -32768;
 #else
 		a++;
 		if(a >= 1024)
@@ -479,13 +513,14 @@ void main(void)
 		Message_Num(moni, 0, 1);
 		Message_Num(moni_MAX, 0, 2);
 		
+#if 0		
 		/* 処理時間計測 */
 		time = NowTime - time;
 		time_cal = time << 4;	/* 物量変換 */
 		time_cal_PH = Mmax(time_cal, time_cal_PH);
 		Message_Num(time_cal, 0, 3);
 		Message_Num(time_cal_PH, 0, 4);
-
+#endif
 		/* 同期待ち */
 		vwait(1);
 	}
