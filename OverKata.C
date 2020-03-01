@@ -1,182 +1,38 @@
+#ifndef	OVERKATA_C
+#define	OVERKATA_C
+
 #include <iocslib.h>
-#include <interrupt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <doslib.h>
 #include <io.h>
 #include <math.h>
 
-#define WIDTH		(256)
-#define HEIGHT		(256)
+#include "inc/usr_style.h"
+#include "inc/usr_define.h"
+#include "inc/usr_macro.h"
 
-/* Ｘ，Ｙ座標の最大と最小 */
-#define X_MIN_DRAW	(0)
-#define X_MAX_DRAW	(511)
-#define X_OFFSET	(128)
-#define X_MIN		X_OFFSET
-#define X_MAX		(WIDTH+X_OFFSET)
-#define X_MAX_H		((WIDTH>>1)+X_OFFSET)
+#include "OverKata.h"
+#include "Draw.h"
+#include "MFP.h"
 
-#define Y_MIN_DRAW	(0)
-#define Y_MAX_DRAW	(511)
-#define Y_OFFSET	(128)
-#define Y_MIN		Y_OFFSET
-#define Y_MAX		(HEIGHT+Y_OFFSET)
-#define Y_MAX_H		((HEIGHT>>1)+Y_OFFSET)
-#define Y_HORIZON	(Y_MAX_H)
+/* グローバル変数 */
+unsigned short moni;
+unsigned short moni_MAX;
+int speed;
 
-/* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
-#define RASTER_NEXT	(24)
-#define RASTER_SIZE	(256)
-#define RASTER_MIN	(40)
-#define RASTER_MAX	(RASTER_MIN + 512)
-#define RASTER_ST	(Y_MAX_H+RASTER_MIN-20-2)
-#define RASTER_ED	(RASTER_ST+RASTER_SIZE)
-
-/* ジョイスティック１のその１ */
-#define UP		(0x01)
-#define DOWN	(0x02)
-#define LEFT	(0x04)
-#define RIGHT	(0x08)
-#define JOYA	(0x20)
-#define JOYB	(0x40)
-#define ESC_S	(27)
-
-/* ジョイスティック１のその１ */
-#define KEY_NULL		(0x00)
-#define KEY_UPPER		(0x04)
-#define KEY_LOWER		(0x08)
-#define KEY_LEFT		(0x01)
-#define KEY_UP_LEFT		(0x05)
-#define KEY_DW_LEFT		(0x09)
-#define KEY_RIGHT		(0x02)
-#define KEY_UP_RIGHT	(0x06)
-#define KEY_DW_RIGHT	(0x0A)
-#define KEY_A			(0x10)
-#define KEY_B			(0x20)
-
-#define KEY_TRUE	1
-#define KEY_FALSE	0
-
-/* ボタンのデータ */
+/* 変数 */
 static short key;
-static volatile unsigned short NowTime;
-static volatile unsigned short moni;
-static volatile unsigned short moni_MAX;
-static volatile int speed;
-static volatile unsigned short ras_count;
-static volatile unsigned short Hsync_count;
-
-enum{
-	DST_none,
-	DST_1us,
-	DST_2p5us,
-	DST_4us,
-	DST_12p5us,
-	DST_16us,
-	DST_25us,
-	DST_50us,
-};
-/*
-        Mmax - 最大値取得 -
-*/
-/**
- * 指定された2つの引数のうち,最大のものを返す.
- * @param [in] a        最大値を選ぶ対象の変数1
- * @param [in] b        最大値を選ぶ対象の変数2
- * @retval 最大値
- * @attention 引数は複数回評価される.
- */
-#define Mmax(a, b) ((a) > (b) ? (a) : (b))
-
-/*
-        Mmin - 最小値取得 -
-*/
-/**
- * 指定された2つの引数のうち,最小のものを返す.
- * @param [in] a        最小値を選ぶ対象の変数1
- * @param [in] b        最小値を選ぶ対象の変数2
- * @retval 最小値
- * @attention 引数は複数回評価される.
- */
-#define Mmin(a, b) ((a) < (b) ? (a) : (b))
 
 /* 関数のプロトタイプ宣言 */
-void interrupt Timer_D_Func(void);
-void interrupt Hsync_Func(void);
-void interrupt Raster_Func(void);
-void interrupt Vsync_Func(void);
+int GetSpeed(int *);
+void Message_Num(int, int, int);
 
-unsigned short SetRGB(unsigned short R, unsigned short G, unsigned short B)
+
+int GetSpeed(int *speed_val)
 {
-	return (( G << 11) + (R << 6) + (B << 1));
-}
-
-int Draw_Pset(short x, short y, unsigned short color)
-{
-	struct _psetptr stPset;
-
-	stPset.x = Mmin(x, X_MAX_DRAW);
-	stPset.y = Mmin(y, Y_MAX_DRAW);
-	stPset.color = color;
-	
-	return PSET(&stPset);
-}
-
-int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
-{
-	struct _lineptr stLine;
-
-	stLine.x1 = Mmin(x1, X_MAX_DRAW);
-	stLine.y1 = Mmin(y1, Y_MAX_DRAW);
-	stLine.x2 = Mmin(x2, X_MAX_DRAW);
-	stLine.y2 = Mmin(y2, Y_MAX_DRAW);
-	stLine.color = color;
-	stLine.linestyle = style;
-	
-	return LINE(&stLine);
-}
-
-int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
-{
-	struct _boxptr stBox;
-
-	stBox.x1 = Mmin(x1, X_MAX_DRAW);
-	stBox.y1 = Mmin(y1, Y_MAX_DRAW);
-	stBox.x2 = Mmin(x2, X_MAX_DRAW);
-	stBox.y2 = Mmin(y2, Y_MAX_DRAW);
-	stBox.color = color;
-	stBox.linestyle = style;
-	
-	return BOX(&stBox);
-}
-
-int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
-{
-	struct _fillptr stFill;
-
-	stFill.x1 = Mmin(x1, X_MAX_DRAW);
-	stFill.y1 = Mmin(y1, Y_MAX_DRAW);
-	stFill.x2 = Mmin(x2, X_MAX_DRAW);
-	stFill.y2 = Mmin(y2, Y_MAX_DRAW);
-	stFill.color = color;
-	
-	return FILL(&stFill);
-}
-
-int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat)
-{
-	struct _circleptr stCircle;
-
-	stCircle.x = x;
-	stCircle.y = y;
-	stCircle.radius = rad;
-	stCircle.color = color;
-	stCircle.start = st;
-	stCircle.end = ed;
-	stCircle.ratio = rat;
-	
-	return CIRCLE(&stCircle);
+	*speed_val = speed;
+	return 0;
 }
 
 void Message_Num(int num, int x, int y)
@@ -222,121 +78,6 @@ short get_key( void )
 	return ret;
 }
 
-void interrupt Timer_D_Func(void)
-{
-	NowTime++;
-
-	IRTE();	/* 割り込み関数の最後で必ず実施 */
-}
-
-void interrupt Hsync_Func(void)
-{
-	HSYNCST((void *)0);		/* stop */
-	HSYNCST(Hsync_Func);	/* H-Sync割り込み */
-
-	IRTE();	/* 割り込み関数の最後で必ず実施 */
-}
-
-void interrupt Raster_Func(void)
-{
-	static volatile unsigned short ras_cal = 0;
-	static volatile unsigned short ras_val = 0;
-	volatile unsigned short *scroll_x = (unsigned short *)0xE80018;
-	volatile unsigned short *raster_add = (unsigned short *)0xE80012;
-	
-//	CRTCRAS((void *)0, 0);	/* stop */
-	
-	ras_count += RASTER_NEXT;
-	ras_val = X_MIN;
-
-	/* ラスタ領域 */
-	if((ras_count >= RASTER_ST) && (ras_count <= (RASTER_ST + 20)))
-	{
-		ras_val += speed;
-	}
-	else if(ras_count < RASTER_MAX)
-	{
-		ras_val += speed * ( RASTER_SIZE  / (float)(Mmax((ras_count - RASTER_ST), 1)) );
-	}
-	else
-	{
-		ras_count = RASTER_ST;
-	}
-
-	*(scroll_x) = ras_val;
-
-	moni = ras_count;
-	
-//	CRTCRAS(Raster_Func, ras_count);	/* ラスター割り込み */
-	*raster_add = ras_count;
-	
-	if(Hsync_count != 0U)
-	{
-		ras_cal++;
-	}
-	else{
-		ras_cal = 0;
-	}
-	
-	if(ras_cal > 32)
-	{
-		ras_cal = 0;
-	}
-	moni_MAX = ras_cal;
-	
-	Hsync_count = 1;
-
-	IRTE();	/* 割り込み関数の最後で必ず実施 */
-}
-
-void interrupt Vsync_Func(void)
-{
-	static volatile unsigned short PalAnime = 0;
-
-	VDISPST((void *)0, 0, 0);	/* stop */
-	
-	if((PalAnime % 10) < 5)
-	{
-		GPALET( 1, SetRGB(16, 16, 16));	/* Glay */
-		GPALET( 2, SetRGB(15, 15, 15));	/* D-Glay */
-		
-		GPALET( 5, SetRGB(31,  0,  0));	/* Red */
-		GPALET(15, SetRGB(31, 31, 31));	/* White */
-		
-		GPALET( 8, SetRGB( 0, 31,  0));	/* Green */
-		GPALET(11, SetRGB( 0, 28,  0));	/* Green */
-	}
-	else
-	{
-		GPALET( 2, SetRGB(16, 16, 16));	/* Glay */
-		GPALET( 1, SetRGB(15, 15, 15));	/* D-Glay */
-		
-		GPALET(15, SetRGB(31,  0,  0));	/* Red */
-		GPALET( 5, SetRGB(31, 31, 31));	/* White */
-		
-		GPALET(11, SetRGB( 0, 31,  0));	/* Green */
-		GPALET( 8, SetRGB( 0, 28,  0));	/* Green */
-	}
-	PalAnime++;
-
-	//moni_MAX = Mmax(moni_MAX, moni);
-
-	Hsync_count = 0;
-//	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
-	VDISPST(Vsync_Func, 0, 1);
-
-	IRTE();	/* 割り込み関数の最後で必ず実施 */
-}
-
-int vwait(int count)				/* 約count／60秒待つ	*/
-{
-	volatile char *mfp = (char *)0xe88001;
-	
-	while(count--){
-		while(!((*mfp) & 0b00010000));	/* 垂直表示期間待ち	*/
-		while((*mfp) & 0b00010000);	/* 垂直帰線期間待ち	*/
-	}
-}
 
 void main(void)
 {
@@ -374,7 +115,7 @@ void main(void)
 	B_CUROFF();
 
 	/*Timer-Dセット*/
-	NowTime = 0;
+	SetNowTime(0);
 
 	px1 = X_MAX_H;
 	px2 = X_MAX_H;
@@ -483,8 +224,8 @@ void main(void)
 	do
 	{
 #if 0		
-		unsigned short time;
-		time = NowTime;
+		unsigned short time, time_old, time_now;
+		GetNowTime(&time_old);
 #endif
 
 		if( ( BITSNS( 2 ) & 0x02 ) != 0 ) loop = 0;	/* Ｑで終了 */
@@ -515,7 +256,8 @@ void main(void)
 		
 #if 0		
 		/* 処理時間計測 */
-		time = NowTime - time;
+		GetNowTime(&time_now);
+		time = time_now - time_old;
 		time_cal = time << 4;	/* 物量変換 */
 		time_cal_PH = Mmax(time_cal, time_cal_PH);
 		Message_Num(time_cal, 0, 3);
@@ -538,3 +280,5 @@ void main(void)
 	/*スーパーバイザーモード終了*/
 	SUPER(superchk);
 }
+
+#endif	/* OVERKATA_C */
