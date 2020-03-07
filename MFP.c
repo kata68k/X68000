@@ -3,7 +3,7 @@
 
 #include <iocslib.h>
 #include <interrupt.h>
-#include "inc/usr_style.h"
+
 #include "inc/usr_define.h"
 #include "inc/usr_macro.h"
 
@@ -11,18 +11,34 @@
 #include "MFP.h"
 
 /* 変数 */
-static volatile unsigned short NowTime;
-static volatile unsigned short ras_count;
-static volatile unsigned short Hsync_count;
+static volatile US NowTime;
+static volatile US ras_count;
+static volatile US Hsync_count;
+static volatile US Vsync_count;
+static US ras_val[1024];
 
 /* 関数のプロトタイプ宣言 */
+UI Init_MFP(void);
 void interrupt Timer_D_Func(void);
+SI GetNowTime(US *);	/* 現在の時間を取得する */
+SI SetNowTime(US);		/* 現在の時間を設定する */
 void interrupt Hsync_Func(void);
 void interrupt Raster_Func(void);
+SI SetRasterVal(void *, size_t);		/* ラスター専用のバッファにコピーする */
 void interrupt Vsync_Func(void);
-int vwait(int);
-int GetNowTime(unsigned short *);	/* 現在の時間を取得する */
-int SetNowTime(unsigned short);		/* 現在の時間を設定する */
+SI vwait(SI);
+
+UI Init_MFP(void)	/* 現在の時間を取得する */
+{
+	NowTime = 0;
+	ras_count = RASTER_ST;
+	Hsync_count = 0;
+	Vsync_count = 0;
+	
+	ras_val[1024];
+	
+	return 0;
+}
 
 void interrupt Timer_D_Func(void)
 {
@@ -31,73 +47,53 @@ void interrupt Timer_D_Func(void)
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
+SI GetNowTime(US *time)	/* 現在の時間を取得する */
+{
+	*time = NowTime;
+	return 0;
+}
+
+SI SetNowTime(US time)	/* 現在の時間を設定する */
+{
+	NowTime = time;
+	return 0;
+}
+
+
 void interrupt Hsync_Func(void)
 {
-	HSYNCST((void *)0);		/* stop */
-	HSYNCST(Hsync_Func);	/* H-Sync割り込み */
-
+	Hsync_count++;
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
 void interrupt Raster_Func(void)
 {
-	static volatile unsigned short ras_cal = 0;
-	static volatile unsigned short ras_val = 0;
-	volatile unsigned short *scroll_x = (unsigned short *)0xE80018;
-	volatile unsigned short *raster_add = (unsigned short *)0xE80012;
-	
-//	CRTCRAS((void *)0, 0);	/* stop */
+	volatile US *scroll_x    = (US *)0xE80018;
+	volatile US *raster_addr = (US *)0xE80012;
 	
 	ras_count += RASTER_NEXT;
-	ras_val = X_MIN;
-	
-	/* ラスタ領域 */
-	if((ras_count >= RASTER_ST) && (ras_count <= (RASTER_ST + 20)))
-	{
-		ras_val += speed;
-	}
-	else if(ras_count < RASTER_MAX)
-	{
-		ras_val += speed * ( RASTER_SIZE  / (float)(Mmax((ras_count - RASTER_ST), 1)) );
-	}
-	else
-	{
-		ras_count = RASTER_ST;
-	}
-
-	*(scroll_x) = ras_val;
-
-	moni = ras_count;
-	
-//	CRTCRAS(Raster_Func, ras_count);	/* ラスター割り込み */
-	*raster_add = ras_count;
-	
-	if(Hsync_count != 0U)
-	{
-		ras_cal++;
-	}
-	else{
-		ras_cal = 0;
-	}
-	
-	if(ras_cal > 32)
-	{
-		ras_cal = 0;
-	}
-	moni_MAX = ras_cal;
-	
-	Hsync_count = 1;
+	if(ras_count >= RASTER_MAX)ras_count = RASTER_ST;
+	*raster_addr = ras_count;
+	*scroll_x = ras_val[ras_count];
 
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
+SI SetRasterVal(void *pSrc, size_t n)
+{
+	SI ret = 0;
+	if(memcpy(ras_val, pSrc, n) == NULL)
+	{
+		ret = -1;
+	}
+	return ret;
+}
+
 void interrupt Vsync_Func(void)
 {
-	static volatile unsigned short PalAnime = 0;
-
-	VDISPST((void *)0, 0, 0);	/* stop */
+//	VDISPST((void *)0, 0, 0);	/* stop */
 	
-	if((PalAnime % 10) < 5)
+	if((Vsync_count % 10) < 5)
 	{
 		GPALET( 1, SetRGB(16, 16, 16));	/* Glay */
 		GPALET( 2, SetRGB(15, 15, 15));	/* D-Glay */
@@ -119,37 +115,26 @@ void interrupt Vsync_Func(void)
 		GPALET(11, SetRGB( 0, 31,  0));	/* Green */
 		GPALET( 8, SetRGB( 0, 28,  0));	/* Green */
 	}
-	PalAnime++;
 
-	//moni_MAX = Mmax(moni_MAX, moni);
-
+	ras_count = RASTER_ST;
+//	ras_count = RASTER_MIN;
+	CRTCRAS(Raster_Func, RASTER_ST );	/* ラスター割り込み */
 	Hsync_count = 0;
 //	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
-	VDISPST(Vsync_Func, 0, 1);
-
+	Vsync_count++;
+//	VDISPST(Vsync_Func, 0, 1);			/* V-Sync割り込み 帰線 */
+	
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
-int vwait(int count)				/* 約count／60秒待つ	*/
+SI vwait(SI count)				/* 約count／60秒待つ	*/
 {
-	volatile char *mfp = (char *)0xe88001;
+	volatile UC *mfp = (UC *)0xe88001;
 	
 	while(count--){
 		while(!((*mfp) & 0b00010000));	/* 垂直表示期間待ち	*/
 		while((*mfp) & 0b00010000);	/* 垂直帰線期間待ち	*/
 	}
-}
-
-int GetNowTime(unsigned short *time)	/* 現在の時間を取得する */
-{
-	*time = NowTime;
-	return 0;
-}
-
-int SetNowTime(unsigned short time)	/* 現在の時間を設定する */
-{
-	NowTime = time;
-	return 0;
 }
 
 #endif	/* MFP_H */

@@ -1,6 +1,8 @@
 #ifndef	OVERKATA_H
 #define	OVERKATA_H
 
+#include "inc/usr_style.h"
+
 enum{
 	DST_none,
 	DST_1us,
@@ -12,11 +14,11 @@ enum{
 	DST_50us,
 };
 
-extern unsigned short moni;
-extern unsigned short moni_MAX;
-extern int speed;
+extern US moni;
+extern US moni_MAX;
+extern SI speed;
 
-extern int GetSpeed(int *);
-extern void Message_Num(int, int, int);
+extern SI GetSpeed(SI *);
+extern void Message_Num(SI, SI, SI);
 
 #endif	/* OVERKATA_H */

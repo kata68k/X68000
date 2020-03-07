@@ -25,6 +25,17 @@
  */
 #define Mmin(a, b) ((a) < (b) ? (a) : (b))
 
+/*
+        Mabs - 絶対値取得 -
+*/
+/**
+ * 指定された引数の絶対値を返す.
+ * @param [in] x        絶対値にする対象の変数
+ * @retval 絶対値
+ * @attention 引数は複数回評価される.
+ */
+#define Mabs(x) ((x) < 0 ? -(x) : (x))
+
 //unsigned short SetRGB(unsigned short R, unsigned short G, unsigned short B)
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 

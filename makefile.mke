@@ -8,15 +8,12 @@ INC		=
 LIBS	= libc.a libgnu.a
 LZH		= OverKata100
 
-vpath	%.c	;
-
-%.o:	%.c
-	$(CC) $(CFLAGS) -c $<
-
+.PHONY: all
 all:	OverKata.x 
 
+.PHONY: clean
 clean:
-	rm -f *.ind *.bak *.o *.x \
+	rm -f *.bak *.o *.x \
 	inc/*.bak
 
 execonly:
@@ -25,11 +22,14 @@ execonly:
 
 OverKata.x:	OverKata.o Draw.o MFP.o
 	$(LD) $^ -o $@ -l $(LIBS)
-
-OverKata.o:	OverKata.c OverKata.h
-Draw.o:	Draw.c	 Draw.h
-MFP.o:	MFP.c	 MFP.h
-
+OverKata.o:	OverKata.c
+	$(CC) $(CFLAGS) -c $<
+Draw.o:	Draw.c
+	$(CC) $(CFLAGS) -c $<
+MFP.o:	MFP.c
+	$(CC) $(CFLAGS) -c $<
+OverKata.o:	inc/usr_define.h
+MFP.o:	inc/usr_define.h
 dist:
 	LHA a -t ../$(LZH)
 

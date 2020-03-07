@@ -21,11 +21,11 @@
 #define Y_HORIZON	(Y_MAX_H)
 
 /* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
-#define RASTER_NEXT	(24)
-#define RASTER_SIZE	(256)
-#define RASTER_MIN	(40)
-#define RASTER_MAX	(RASTER_MIN + 512)
-#define RASTER_ST	(Y_MAX_H+RASTER_MIN-20-2)
+#define RASTER_NEXT	(2)
+#define RASTER_SIZE	(240)
+#define RASTER_MIN	(16)//表示開始位置(40,16)
+#define RASTER_MAX	(256)//表示終了位置(552,256)
+#define RASTER_ST	(RASTER_MIN+(128*1))//高解像度なら2倍する
 #define RASTER_ED	(RASTER_ST+RASTER_SIZE)
 
 /* ジョイスティック１のその１ */
