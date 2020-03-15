@@ -20,7 +20,7 @@ execonly:
 	rm -f *.ind *.bak *.o *.c *.h *.s makefile \
 	rmdir inc
 
-OverKata.x:	OverKata.o Draw.o MFP.o
+OverKata.x:	OverKata.o Draw.o MFP.o FileManager.o
 	$(LD) $^ -o $@ -l $(LIBS)
 OverKata.o:	OverKata.c
 	$(CC) $(CFLAGS) -c $<
@@ -28,8 +28,11 @@ Draw.o:	Draw.c
 	$(CC) $(CFLAGS) -c $<
 MFP.o:	MFP.c
 	$(CC) $(CFLAGS) -c $<
+FileManager.o:	FileManager.c
+	$(CC) $(CFLAGS) -c $<
 OverKata.o:	inc/usr_define.h
 MFP.o:	inc/usr_define.h
+
 dist:
 	LHA a -t ../$(LZH)
 

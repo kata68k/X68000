@@ -16,25 +16,19 @@
 #include "MFP.h"
 
 /* グローバル変数 */
-US moni;
-US moni_MAX;
-SI speed;
+SS moni;
+SS moni_MAX;
+SS speed;
+US	map_data[64][64];
 
 /* 変数 */
 static SS key;
 
 /* 関数のプロトタイプ宣言 */
-SI GetSpeed(SI *);
-void Message_Num(SI, SI, SI);
+void Message_Num(SS, SI, SI);
 
-
-SI GetSpeed(SI *speed_val)
-{
-	*speed_val = speed;
-	return 0;
-}
-
-void Message_Num(SI num, SI x, SI y)
+/* 関数 */
+void Message_Num(SS num, SI x, SI y)
 {
 	char str[64];
 
@@ -92,6 +86,34 @@ void main(void)
 	SI time_cal = 0;
 	SI time_cal_PH = 0;
 	US	ras_tmp[512];
+	US	*ptr;
+	SI	vx;
+	UI	vi, vj;
+
+	/* デバッグコーナー */
+#if 0
+	/* マップデータ読み込み */
+	File_Load_CSV("data/map.csv", map_data, &vi, &vj);
+	
+	for(y=0;y<64;y++)
+	{
+		for(x=0;x<64;x++)
+		{
+			printf("%d,", map_data[y][x]);
+		}
+		printf("\n");
+	}
+	
+	loop = 1;
+	do
+	{
+		if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
+		if(loop == 0)break;
+	}
+	while( loop );
+	
+	exit(0);
+#endif
 	
 	/* スーパーバイザーモード開始 */
 	/*ＤＯＳのスーパーバイザーモード開始*/
@@ -118,8 +140,10 @@ void main(void)
 	Init_MFP();
 
 	/*Timer-Dセット*/
+	TIMERDST(Timer_D_Func, 7, 200);	/* 50us(7) x 200cnt = 10ms */
 	SetNowTime(0);
 
+	/* 変数の初期化 */
 	px1 = X_MAX_H;
 	px2 = X_MAX_H;
 	speed = 0;
@@ -128,21 +152,78 @@ void main(void)
 	{
 		RD[a] = 0;
 	}
+	
 	/* 乱数の初期化 */
-	for(a = 0; a  < 100; a++)
+	srandom(TIMEGET());
+	for(a=0; a < 16; a++)
 	{
-		b = (rand() % 768);
+		d = a * 64;
 		c = (rand() % 5) - 2;
-		for(d = b; d < b + 100; d++)
+		for(b = d; b < d + 64; b++)
 		{
-			RD[d] = c;
+			RD[b] = c;
 		}
 	}
-	for(a=0; a < 1024; a++)
-	{
-		ras_tmp[a] = rand() % 512;
-	}
 	
+	/* スプライトの初期化 */
+	SP_INIT();			/* スプライトの初期化 */
+	SP_ON();			/* スプライト表示をＯＮ */
+	BGCTRLST(0, 0, 1);	/* ＢＧ０表示ＯＮ */
+	BGCTRLST(1, 1, 1);	/* ＢＧ１表示ＯＮ */
+	/*スプライトレジスタ初期化*/
+	for(j = 0x80000000; j < 0x80000000 + 128; j++ ){
+		SP_REGST(j,-1,0,0,0,0);
+	}
+	/* スプライトのデータ読み込み */
+	/* スプライトのパレットデータ読み込み */
+	sp_dataload();
+
+	//	BGCTRLGT(1);				/* BGコントロールレジスタ読み込み */
+	BGSCRLST(0,0,0);				/* BGスクロールレジスタ設定 */
+	BGSCRLST(1,0,0);				/* BGスクロールレジスタ設定 */
+	BGTEXTCL(0,SetBGcode(0,0,0,0));	/* BGテキストクリア */
+	BGTEXTCL(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
+	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
+	
+	/* マップデータ読み込み */
+	File_Load_CSV("data/map.csv", map_data, &i, &j);
+	for(y=0; y<j; y++)
+	{
+		for(x=0; x<i; x++)
+		{
+			int pat = 0;
+			int offset = 0;
+			switch(map_data[y][x])
+			{
+				case 1:
+					pat = 1;
+					offset = 0;
+					break;
+				case 2:
+					pat = 2;
+					offset = 64;
+					break;
+				case 3:
+					pat = 3;
+					offset = 64;
+					break;
+				case 4:
+					pat = 0x0F;
+					offset = 64;
+					break;
+				defult:
+					pat = 0x0F;
+					offset = 64;
+					break;
+			}
+			BGTEXTST(0,x,y,SetBGcode(0,0,pat,map_data[y][x]+offset));		/* BGテキスト設定 */
+//			BGTEXTST(1,x,y,SetBGcode(0,0,0,90));		/* BGテキスト設定 */
+		}
+	}
+	moni = i;
+	moni_MAX = j;
+	
+	/* グラフィックパレットの初期化 */
 	for(a=0; a < 0xFF; a++)
 	{
 		GPALET( a, SetRGB(31, 31, 31));	/* White */
@@ -161,9 +242,6 @@ void main(void)
 	GPALET(14, SetRGB(16, 16, 16));	/* Glay2 */
 	GPALET(15, SetRGB(31, 31, 31));	/* White */
 
-	/* 空 */
-	Draw_Fill( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW, 3);
-
 	/* 建物とコースの間 */
 	Draw_Fill( X_MIN_DRAW,  Y_HORIZON, X_MAX_DRAW,  Y_HORIZON, 1);
 
@@ -172,6 +250,9 @@ void main(void)
 	{
 		Draw_Fill((e << 6), 0/*Y_HORIZON-16-1*/, (e << 6) + 10, Y_HORIZON-1, 14);
 	}
+#if 0
+	/* 空 */
+	Draw_Fill( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW, 3);
 
 	a = 0;
 	c = 1;
@@ -227,22 +308,23 @@ void main(void)
 			col_2 = 15;
 			col_3 = 8;
 		}
-#if 1
 		/* コースアウト */
 		Draw_Line( X_MIN_DRAW,     y1,         x1,   y1,  col_3, 0xFFFF);	/* 左側 */
 		Draw_Line(         x2,     y1, X_MAX_DRAW,   y1,  col_3, 0xFFFF);	/* 右側 */
-#endif			
+			
 		/* 道1 */
 		Draw_Line(         x1,     y1,         x2,   y1,  col_1, 0xFFFF );
-#if 1
+
 		/* 側道 */
 		Draw_Line(     x1 - i,     y1,         x1,   y1,  col_2, 0xFFFF );	/* 左側 */
 		Draw_Line(         x2,     y1,     x2 + i,   y1,  col_2, 0xFFFF );	/* 右側 */
-#endif
 	}
+#endif
 	
 	VDISPST(Vsync_Func, 0, 1);			/* V-Sync割り込み 帰線 */
 
+	a = 0;
+	c = 0;
 	speed = 0;
 	loop = 1;
 	do
@@ -257,40 +339,38 @@ void main(void)
 		if(loop == 0)break;
 
 #if 1
-		if(get_key() == KEY_RIGHT)	speed += 1; 
-		if(get_key() == KEY_LEFT)	speed -= 1; 
-//		if(speed >= RASTER_SIZE-1)speed =  RASTER_SIZE-1;
-//		if(speed <= 0)speed = 0;
-		if(speed >=  7)speed =  7;
-		if(speed <= -8)speed = -8;
-//		if(speed >=  32767)speed =  32767;
-//		if(speed <= -32768)speed = -32768;
+		if(get_key() == KEY_UPPER)	speed += 1; 
+		if(get_key() == KEY_LOWER)	speed -= 1; 
+		if(get_key() == KEY_RIGHT)	vx += 1; 
+		if(get_key() == KEY_LEFT)	vx -= 1; 
+		speed = Mmax(Mmin(speed, 256), 0);
+		vx = Mmax(Mmin(vx, 7), -8);
 #else
 		a++;
 		if(a >= 1024)
 		{
 			a = 0;
-			speed = 0;
+			c = 0;
 		}
-		c += RD[a];
-		speed = c;
-		if(speed >  10)speed =  10;
-		if(speed < -10)speed = -10;
+		d = Mmin(Mmax(RD[a], -32768), 32767);
+		c += d;
+
+		speed = c / 100;
 #endif
-		Message_Num(speed, 0, 0);
 		
 		for(y=0; y < RASTER_MAX; y++)
 		{
 			ras_tmp[y] = X_MIN;
 			if(y >= RASTER_ST){
-				ras_tmp[y] += speed * ( (RASTER_ED - RASTER_ST) / (float)(Mmax(y-RASTER_ST, 1)) );
+				ras_tmp[y] += vx * ( (RASTER_ED - RASTER_ST) / (float)(Mmax(y-RASTER_ST, 1)) );
 			}
 		}
 		SetRasterVal(ras_tmp, sizeof(US)*RASTER_MAX);
 		
-		moni = ras_tmp[Mabs(speed)];
-		moni_MAX = sizeof(US)*RASTER_MAX;
-		
+//		moni = ras_tmp[RASTER_ST];
+//		moni_MAX = ras_tmp[RASTER_ED];
+
+		Message_Num(speed, 0, 0);
 		Message_Num(moni, 0, 1);
 		Message_Num(moni_MAX, 0, 2);
 		
@@ -311,7 +391,11 @@ void main(void)
 	CRTCRAS((void *)0, 0);		/* stop */
 	HSYNCST((void *)0);			/* stop */
 	VDISPST((void *)0, 0, 0);	/* stop */
-	TIMERDST((void *)0, 0, 1);	/* Stop */
+	TIMERDST((void *)0, 0, 1);	/* stop */
+
+	BGCTRLST(0, 0, 0);	/* ＢＧ０表示ＯＮ */
+	BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＮ */
+	G_CLR_ON();
 
 	B_CURON();
 

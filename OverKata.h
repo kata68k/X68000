@@ -14,11 +14,10 @@ enum{
 	DST_50us,
 };
 
-extern US moni;
-extern US moni_MAX;
-extern SI speed;
+extern SS moni;
+extern SS moni_MAX;
+extern SS speed;
 
-extern SI GetSpeed(SI *);
-extern void Message_Num(SI, SI, SI);
+extern void Message_Num(SS, SI, SI);
 
 #endif	/* OVERKATA_H */

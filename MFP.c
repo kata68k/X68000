@@ -69,12 +69,14 @@ void interrupt Hsync_Func(void)
 void interrupt Raster_Func(void)
 {
 	volatile US *scroll_x    = (US *)0xE80018;
+	volatile US *BGscroll_x  = (US *)0xEB0800;
 	volatile US *raster_addr = (US *)0xE80012;
 	
 	ras_count += RASTER_NEXT;
 	if(ras_count >= RASTER_MAX)ras_count = RASTER_ST;
 	*raster_addr = ras_count;
-	*scroll_x = ras_val[ras_count];
+	*scroll_x	= ras_val[ras_count];
+	*BGscroll_x	= ras_val[ras_count];
 
 	IRTE();	/* Š„‚è‚İŠÖ”‚ÌÅŒã‚Å•K‚¸À{ */
 }

@@ -36,7 +36,8 @@
  */
 #define Mabs(x) ((x) < 0 ? -(x) : (x))
 
-//unsigned short SetRGB(unsigned short R, unsigned short G, unsigned short B)
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
+
+#define SetBGcode(V,H,PAL,PCG)	((V << 15) + (H << 14) + (PAL << 8) + PCG)
 
 #endif	/* USR_MACRO_H */

@@ -53,4 +53,7 @@
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
+/* スプライトＰＣＧパターン最大数 */
+#define	PCG_MAX	(256)
+
 #endif	/* USR_DEFINE_H */
