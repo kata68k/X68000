@@ -21,11 +21,10 @@ SS moni_MAX;
 SS speed;
 US	map_data[64][64];
 
-/* 変数 */
-static SS key;
 
 /* 関数のプロトタイプ宣言 */
 void Message_Num(SS, SI, SI);
+SS get_key( SI );
 
 /* 関数 */
 void Message_Num(SS num, SI x, SI y)
@@ -36,32 +35,38 @@ void Message_Num(SS num, SI x, SI y)
 	B_PUTMES( 3, x, y, 10-1, str);
 }
 
-SS get_key( void )
+SS get_key( SI mode )
 {
-	UI kd_k1,kd_k2_1,kd_k2_2,kd_b;
+	UI kd_k1,kd_k2_1,kd_k2_2,kd_b,kd_b2,kd_b3,kd_b4;
 	static SS repeat_flag_a = KEY_TRUE;
 	static SS repeat_flag_b = KEY_TRUE;
 	SS ret = 0;
 	
-	kd_k1 = BITSNS(7);
-	kd_k2_1 = BITSNS(8);
-	kd_k2_2 = BITSNS(9);
-	kd_b = BITSNS(10);
+	kd_k1	= BITSNS(7);
+	kd_k2_1	= BITSNS(8);
+	kd_k2_2	= BITSNS(9);
+	kd_b	= BITSNS(10);
+	kd_b2	= BITSNS(5);
+	kd_b3	= BITSNS( 2 );
+	kd_b4	= BITSNS( 0 );
 	
+	if( (kd_b3  & 0x02 ) != 0 ) ret |= KEY_b_Q;		/* Ｑで終了 */
+	if( (kd_b4  & 0x02 ) != 0 ) ret |= KEY_b_ESC;	/* ＥＳＣポーズ */
+
 	if( !( JOYGET( 0 ) & UP    ) || ( kd_k1 & 0x10 ) || ( kd_k2_1 & 0x10 ) ) ret |= KEY_UPPER;
 	if( !( JOYGET( 0 ) & DOWN  ) || ( kd_k1 & 0x40 ) || ( kd_k2_2 & 0x10 ) ) ret |= KEY_LOWER;
 	if( !( JOYGET( 0 ) & LEFT  ) || ( kd_k1 & 0x08 ) || ( kd_k2_1 & 0x80 ) ) ret |= KEY_LEFT;
 	if( !( JOYGET( 0 ) & RIGHT ) || ( kd_k1 & 0x20 ) || ( kd_k2_2 & 0x02 ) ) ret |= KEY_RIGHT;
-	if( !( JOYGET( 0 ) & JOYA  ) || kd_b & 0x20 ) { /* Ａボタン */
-		if( repeat_flag_a ) {
+	if( !( JOYGET( 0 ) & JOYA  ) || ( kd_b  & 0x20 ) || ( kd_b2   & 0x04 ) ) { /* Ａボタン or XF1 or z */
+		if( repeat_flag_a || (mode != 0u)) {
 			ret |= KEY_A;
 			repeat_flag_a = KEY_FALSE;
 			}
 		} else {
 			repeat_flag_a = KEY_TRUE;
 		}
-	if( !( JOYGET( 0 ) & JOYB  ) || kd_b & 0x40 ) { /* Ｂボタン */
-		if( repeat_flag_b ) {
+	if( !( JOYGET( 0 ) & JOYB  ) || ( kd_b  & 0x40 ) || ( kd_b2   & 0x08 ) ) { /* Ｂボタン or XF2 or x  */
+		if( repeat_flag_b || (mode != 0u)) {
 			ret |= KEY_B;
 			repeat_flag_b = KEY_FALSE;
 			}
@@ -86,22 +91,34 @@ void main(void)
 	SI time_cal = 0;
 	SI time_cal_PH = 0;
 	US	ras_tmp[512];
+	US	pal_tmp[512];
 	US	*ptr;
-	SI	vx;
+	SS	vx, vy;
 	UI	vi, vj;
+	UI	pal = 0;
+	UI	count=0;
+	UI	jdge=0;
+	SS	road;
+	SS	input;
+	struct _fntbuf	stFont;
+
+	volatile US *V_Sync_end = (US *)0xE8000E;
+	volatile US *VIDEO_REG1 = (US *)0xE82400;
+	volatile US *VIDEO_REG2 = (US *)0xE82500;
+	volatile US *VIDEO_REG3 = (US *)0xE82600;
 
 	/* デバッグコーナー */
 #if 0
 	/* マップデータ読み込み */
 	File_Load_CSV("data/map.csv", map_data, &vi, &vj);
 	
-	for(y=0;y<64;y++)
+	for(y=0;y<vi;y++)
 	{
-		for(x=0;x<64;x++)
+		for(x=0;x<vj;x++)
 		{
 			printf("%d,", map_data[y][x]);
 		}
-		printf("\n");
+		printf("->(%d,%d)\n",vj, vi);
 	}
 	
 	loop = 1;
@@ -125,16 +142,26 @@ void main(void)
 	}
 	
 	/*画面の初期設定*/
-	crtmod = CRTMOD(11);	/* 偶数：標準解像度、奇数：標準 */
-	G_CLR_ON();
-	VPAGE(1);
-	APAGE(0);
+	crtmod = CRTMOD(-1);	/* 現在のモードを返す */
+	CRTMOD(11);				/* 偶数：標準解像度、奇数：標準 */
+	G_CLR_ON();				/* グラフィックのクリア */
+	VPAGE(0b0011);			/* pege(3:0ff 2:Off 1:0n 0:0n) */
+	APAGE(0);				/* グラフィックの書き込み */
 	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
 	HOME(0, X_OFFSET, Y_OFFSET);
+	HOME(1, X_OFFSET, Y_OFFSET);
+	HOME(2, X_OFFSET, 416);
+	HOME(3, X_OFFSET, 416);
 	WIPE();
+	*VIDEO_REG1 = Mbset(*VIDEO_REG1,   0x07, 0b001);			/* 512x512 256color 2men */
+	*VIDEO_REG2 = Mbset(*VIDEO_REG2, 0x3FFF, 0b10000111100100);	/* 優先順位 TX>GR>SP GR0>GR1>GR2>GR3 */
+	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x3F, 0b1100011);		/* 特殊モードなし 仮想画面512x512 */
+	*V_Sync_end = V_SYNC_MAX;			/* 縦の表示範囲を決める(画面下のゴミ防止) */
 	
 	/*カーソルを消します。*/
 	B_CUROFF();
+	MS_CUROF();
+	SKEY_MOD(0, 0, 0);
 
 	/* MFP関連の初期化 */
 	Init_MFP();
@@ -148,6 +175,12 @@ void main(void)
 	px2 = X_MAX_H;
 	speed = 0;
 	
+	for(a=0; a < 512; a++)
+	{
+		ras_tmp[a] = 0;
+		pal_tmp[a] = 0;
+	}
+
 	for(a=0; a < 1024; a++)
 	{
 		RD[a] = 0;
@@ -168,8 +201,9 @@ void main(void)
 	/* スプライトの初期化 */
 	SP_INIT();			/* スプライトの初期化 */
 	SP_ON();			/* スプライト表示をＯＮ */
-	BGCTRLST(0, 0, 1);	/* ＢＧ０表示ＯＮ */
+	BGCTRLST(0, 1, 1);	/* ＢＧ０表示ＯＮ */
 	BGCTRLST(1, 1, 1);	/* ＢＧ１表示ＯＮ */
+//	BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＦＦ */
 	/*スプライトレジスタ初期化*/
 	for(j = 0x80000000; j < 0x80000000 + 128; j++ ){
 		SP_REGST(j,-1,0,0,0,0);
@@ -187,46 +221,55 @@ void main(void)
 	
 	/* マップデータ読み込み */
 	File_Load_CSV("data/map.csv", map_data, &i, &j);
-	for(y=0; y<j; y++)
+	
+	pal = 0x0E;
+	for(y=0; y<16; y++)
 	{
 		for(x=0; x<i; x++)
 		{
-			int pat = 0;
-			int offset = 0;
-			switch(map_data[y][x])
-			{
-				case 1:
-					pat = 1;
-					offset = 0;
-					break;
-				case 2:
-					pat = 2;
-					offset = 64;
-					break;
-				case 3:
-					pat = 3;
-					offset = 64;
-					break;
-				case 4:
-					pat = 0x0F;
-					offset = 64;
-					break;
-				defult:
-					pat = 0x0F;
-					offset = 64;
-					break;
-			}
-			BGTEXTST(0,x,y,SetBGcode(0,0,pat,map_data[y][x]+offset));		/* BGテキスト設定 */
-//			BGTEXTST(1,x,y,SetBGcode(0,0,0,90));		/* BGテキスト設定 */
+			BGTEXTST(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+			BGTEXTST(1,x,y,SetBGcode(0,0,pal+1,map_data[y][x]));		/* BGテキスト設定 */
 		}
 	}
-	moni = i;
-	moni_MAX = j;
+
+	count=0;
+	pal = 1;
+	for(y=16; y<j; y++)
+	{
+		for(x=0; x<i; x++)
+		{
+			if(x < 16 || x > 40){
+				BGTEXTST(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+				BGTEXTST(1,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+			}
+			else{	/* 垂直反転 */
+				BGTEXTST(0,x,y,SetBGcode(0,1,pal,map_data[y][x]));		/* BGテキスト設定 */
+				BGTEXTST(1,x,y,SetBGcode(0,1,pal,map_data[y][x]));		/* BGテキスト設定 */
+			}
+		}
+		
+		count++;
+		if(count < 12){
+		}
+		else{
+			pal++;
+			count=0;
+		}
+	}
+	/* テキストパレットの初期化(Pal0はSPと共通) */
+	TPALET2( 0, SetRGB( 0,  0,  0));	/* Black */
+	TPALET2( 1, SetRGB(31, 31, 31));	/* White */
+	TPALET2( 2, SetRGB(31,  0,  0));	/* Red */
+	TPALET2( 3, SetRGB(30, 26, 16));	/* Red2 */
+	TPALET2( 4, SetRGB( 0, 31,  0));	/* Green */
+	TPALET2( 5, SetRGB(30,  8,  0));	/* Orenge */
+	TPALET2( 6, SetRGB(30, 30,  0));	/* Yellow */
+	TPALET2( 7, SetRGB( 1,  0,  0));	/* Black2 */
 	
 	/* グラフィックパレットの初期化 */
 	for(a=0; a < 0xFF; a++)
 	{
-		GPALET( a, SetRGB(31, 31, 31));	/* White */
+		GPALET( a, SetRGB(0, 0, 0));	/* Black */
 	}
 	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
 	GPALET( 1, SetRGB(16, 16, 16));	/* Glay1 */
@@ -248,7 +291,7 @@ void main(void)
 	/* 建物 */
 	for(e = 0; e < 8; e++)
 	{
-		Draw_Fill((e << 6), 0/*Y_HORIZON-16-1*/, (e << 6) + 10, Y_HORIZON-1, 14);
+		Draw_Fill((e << 6), Y_HORIZON-16-1, (e << 6) + 10, Y_HORIZON-1, 14);
 	}
 #if 0
 	/* 空 */
@@ -327,25 +370,38 @@ void main(void)
 	c = 0;
 	speed = 0;
 	loop = 1;
+	vx = vy =0;
+	count=0;
+	jdge = 50000;
 	do
 	{
 #if 0		
 		US time, time_old, time_now;
 		GetNowTime(&time_old);
 #endif
-
-		if( ( BITSNS( 2 ) & 0x02 ) != 0 ) loop = 0;	/* Ｑで終了 */
-		if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
+		
+		input = get_key(1);
+		if( input == KEY_b_Q ) loop = 0;	/* Ｑで終了 */
+		if( input == KEY_b_ESC ) loop = 0;	/* ＥＳＣポーズ */
 		if(loop == 0)break;
+		
+		if(input == KEY_UPPER)	vy += 1;
+		if(input == KEY_LOWER)	vy -= 1;
+		vy = Mmax(Mmin(vy, 32767), -32768);
+		road = vy >> 1;
 
-#if 1
-		if(get_key() == KEY_UPPER)	speed += 1; 
-		if(get_key() == KEY_LOWER)	speed -= 1; 
-		if(get_key() == KEY_RIGHT)	vx += 1; 
-		if(get_key() == KEY_LEFT)	vx -= 1; 
-		speed = Mmax(Mmin(speed, 256), 0);
-		vx = Mmax(Mmin(vx, 7), -8);
-#else
+		if(input == KEY_RIGHT)	vx += 8;
+		if(input == KEY_LEFT)	vx -= 8;
+		vx = Mmax(Mmin(vx, 180), -180);
+		
+		if(input == KEY_A){
+			speed -= 1;
+		}
+		else{
+			if((count % 5) == 0)speed += 1;
+		}
+		speed = Mmax(Mmin(speed, 0), -15);
+#if 0
 		a++;
 		if(a >= 1024)
 		{
@@ -353,22 +409,52 @@ void main(void)
 			c = 0;
 		}
 		d = Mmin(Mmax(RD[a], -32768), 32767);
-		c += d;
-
-		speed = c / 100;
+//		vx += d;
+//		
 #endif
 		
-		for(y=0; y < RASTER_MAX; y++)
+		c = 0;
+		e = 8;
+		jdge = (RASTER_ED - RASTER_ST) * (RASTER_ED - RASTER_ST);
+		for(y=RASTER_ST; y < RASTER_ED; y+=RASTER_NEXT)
 		{
-			ras_tmp[y] = X_MIN;
-			if(y >= RASTER_ST){
-				ras_tmp[y] += vx * ( (RASTER_ED - RASTER_ST) / (float)(Mmax(y-RASTER_ST, 1)) );
+			UI num = y;
+			h = y - RASTER_ST;
+			ras_tmp[num] = vx + road * ( (RASTER_ED - RASTER_ST) / (float)(Mmax(num-RASTER_ST, 1)) );
+
+			b = (RASTER_ED-y) * (RASTER_ED-y);	/* 判定閾値 */;
+			if(jdge + speed > b){
+				jdge -= 2500;
+				d++;
+			}
+
+			if(d >= 4)d=0;
+			pal_tmp[num] = d * 96;
+
+			/* ラスター飛ばし分 */
+			for(i=0; i<=vy; i++){
+				ras_tmp[num+i] = ras_tmp[num];
+				pal_tmp[num+i] = pal_tmp[num];
 			}
 		}
 		SetRasterVal(ras_tmp, sizeof(US)*RASTER_MAX);
+		SetRasterPal(pal_tmp, sizeof(US)*RASTER_MAX);
 		
-//		moni = ras_tmp[RASTER_ST];
-//		moni_MAX = ras_tmp[RASTER_ED];
+#if 0		
+		stFont.xl = 8;
+		stFont.yl = 8;
+		memcpy(stFont.buffer, (unsigned char *)(0xEB8000+0x800), stFont.xl * stFont.yl);
+		TEXTPUT(128+0,128, &stFont);
+		memcpy(stFont.buffer, (unsigned char *)(0xEB8000+0x800+32), stFont.xl * stFont.yl);
+		TEXTPUT(128+8,128, &stFont);
+		memcpy(stFont.buffer, (unsigned char *)(0xEB8000+0x800+64), stFont.xl * stFont.yl);
+		TEXTPUT(128+16,128, &stFont);
+		memcpy(stFont.buffer, (unsigned char *)(0xEB8000+0x800+96), stFont.xl * stFont.yl);
+		TEXTPUT(128*24,128, &stFont);
+#endif
+
+		moni = count;
+		moni_MAX = speed;
 
 		Message_Num(speed, 0, 0);
 		Message_Num(moni, 0, 1);
@@ -383,6 +469,8 @@ void main(void)
 		Message_Num(time_cal, 0, 3);
 		Message_Num(time_cal_PH, 0, 4);
 #endif
+		count++;
+		if(count >= 10000)count=0;
 		/* 同期待ち */
 		vwait(1);
 	}
@@ -392,17 +480,32 @@ void main(void)
 	HSYNCST((void *)0);			/* stop */
 	VDISPST((void *)0, 0, 0);	/* stop */
 	TIMERDST((void *)0, 0, 1);	/* stop */
-
+	
 	BGCTRLST(0, 0, 0);	/* ＢＧ０表示ＯＮ */
 	BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＮ */
 	G_CLR_ON();
 
 	B_CURON();
 
-	CRTMOD(crtmod);
+	CRTMOD(crtmod);			/* モードをもとに戻す */
 	
+	_dos_kflushio(0xFF);	/* キーバッファをクリア */
+
 	/*スーパーバイザーモード終了*/
 	SUPER(superchk);
+
+#if	1
+	for(x=RASTER_ST;x<RASTER_ED;x++){
+		printf("%3d=%3d,", x, pal_tmp[x]);
+		if((x % 11) == 0)
+		{
+			printf("\n");
+		}
+	}
+	printf("\n");
+
+#endif
+
 }
 
 #endif	/* OVERKATA_C */

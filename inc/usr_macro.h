@@ -36,6 +36,19 @@
  */
 #define Mabs(x) ((x) < 0 ? -(x) : (x))
 
+/*
+        Mbset - bitセット -
+*/
+/**
+ * 指定された引数のビットをセット.
+ * @param [in] x        元の値
+ * @param [in] y        変更したい領域
+ * @param [in] z        変更したい値
+ * @retval ビットセットされた値
+ * @attention 引数は複数回評価される.
+ */
+#define Mbset(x,y,z) (((x) & ~(y)) | (z))
+
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 
 #define SetBGcode(V,H,PAL,PCG)	((V << 15) + (H << 14) + (PAL << 8) + PCG)

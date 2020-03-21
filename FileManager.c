@@ -59,12 +59,13 @@ SI File_Load(SC *fname, void *ptr, size_t size, size_t n)
 SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 {
 	FILE *fp;
-	UI ret, x, y, flag;
+	UI ret, x, y, flag, cnv_flag;
 	char buf[1000], *s, *p, *end;
 	
 	x = 0;
 	y = 0;
 	flag = 0;
+	cnv_flag = 0;
 	
 	fp = fopen(fname, "r");
 	if(fp == NULL)
@@ -100,6 +101,7 @@ SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 
 					p = end + 1;
 					
+					cnv_flag = 1;
 					x++;
 				}
 				else
@@ -109,7 +111,11 @@ SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 				}
 			}
 			while(1);
-			y++;
+			
+			if(cnv_flag != 0){
+				cnv_flag = 0;
+				y++;
+			}
 			x = 0;
 		}
 		fclose(fp);

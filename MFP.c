@@ -13,9 +13,12 @@
 /* 変数 */
 static volatile US NowTime;
 static volatile US ras_count;
+static volatile US pal_count;
+static volatile US ras_v_offset;
 static volatile US Hsync_count;
 static volatile US Vsync_count;
 static US ras_val[1024];
+static US ras_pal[1024];
 
 /* 関数のプロトタイプ宣言 */
 UI Init_MFP(void);
@@ -25,17 +28,19 @@ SI SetNowTime(US);		/* 現在の時間を設定する */
 void interrupt Hsync_Func(void);
 void interrupt Raster_Func(void);
 SI SetRasterVal(void *, size_t);		/* ラスター専用のバッファにコピーする */
+SI SetRasterPal(void *, size_t);		/* ラスター専用(PAL)のバッファにコピーする */
 void interrupt Vsync_Func(void);
 SI vwait(SI);
 
+/* 関数 */
 UI Init_MFP(void)	/* 現在の時間を取得する */
 {
 	NowTime = 0;
 	ras_count = RASTER_ST;
+	pal_count = 0;
+	ras_v_offset = 0;
 	Hsync_count = 0;
 	Vsync_count = 0;
-	
-	ras_val[1024];
 	
 	return 0;
 }
@@ -68,15 +73,35 @@ void interrupt Hsync_Func(void)
 
 void interrupt Raster_Func(void)
 {
-	volatile US *scroll_x    = (US *)0xE80018;
-	volatile US *BGscroll_x  = (US *)0xEB0800;
-	volatile US *raster_addr = (US *)0xE80012;
+	volatile US *scroll_x     = (US *)0xE80018;
+	volatile US *BG0scroll_x  = (US *)0xEB0800;
+	volatile US *BG0scroll_y  = (US *)0xEB0802;
+	volatile US *BG1scroll_x  = (US *)0xEB0804;
+	volatile US *BG1scroll_y  = (US *)0xEB0806;
+	volatile US *raster_addr  = (US *)0xE80012;
+	US nNum = ras_count;
 	
 	ras_count += RASTER_NEXT;
-	if(ras_count >= RASTER_MAX)ras_count = RASTER_ST;
-	*raster_addr = ras_count;
-	*scroll_x	= ras_val[ras_count];
-	*BGscroll_x	= ras_val[ras_count];
+	if(ras_count >= RASTER_ED){
+		ras_count = RASTER_ED;
+		*BG0scroll_x = 0;
+		*BG0scroll_y = 0;
+		*BG1scroll_x = 256;
+		*BG1scroll_y = 0;
+	}
+	else{
+		*raster_addr = ras_count;
+		*BG0scroll_x = ras_val[nNum];
+		*BG0scroll_y = ras_pal[nNum];
+		*BG1scroll_x = 256;
+		*BG1scroll_y = 0;
+	}
+	*scroll_x	= ras_val[nNum];
+	
+//	pal_count += RASTER_NEXT;
+
+//	moni = ras_val[nNum];
+//	moni_MAX = ras_pal[nNum];
 
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
@@ -91,9 +116,24 @@ SI SetRasterVal(void *pSrc, size_t n)
 	return ret;
 }
 
+SI SetRasterPal(void *pSrc, size_t n)
+{
+	SI ret = 0;
+	if(memcpy(ras_pal, pSrc, n) == NULL)
+	{
+		ret = -1;
+	}
+	return ret;
+}
+
 void interrupt Vsync_Func(void)
 {
-//	VDISPST((void *)0, 0, 0);	/* stop */
+	volatile US *BG0scroll_x  = (US *)0xEB0800;
+	volatile US *BG0scroll_y  = (US *)0xEB0802;
+	volatile US *BG1scroll_x  = (US *)0xEB0804;
+	volatile US *BG1scroll_y  = (US *)0xEB0806;
+
+	//	VDISPST((void *)0, 0, 0);	/* stop */
 	
 	if((Vsync_count % 10) < 5)
 	{
@@ -118,8 +158,15 @@ void interrupt Vsync_Func(void)
 		GPALET( 8, SetRGB( 0, 28,  0));	/* Green */
 	}
 
+	*BG0scroll_x = 0;
+	*BG0scroll_y = 0;
+	*BG1scroll_x = 0;
+	*BG1scroll_y = 0;
+
 	ras_count = RASTER_ST;
 //	ras_count = RASTER_MIN;
+	pal_count = 0;
+	ras_v_offset = 0;
 	CRTCRAS(Raster_Func, RASTER_ST );	/* ラスター割り込み */
 	Hsync_count = 0;
 //	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
