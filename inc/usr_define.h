@@ -2,7 +2,7 @@
 #define	USR_DEFINE_H
 
 #define WIDTH		(256)
-#define HEIGHT		(224)
+#define HEIGHT		(256)
 
 /* ÇwÅCÇxç¿ïWÇÃç≈ëÂÇ∆ç≈è¨ */
 #define X_MIN_DRAW	(0)

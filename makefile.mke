@@ -17,7 +17,7 @@ clean:
 	inc/*.bak
 
 execonly:
-	rm -f *.ind *.bak *.o *.c *.h *.s makefile \
+	rm -f *.ind *.bak *.o \
 	rmdir inc
 
 OverKata.x:	OverKata.o Draw.o MFP.o FileManager.o
@@ -34,5 +34,5 @@ OverKata.o:	inc/usr_define.h
 MFP.o:	inc/usr_define.h
 
 dist:
-	LHA a -t ../$(LZH)
+	LHA a -t $(LZH)
 

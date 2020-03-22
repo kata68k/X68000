@@ -13,8 +13,6 @@
 /* 変数 */
 static volatile US NowTime;
 static volatile US ras_count;
-static volatile US pal_count;
-static volatile US ras_v_offset;
 static volatile US Hsync_count;
 static volatile US Vsync_count;
 static US ras_val[1024];
@@ -36,9 +34,8 @@ SI vwait(SI);
 UI Init_MFP(void)	/* 現在の時間を取得する */
 {
 	NowTime = 0;
-	ras_count = RASTER_ST;
-	pal_count = 0;
-	ras_v_offset = 0;
+	ras_pal[0] = 0;
+	ras_count = RASTER_ST + ras_pal[0];
 	Hsync_count = 0;
 	Vsync_count = 0;
 	
@@ -79,30 +76,18 @@ void interrupt Raster_Func(void)
 	volatile US *BG1scroll_x  = (US *)0xEB0804;
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
 	volatile US *raster_addr  = (US *)0xE80012;
+
 	US nNum = ras_count;
 	
-	ras_count += RASTER_NEXT;
-	if(ras_count >= RASTER_ED){
-		ras_count = RASTER_ED;
-		*BG0scroll_x = 0;
-		*BG0scroll_y = 0;
-		*BG1scroll_x = 256;
-		*BG1scroll_y = 0;
-	}
-	else{
-		*raster_addr = ras_count;
-		*BG0scroll_x = ras_val[nNum];
-		*BG0scroll_y = ras_pal[nNum];
-		*BG1scroll_x = 256;
-		*BG1scroll_y = 0;
-	}
-	*scroll_x	= ras_val[nNum];
+	ras_count += RASTER_NEXT;		/* 次のラスタ割り込み位置の計算 */
+	*raster_addr = ras_count;		/* 次のラスタ割り込み位置の設定 */
+
+	*BG0scroll_x = ras_val[nNum];	/* BG0のX座標の設定 */
+	*BG0scroll_y = ras_pal[nNum];	/* BG0のY座標の設定 */
+	*BG1scroll_x = 256;				/* BG1のX座標の設定 */
+	*BG1scroll_y = 0;				/* BG1のY座標の設定 */
+	*scroll_x	= ras_val[nNum];	/* GRのX座標の設定 */
 	
-//	pal_count += RASTER_NEXT;
-
-//	moni = ras_val[nNum];
-//	moni_MAX = ras_pal[nNum];
-
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
@@ -158,16 +143,8 @@ void interrupt Vsync_Func(void)
 		GPALET( 8, SetRGB( 0, 28,  0));	/* Green */
 	}
 
-	*BG0scroll_x = 0;
-	*BG0scroll_y = 0;
-	*BG1scroll_x = 0;
-	*BG1scroll_y = 0;
-
-	ras_count = RASTER_ST;
-//	ras_count = RASTER_MIN;
-	pal_count = 0;
-	ras_v_offset = 0;
-	CRTCRAS(Raster_Func, RASTER_ST );	/* ラスター割り込み */
+	ras_count = RASTER_ST + ras_pal[0];
+	CRTCRAS(Raster_Func, ras_count );	/* ラスター割り込み */
 	Hsync_count = 0;
 //	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
 	Vsync_count++;

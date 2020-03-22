@@ -99,6 +99,8 @@ void main(void)
 	UI	count=0;
 	UI	jdge=0;
 	SS	road;
+	SS	road_offset_x, road_offset_y;
+	SI	ras_st;
 	SS	input;
 	struct _fntbuf	stFont;
 
@@ -150,8 +152,8 @@ void main(void)
 	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
 	HOME(0, X_OFFSET, Y_OFFSET);
 	HOME(1, X_OFFSET, Y_OFFSET);
-	HOME(2, X_OFFSET, 416);
-	HOME(3, X_OFFSET, 416);
+//	HOME(2, X_OFFSET, 416);
+//	HOME(3, X_OFFSET, 416);
 	WIPE();
 	*VIDEO_REG1 = Mbset(*VIDEO_REG1,   0x07, 0b001);			/* 512x512 256color 2men */
 	*VIDEO_REG2 = Mbset(*VIDEO_REG2, 0x3FFF, 0b10000111100100);	/* 優先順位 TX>GR>SP GR0>GR1>GR2>GR3 */
@@ -174,6 +176,8 @@ void main(void)
 	px1 = X_MAX_H;
 	px2 = X_MAX_H;
 	speed = 0;
+	road_offset_x = 0;
+	road_offset_y = 0;
 	
 	for(a=0; a < 512; a++)
 	{
@@ -375,7 +379,7 @@ void main(void)
 	jdge = 50000;
 	do
 	{
-#if 0		
+#if 1		
 		US time, time_old, time_now;
 		GetNowTime(&time_old);
 #endif
@@ -387,8 +391,8 @@ void main(void)
 		
 		if(input == KEY_UPPER)	vy += 1;
 		if(input == KEY_LOWER)	vy -= 1;
-		vy = Mmax(Mmin(vy, 32767), -32768);
-		road = vy >> 1;
+		vy = Mmax(Mmin(vy, 16), -16);
+		road = vy;
 
 		if(input == KEY_RIGHT)	vx += 8;
 		if(input == KEY_LEFT)	vx -= 8;
@@ -414,22 +418,43 @@ void main(void)
 #endif
 		
 		c = 0;
-		e = 8;
-		jdge = (RASTER_ED - RASTER_ST) * (RASTER_ED - RASTER_ST);
-		for(y=RASTER_ST; y < RASTER_ED; y+=RASTER_NEXT)
+		pal_tmp[0] = 0;
+		ras_st = RASTER_ST;
+		e = (RASTER_ED - ras_st);
+		f = (RASTER_ED - RASTER_NEXT);
+		jdge = e * e;
+
+		HOME(0, X_OFFSET, Y_OFFSET + pal_tmp[0]);
+
+		for(y=ras_st; y < RASTER_ED; y+=RASTER_NEXT)
 		{
 			UI num = y;
-			h = y - RASTER_ST;
-			ras_tmp[num] = vx + road * ( (RASTER_ED - RASTER_ST) / (float)(Mmax(num-RASTER_ST, 1)) );
-
-			b = (RASTER_ED-y) * (RASTER_ED-y);	/* 判定閾値 */;
+			h = y - ras_st;
+			
+			/* Y座標 */
+			c = (RASTER_ED-y);
+			b = c * c;				/* 判定閾値 */;
 			if(jdge + speed > b){
 				jdge -= 2500;
 				d++;
 			}
 
 			if(d >= 4)d=0;
+			if(y >= f){
+				d=0;
+			}
 			pal_tmp[num] = d * 96;
+
+			/* X座標 */
+			a = y * y;
+			road_offset_x = 0;
+			if(vx > 0){
+				ras_tmp[num] = vx + road_offset_x;
+			}
+			else{
+				ras_tmp[num] = vx - road_offset_x;
+			}
+			ras_tmp[num] += road * ( e / (float)(Mmax(num-ras_st, 1)) );
 
 			/* ラスター飛ばし分 */
 			for(i=0; i<=vy; i++){
@@ -460,11 +485,11 @@ void main(void)
 		Message_Num(moni, 0, 1);
 		Message_Num(moni_MAX, 0, 2);
 		
-#if 0		
+#if 1		
 		/* 処理時間計測 */
 		GetNowTime(&time_now);
 		time = time_now - time_old;
-		time_cal = time << 4;	/* 物量変換 */
+		time_cal = time;
 		time_cal_PH = Mmax(time_cal, time_cal_PH);
 		Message_Num(time_cal, 0, 3);
 		Message_Num(time_cal_PH, 0, 4);
@@ -495,7 +520,7 @@ void main(void)
 	SUPER(superchk);
 
 #if	1
-	for(x=RASTER_ST;x<RASTER_ED;x++){
+	for(x=RASTER_ST-1;x<=RASTER_ED;x++){
 		printf("%3d=%3d,", x, pal_tmp[x]);
 		if((x % 11) == 0)
 		{
