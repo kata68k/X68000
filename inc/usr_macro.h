@@ -49,6 +49,18 @@
  */
 #define Mbset(x,y,z) (((x) & ~(y)) | (z))
 
+/*
+        Mdec - デクリメント（０クリップ） -
+*/
+/**
+ * 指定された引数のビットをセット.
+ * @param [in] x        カウンタ
+ * @param [in] y        減算したい値
+ * @retval 減算された値
+ * @attention 引数は複数回評価される.
+ */
+#define Mdec(x,y) (x = (x > (x - y)) ? (x - y) : 0)
+
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 
 #define SetBGcode(V,H,PAL,PCG)	((V << 15) + (H << 14) + (PAL << 8) + PCG)

@@ -23,16 +23,66 @@ US	map_data[64][64];
 
 
 /* 関数のプロトタイプ宣言 */
-void Message_Num(SS, SI, SI);
+void Message_Num(void *, SI, SI, UC);
 SS get_key( SI );
 
 /* 関数 */
-void Message_Num(SS num, SI x, SI y)
+void Message_Num(void *pNum, SI x, SI y, UC mode)
 {
 	char str[64];
 
-	sprintf(str, "%d", num);
-	B_PUTMES( 3, x, y, 10-1, str);
+	switch(mode){
+	case MONI_Type_UI:
+		{
+			UI *num;
+			num = (UI *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	case MONI_Type_SI:
+		{
+			SI *num;
+			num = (SI *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	case MONI_Type_US:
+		{
+			US *num;
+			num = (US *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	case MONI_Type_SS:
+		{
+			SS *num;
+			num = (SS *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	case MONI_Type_UC:
+		{
+			UC *num;
+			num = (UC *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	case MONI_Type_SC:
+		{
+			SC *num;
+			num = (SC *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	default:
+		{
+			US *num;
+			num = (US *)pNum;
+			sprintf(str, "%d", *num);
+		}
+		break;
+	}
+	B_PUTMES( 2, x, y, 10-1, str);
 }
 
 SS get_key( SI mode )
@@ -93,15 +143,18 @@ void main(void)
 	US	ras_tmp[512];
 	US	pal_tmp[512];
 	US	*ptr;
-	SS	vx, vy;
-	UI	vi, vj;
+	US	usV_pat;
 	UI	pal = 0;
-	UI	count=0;
-	UI	jdge=0;
+	US	usFreeRunCount=0;
+	UI	uJdge=0;
+	UI	uCountNum;
+	UI	uSQ;
+	SI	ras_st;
+	SS	vx, vy;
 	SS	road;
 	SS	road_offset_x, road_offset_y;
-	SI	ras_st;
 	SS	input;
+	UC	road_flag;
 	struct _fntbuf	stFont;
 
 	volatile US *V_Sync_end = (US *)0xE8000E;
@@ -111,6 +164,7 @@ void main(void)
 
 	/* デバッグコーナー */
 #if 0
+	UI	vi, vj;
 	/* マップデータ読み込み */
 	File_Load_CSV("data/map.csv", map_data, &vi, &vj);
 	
@@ -169,7 +223,7 @@ void main(void)
 	Init_MFP();
 
 	/*Timer-Dセット*/
-	TIMERDST(Timer_D_Func, 7, 200);	/* 50us(7) x 200cnt = 10ms */
+	TIMERDST(Timer_D_Func, 7, 20);	/* 50us(7) x 20cnt = 1ms */
 	SetNowTime(0);
 
 	/* 変数の初期化 */
@@ -236,7 +290,7 @@ void main(void)
 		}
 	}
 
-	count=0;
+	usV_pat=0;
 	pal = 1;
 	for(y=16; y<j; y++)
 	{
@@ -252,12 +306,12 @@ void main(void)
 			}
 		}
 		
-		count++;
-		if(count < 12){
+		usV_pat++;
+		if(usV_pat < 12){
 		}
 		else{
 			pal++;
-			count=0;
+			usV_pat=0;
 		}
 	}
 	/* テキストパレットの初期化(Pal0はSPと共通) */
@@ -375,97 +429,88 @@ void main(void)
 	speed = 0;
 	loop = 1;
 	vx = vy =0;
-	count=0;
-	jdge = 50000;
+	usFreeRunCount = 0;
 	do
 	{
-#if 1		
+		UI unHantei = 0;
 		US time, time_old, time_now;
-		GetNowTime(&time_old);
-#endif
+		
+		if((usFreeRunCount % 10) == 0){
+			GetNowTime(&time_old);
+		}
 		
 		input = get_key(1);
-		if( input == KEY_b_Q ) loop = 0;	/* Ｑで終了 */
-		if( input == KEY_b_ESC ) loop = 0;	/* ＥＳＣポーズ */
+		if(input & KEY_b_Q   ) loop = 0;	/* Ｑで終了 */
+		if(input & KEY_b_ESC ) loop = 0;	/* ＥＳＣポーズ */
 		if(loop == 0)break;
 		
-		if(input == KEY_UPPER)	vy += 1;
-		if(input == KEY_LOWER)	vy -= 1;
+		if(input & KEY_UPPER)	vy += 1;
+		if(input & KEY_LOWER)	vy -= 1;
 		vy = Mmax(Mmin(vy, 16), -16);
-		road = vy;
 
-		if(input == KEY_RIGHT)	vx += 8;
-		if(input == KEY_LEFT)	vx -= 8;
-		vx = Mmax(Mmin(vx, 180), -180);
+		if(input & KEY_RIGHT)	vx += 1;
+		if(input & KEY_LEFT)	vx -= 1;
+		vx = Mmax(Mmin(vx, 32), -32);
 		
-		if(input == KEY_A){
-			speed -= 1;
+		if(input & KEY_A){
+			speed += 1;
 		}
 		else{
-			if((count % 5) == 0)speed += 1;
+			if((usFreeRunCount % 5) == 0)speed -= 1;
 		}
-		speed = Mmax(Mmin(speed, 0), -15);
-#if 0
-		a++;
-		if(a >= 1024)
+		speed = Mmax(Mmin(speed, 32), 0);
+
+		if( (usFreeRunCount % 5) == 0 )
 		{
-			a = 0;
-			c = 0;
-		}
-		d = Mmin(Mmax(RD[a], -32768), 32767);
-//		vx += d;
-//		
-#endif
-		
-		c = 0;
-		pal_tmp[0] = 0;
-		ras_st = RASTER_ST;
-		e = (RASTER_ED - ras_st);
-		f = (RASTER_ED - RASTER_NEXT);
-		jdge = e * e;
-
-		HOME(0, X_OFFSET, Y_OFFSET + pal_tmp[0]);
-
-		for(y=ras_st; y < RASTER_ED; y+=RASTER_NEXT)
-		{
-			UI num = y;
-			h = y - ras_st;
-			
-			/* Y座標 */
-			c = (RASTER_ED-y);
-			b = c * c;				/* 判定閾値 */;
-			if(jdge + speed > b){
-				jdge -= 2500;
-				d++;
-			}
-
-			if(d >= 4)d=0;
-			if(y >= f){
-				d=0;
-			}
-			pal_tmp[num] = d * 96;
-
-			/* X座標 */
-			a = y * y;
-			road_offset_x = 0;
-			if(vx > 0){
-				ras_tmp[num] = vx + road_offset_x;
+			if(road_flag == 0){
+				road += 1;
+				if(road > 12)road_flag = 1;
 			}
 			else{
-				ras_tmp[num] = vx - road_offset_x;
+				road -= 1;
+				if(road < -12)road_flag = 0;
 			}
-			ras_tmp[num] += road * ( e / (float)(Mmax(num-ras_st, 1)) );
+		}
+		
+		d = 0;
+
+		uJdge = (UI)((RASTER_ED - RASTER_ST) * (RASTER_ED - RASTER_ST));
+
+		unHantei = 0;
+		for(y=RASTER_ST; y < RASTER_ED; y+=RASTER_NEXT)
+		{
+			UI num = (UI)y- RASTER_ST;
+			UI Anime;
+
+			Anime = (num + (0xF & usFreeRunCount));
+			
+			/* Y座標 */
+			pal_tmp[y] = d * 96;
+			
+			if( Anime > unHantei ){
+				unHantei = (float)Anime * 1.2;
+				d++;
+				if(d >= 4)d=0;
+			}
+			
+			if(y >= (RASTER_ED - RASTER_NEXT)){		/* ラスタの最後は元の座標に戻す */
+				d = 0;
+			}
+
+			/* X座標 */
+			ras_tmp[y] = num * ((float)vx / 32);
+			ras_tmp[y] += road * ( (RASTER_ED - RASTER_ST) / (float)(Mmax(y-RASTER_ST, 1)) );
 
 			/* ラスター飛ばし分 */
-			for(i=0; i<=vy; i++){
-				ras_tmp[num+i] = ras_tmp[num];
-				pal_tmp[num+i] = pal_tmp[num];
+			for(i = 0; i < RASTER_NEXT; i++){
+				ras_tmp[y+i] = ras_tmp[y];
+				pal_tmp[y+i] = pal_tmp[y];
 			}
 		}
 		SetRasterVal(ras_tmp, sizeof(US)*RASTER_MAX);
 		SetRasterPal(pal_tmp, sizeof(US)*RASTER_MAX);
 		
-#if 0		
+#if 0
 		stFont.xl = 8;
 		stFont.yl = 8;
 		memcpy(stFont.buffer, (unsigned char *)(0xEB8000+0x800), stFont.xl * stFont.yl);
@@ -478,24 +523,26 @@ void main(void)
 		TEXTPUT(128*24,128, &stFont);
 #endif
 
-		moni = count;
-		moni_MAX = speed;
+#if 1
+		if((usFreeRunCount % 10) == 0){
+			
+			/* 処理時間計測 */
+			GetNowTime(&time_now);
+			time = time_now - time_old;
+			time_cal = time;	/* LSB:1 UNIT:ms */
+			time_cal_PH = Mmax(time_cal, time_cal_PH);
 
-		Message_Num(speed, 0, 0);
-		Message_Num(moni, 0, 1);
-		Message_Num(moni_MAX, 0, 2);
-		
-#if 1		
-		/* 処理時間計測 */
-		GetNowTime(&time_now);
-		time = time_now - time_old;
-		time_cal = time;
-		time_cal_PH = Mmax(time_cal, time_cal_PH);
-		Message_Num(time_cal, 0, 3);
-		Message_Num(time_cal_PH, 0, 4);
+			/* モニタ */
+			Message_Num(&speed,			0, 0, MONI_Type_SS);
+			Message_Num(&vx, 			0, 1, MONI_Type_SS);
+			Message_Num(&vy, 			0, 2, MONI_Type_SS);
+			Message_Num(&time_cal,	 	0, 3, MONI_Type_SI);
+			Message_Num(&time_cal_PH,	0, 4, MONI_Type_SI);
+			Message_Num(&road,			0, 5, MONI_Type_SI);
+		}
 #endif
-		count++;
-		if(count >= 10000)count=0;
+		usFreeRunCount++;
+
 		/* 同期待ち */
 		vwait(1);
 	}
@@ -528,7 +575,6 @@ void main(void)
 		}
 	}
 	printf("\n");
-
 #endif
 
 }

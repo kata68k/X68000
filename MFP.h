@@ -12,6 +12,7 @@ extern void interrupt Vsync_Func(void);
 extern SI vwait(SI);
 extern SI GetNowTime(US *);	/* 現在の時間を取得する */
 extern SI SetNowTime(US);		/* 現在の時間を設定する */
+
 extern SI SetRasterVal(void *, size_t);	/* ラスター専用のバッファにコピーする */
 extern SI SetRasterPal(void *, size_t);	/* ラスター専用(PAL)のバッファにコピーする */
 
