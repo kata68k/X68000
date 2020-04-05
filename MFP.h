@@ -4,6 +4,17 @@
 #include <string.h>
 #include "inc/usr_style.h"
 
+enum{
+	DST_none=0,
+	DST_1us,
+	DST_2p5us,
+	DST_4us,
+	DST_12p5us,
+	DST_16us,
+	DST_25us,
+	DST_50us,
+};
+
 extern UI Init_MFP(void);
 extern void interrupt Timer_D_Func(void);
 extern void interrupt Hsync_Func(void);

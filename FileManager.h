@@ -9,5 +9,6 @@
 extern SI File_Load(SC *, void *, size_t, size_t);
 extern SI File_Load_CSV(SC *, US *, UI *, UI *);
 extern void sp_dataload(void);
+extern SI APICG_DataLoad(SC *, US, US);
 
 #endif	/* FILEMANAGER_H */

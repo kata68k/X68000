@@ -5,7 +5,7 @@ CFLAGS	= -O -fomit-frame-pointer -fstrength-reduce
 AS		= has
 LD		= hlk
 INC		= 
-LIBS	= libc.a libgnu.a
+LIBS	= libc.a libgnu.a LIB/APICGLIB.a
 LZH		= OverKata100
 
 .PHONY: all
@@ -20,7 +20,7 @@ execonly:
 	rm -f *.ind *.bak *.o \
 	rmdir inc
 
-OverKata.x:	OverKata.o Draw.o MFP.o FileManager.o
+OverKata.x:	OverKata.o Draw.o MFP.o FileManager.o Input.o OutPut_Text.o
 	$(LD) $^ -o $@ -l $(LIBS)
 OverKata.o:	OverKata.c
 	$(CC) $(CFLAGS) -c $<
@@ -30,8 +30,12 @@ MFP.o:	MFP.c
 	$(CC) $(CFLAGS) -c $<
 FileManager.o:	FileManager.c
 	$(CC) $(CFLAGS) -c $<
+Input.o:	Input.c
+	$(CC) $(CFLAGS) -c $<
+OutPut_Text.o:	OutPut_Text.c
+	$(CC) $(CFLAGS) -c $<
 OverKata.o:	inc/usr_define.h
-MFP.o:	inc/usr_define.h
+MFP.o:		inc/usr_define.h
 
 dist:
 	LHA a -t $(LZH)

@@ -1,7 +1,7 @@
 ECHO OFF
 ZMSC.X
-ZP data\DB_BGM1.ZMD
+echo ZP data\DB_BGM1.ZMD
 OverKata.x
-ZP -S
+echo ZP -S
 ZMSC.X -R
 

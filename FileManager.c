@@ -20,7 +20,9 @@ static unsigned short pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ 
 /* 関数のプロトタイプ宣言 */
 SI File_Load(SC *, void *, size_t, size_t);
 SI File_Load_CSV(SC *, US *, UI *, UI *);
-void sp_dataload(void);
+SI PCG_SP_dataload(SC *);
+SI PCG_PAL_dataload(SC *);
+SI APICG_DataLoad(SC *, US, US);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
@@ -30,7 +32,7 @@ void sp_dataload(void);
 SI File_Load(SC *fname, void *ptr, size_t size, size_t n)
 {
 	FILE *fp;
-	UI ret;
+	SI ret = 0;
 
 	/* ファイルを開ける */
 	fp = fopen(fname, "rb");
@@ -38,6 +40,7 @@ SI File_Load(SC *fname, void *ptr, size_t size, size_t n)
 	if(fp == NULL)
 	{
 		/* ファイルが読み込めません */
+		ret = -1;
 	}
 	else
 	{
@@ -59,7 +62,8 @@ SI File_Load(SC *fname, void *ptr, size_t size, size_t n)
 SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 {
 	FILE *fp;
-	UI ret, x, y, flag, cnv_flag;
+	SI ret = 0;
+	UI x, y, flag, cnv_flag;
 	char buf[1000], *s, *p, *end;
 	
 	x = 0;
@@ -126,44 +130,103 @@ SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 	return ret;
 }
 
-void sp_dataload(void)
+SI PCG_SP_dataload(SC *fname)
 {
 	FILE *fp;
+	SI ret = 0;
 	UI i,j;
 
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
 
-	fp = fopen( "data/BG.SP" , "rb" ) ;
-	pcg_size = filelength( fileno( fp ) );
-	pcg_dat = ( char *) malloc( pcg_size );
-	j = fread( pcg_dat
-		,  128		/* 1PCG = 128byte */
-		,  PCG_MAX	/* 256PCG */
-		,  fp
-		) ;
-	fclose( fp ) ;
-
-	for( i = 0 ; i < PCG_MAX ; i++ ){
-		SP_DEFCG( i, 1, pcg_dat );
-		pcg_dat += 128;
+	fp = fopen( fname , "rb" ) ;
+	if(fp == NULL)
+	{
+		ret = -1;
 	}
+	else
+	{
+		pcg_size = filelength( fileno( fp ) );
+		pcg_dat = ( char *) malloc( pcg_size );
+		j = fread( pcg_dat
+			,  128		/* 1PCG = 128byte */
+			,  PCG_MAX	/* 256PCG */
+			,  fp
+			) ;
+		fclose( fp ) ;
+
+		for( i = 0 ; i < PCG_MAX ; i++ ){
+			SP_DEFCG( i, 1, pcg_dat );
+			pcg_dat += 128;
+		}
+	}
+	
+	return ret;
+}
+
+SI PCG_PAL_dataload(SC *fname)
+{
+	FILE *fp;
+	SI ret = 0;
+	UI i,j;
 
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
 
-	fp = fopen( "data/BG.PAL" , "rb" ) ;
-	fread( pal_dat
-		,  2		/* 1palet = 2byte */
-		,  256		/* 16palet * 16block */
-		,  fp
-		) ;
-	fclose( fp ) ;
-
-	/* スプライトパレットに転送 */
-	for( i = 0 ; i < 256 ; i++ )
+	fp = fopen( fname , "rb" ) ;
+	if(fp == NULL)
 	{
-		SPALET( (i&15) | (1<<0x1F) , i/16+1 , pal_dat[i] ) ;
+		ret = -1;
 	}
+	else
+	{
+		fread( pal_dat
+			,  2		/* 1palet = 2byte */
+			,  256		/* 16palet * 16block */
+			,  fp
+			) ;
+		fclose( fp ) ;
 
+		/* スプライトパレットに転送 */
+		for( i = 0 ; i < 256 ; i++ )
+		{
+			SPALET( (i&15) | (1<<0x1F) , i/16+1 , pal_dat[i] ) ;
+		}
+	}
+	
+	return ret;
+}
+
+#define	PIC_FILE_BUF_SIZE	(16*1024)
+
+/* PICファイルを読み込み */
+SI APICG_DataLoad(SC *fname, US pos_x, US pos_y)
+{
+	US *GR = (US *)0xC00000;
+	UC *file_buf, *work_buf;
+	SI ret;
+	file_buf = _dos_malloc (PIC_FILE_BUF_SIZE);
+	work_buf = _dos_malloc (256 * 256);
+	
+	if (((int) file_buf < 0) || ((int) work_buf < 0)) {
+		/* メモリエラー */
+		ret = -1;
+	} else {
+		ret = APICLOAD(	GR, 
+						fname,				/* PICファイル名 */
+						pos_x, pos_y,		/* 描画先のX座標とY座標 */
+						file_buf,
+						PIC_FILE_BUF_SIZE,	
+						APF_NOINITCRT | 	/* 1で画面モードを初期化しません */
+						APF_NOCLRBUF | 		/* 1で展開先バッファをクリアしません */
+						APF_NOPRFC,			/* 1でファイル名とコメントを表示しません */
+						work_buf);
+		if (ret < 0) {
+			/* メモリエラー */
+			ret = -1;
+		}
+		_dos_mfree (work_buf);
+		_dos_mfree (file_buf);
+	}
+	return ret;
 }
 #endif	/* FILEMANAGER_C */
 

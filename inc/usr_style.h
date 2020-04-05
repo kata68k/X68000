@@ -12,6 +12,7 @@ typedef signed int		SI;
 typedef signed long		SL;
 
 typedef float	FLOAT;
+typedef float	FL;
 
 
 #endif	/* USR_STYLE_H */

@@ -19,6 +19,21 @@ int Draw_Pset(short x, short y, unsigned short color)
 	return PSET(&stPset);
 }
 
+int Draw_Pget(short x, short y, unsigned short *color)
+{
+	struct _pointptr stPget;
+	int ret;
+	
+	stPget.x  = x;
+	stPget.y  = y;
+	
+	ret = POINT(&stPget);
+
+	*color = stPget.color;
+	
+	return ret;
+}
+
 int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
 {
 	struct _lineptr stLine;

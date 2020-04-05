@@ -16,8 +16,8 @@ static volatile US ras_count;
 static volatile US Hsync_count;
 static volatile US Vsync_count;
 
-static US ras_val[1024];
-static US ras_pal[1024];
+static US ras_val[256];
+static US ras_pal[256];
 
 /* 関数のプロトタイプ宣言 */
 UI Init_MFP(void);
@@ -37,7 +37,7 @@ UI Init_MFP(void)	/* 現在の時間を取得する */
 {
 	NowTime = 0;
 	ras_pal[0] = 0;
-	ras_count = RASTER_ST;
+	ras_count = RASTER_MAX;
 	Hsync_count = 0;
 	Vsync_count = 0;
 	
@@ -87,8 +87,8 @@ void interrupt Raster_Func(void)
 	*BG0scroll_x	= ras_val[nNum];	/* BG0のX座標の設定 */
 	*BG0scroll_y	= ras_pal[nNum];	/* BG0のY座標の設定 */
 	*BG1scroll_x	= 256;				/* BG1のX座標の設定 */
-	*BG1scroll_y	= 0;				/* BG1のY座標の設定 */
-	*scroll_x		= ras_pal[nNum];	/* GRのX座標の設定 */
+	*BG1scroll_y	= ras_pal[1];		/* BG1のY座標の設定 */
+//	*scroll_x		= ras_val[nNum] + X_OFFSET;			/* GRのX座標の設定 */
 	
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
@@ -121,7 +121,7 @@ void interrupt Vsync_Func(void)
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
 
 	//	VDISPST((void *)0, 0, 0);	/* stop */
-	
+#if 0
 	if((Vsync_count % 10) < 5)
 	{
 		GPALET( 1, SetRGB(16, 16, 16));	/* Glay */
@@ -144,8 +144,9 @@ void interrupt Vsync_Func(void)
 		GPALET(11, SetRGB( 0, 31,  0));	/* Green */
 		GPALET( 8, SetRGB( 0, 28,  0));	/* Green */
 	}
-
-	ras_count = RASTER_ST;
+#endif
+	
+	ras_count = ras_pal[0];
 	CRTCRAS(Raster_Func, ras_count );	/* ラスター割り込み */
 	Hsync_count = 0;
 //	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
