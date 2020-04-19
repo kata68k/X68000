@@ -1,6 +1,9 @@
 #ifndef	USR_DEFINE_H
 #define	USR_DEFINE_H
 
+#define FALSE	(0)
+#define TRUE	(!FALSE)
+
 /* Ｘ，Ｙ座標（表示座標） */
 #define V_SYNC_MAX	(240)
 #define WIDTH		(256)
@@ -31,5 +34,8 @@
 
 /* スプライトＰＣＧパターン最大数 */
 #define	PCG_MAX	(256)
+
+#define	BG_WIDTH	(8)
+#define	BG_HEIGHT	(8)
 
 #endif	/* USR_DEFINE_H */

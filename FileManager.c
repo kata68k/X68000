@@ -22,7 +22,7 @@ SI File_Load(SC *, void *, size_t, size_t);
 SI File_Load_CSV(SC *, US *, UI *, UI *);
 SI PCG_SP_dataload(SC *);
 SI PCG_PAL_dataload(SC *);
-SI APICG_DataLoad(SC *, US, US);
+SI APICG_DataLoad(SC *, US, US, US);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
@@ -198,13 +198,21 @@ SI PCG_PAL_dataload(SC *fname)
 #define	PIC_FILE_BUF_SIZE	(16*1024)
 
 /* PICファイルを読み込み */
-SI APICG_DataLoad(SC *fname, US pos_x, US pos_y)
+SI APICG_DataLoad(SC *fname, US pos_x, US pos_y, US uArea)
 {
-	US *GR = (US *)0xC00000;
+	US *GR;
 	UC *file_buf, *work_buf;
 	SI ret;
 	file_buf = _dos_malloc (PIC_FILE_BUF_SIZE);
 	work_buf = _dos_malloc (256 * 256);
+	
+	if(uArea != 0)
+	{
+		GR = (US *)0xC80000;	/* Screen1 */
+	}
+	else{
+		GR = (US *)0xC00000;	/* Screen0 */
+	}
 	
 	if (((int) file_buf < 0) || ((int) work_buf < 0)) {
 		/* メモリエラー */

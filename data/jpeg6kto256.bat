@@ -1,5 +1,5 @@
 ECHO ‰æ‘œ‚ð‚P‚UF‚É•ÏŠ·‚µ‚Ä•Û‘¶‚µ‚Ü‚·
-APICG %1
+jpeged -L0,0 %1
 PS16G -512 -256
 APICG -S0,0,255,255 %2
 APICG -PP %2

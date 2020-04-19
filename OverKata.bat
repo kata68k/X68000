@@ -1,7 +1,10 @@
 ECHO OFF
-ZMSC.X
-echo ZP data\DB_BGM1.ZMD
+PCM8A.X
+ZMUSIC.X
+echo MZP data\MSS.mdx
+MZP data\CZ600CE.MDX
 OverKata.x
-echo ZP -S
-ZMSC.X -R
+MZP -S
+ZMUSIC.X -R
+PCM8A.X -R
 

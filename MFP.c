@@ -11,7 +11,7 @@
 #include "MFP.h"
 
 /* 変数 */
-static volatile US NowTime;
+static volatile UI NowTime;
 static volatile US ras_count;
 static volatile US Hsync_count;
 static volatile US Vsync_count;
@@ -22,8 +22,8 @@ static US ras_pal[256];
 /* 関数のプロトタイプ宣言 */
 UI Init_MFP(void);
 void interrupt Timer_D_Func(void);
-SI GetNowTime(US *);	/* 現在の時間を取得する */
-SI SetNowTime(US);		/* 現在の時間を設定する */
+SI GetNowTime(UI *);	/* 現在の時間を取得する */
+SI SetNowTime(UI);		/* 現在の時間を設定する */
 void interrupt Hsync_Func(void);
 void interrupt Raster_Func(void);
 
@@ -51,25 +51,27 @@ void interrupt Timer_D_Func(void)
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
-SI GetNowTime(US *time)	/* 現在の時間を取得する */
+SI GetNowTime(UI *time)	/* 現在の時間を取得する */
 {
 	*time = NowTime;
 	return 0;
 }
 
-SI SetNowTime(US time)	/* 現在の時間を設定する */
+SI SetNowTime(UI time)	/* 現在の時間を設定する */
 {
 	NowTime = time;
 	return 0;
 }
 
-
+/* 割り込み関数は修飾子にinterruptを入れること */	/* くにちこ（Kunihiko Ohnaka）さんのアドバイス */
 void interrupt Hsync_Func(void)
 {
 	Hsync_count++;
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
+/* ラスター割り込みの処理内は必要最低限だけ */	/* EXCEED.さんのアドバイス */
+/* ２ライン飛ばしぐらいが精度の限界 */	/* EXCEED.さんのアドバイス */
 void interrupt Raster_Func(void)
 {
 	volatile US *scroll_x     = (US *)0xE80018;

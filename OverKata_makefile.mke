@@ -20,21 +20,28 @@ execonly:
 	rm -f *.ind *.bak *.o \
 	rmdir inc
 
-OverKata.x:	OverKata.o Draw.o MFP.o FileManager.o Input.o OutPut_Text.o
+OverKata.x:	OverKata.o Draw.o FileManager.o Graphic.o Input.o MFP.o OutPut_Text.o PCG.o Text.o
 	$(LD) $^ -o $@ -l $(LIBS)
 OverKata.o:	OverKata.c
 	$(CC) $(CFLAGS) -c $<
 Draw.o:	Draw.c
 	$(CC) $(CFLAGS) -c $<
-MFP.o:	MFP.c
-	$(CC) $(CFLAGS) -c $<
 FileManager.o:	FileManager.c
+	$(CC) $(CFLAGS) -c $<
+Graphic.o:	Graphic.c
 	$(CC) $(CFLAGS) -c $<
 Input.o:	Input.c
 	$(CC) $(CFLAGS) -c $<
+MFP.o:	MFP.c
+	$(CC) $(CFLAGS) -c $<
 OutPut_Text.o:	OutPut_Text.c
 	$(CC) $(CFLAGS) -c $<
+PCG.o:	PCG.c
+	$(CC) $(CFLAGS) -c $<
+Text.o:	Text.c
+	$(CC) $(CFLAGS) -c $<
 OverKata.o:	inc/usr_define.h
+Graphic.o:	inc/usr_define.h
 MFP.o:		inc/usr_define.h
 
 dist:

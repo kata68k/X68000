@@ -59,7 +59,7 @@
  * @retval Œ¸ŽZ‚³‚ê‚½’l
  * @attention ˆø”‚Í•¡”‰ñ•]‰¿‚³‚ê‚é.
  */
-#define Mdec(x,y) (x = (x > (x - y)) ? (x - y) : 0)
+#define Mdec(x,y) ((x > (x - y)) ? (x - y) : 0)
 
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 
