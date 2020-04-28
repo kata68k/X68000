@@ -8,7 +8,7 @@
 
 /* 関数のプロトタイプ宣言 */
 void PCG_INIT(void);
-void BG_TEXT_SET(void);
+void BG_TEXT_SET(SC *);
 
 /* 関数 */
 void PCG_INIT(void)
@@ -36,7 +36,7 @@ void PCG_INIT(void)
 	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
 }
 
-void BG_TEXT_SET(void)
+void BG_TEXT_SET(SC *fname)
 {
 	US	usV_pat;
 	UI	pal = 0;
@@ -44,7 +44,7 @@ void BG_TEXT_SET(void)
 	US	map_data[64][64];
 
 	/* マップデータ読み込み */
-	File_Load_CSV("data/map.csv", map_data, &i, &j);
+	File_Load_CSV( fname, map_data, &i, &j);
 	
 	pal = 0x0E;
 	for(y=0; y<16; y++)

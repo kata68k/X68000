@@ -23,7 +23,7 @@ void G_INIT(void)
 
 	CRTMOD(11);				/* 偶数：標準解像度、奇数：標準 */
 	G_CLR_ON();				/* グラフィックのクリア */
-	VPAGE(0b0011);			/* pege(3:0ff 2:Off 1:0n 0:0n) */
+	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
 	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
 	HOME(0, X_OFFSET, Y_OFFSET);
 	HOME(1, X_OFFSET, Y_OFFSET);
@@ -115,12 +115,12 @@ void G_INIT(void)
 
 void G_MyCar(void)
 {
-	SI x,y;
-
-	/* 車載 */
-	APICG_DataLoad("data/EVO256_gen.pic", X_OFFSET, Y_OFFSET-32, 0);
-
 #if 1	/* 画像がしっかり作られてたらいらない処理 */
+	SS x,y;
+
+	APAGE(0);		/* グラフィックの書き込み */
+
+	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
 	
 	/* 画像変換 */
 	for(y=Y_OFFSET-32-1; y<(Y_OFFSET-32)+HEIGHT+1; y++)
@@ -135,10 +135,10 @@ void G_MyCar(void)
 			{
 				case 0x00:
 				{
-					color = 0x01;	/* 透過色→不透過色 */
+					color = 0x02;	/* 透過色→不透過色 */
 					break;
 				}
-				case 0x40:
+				case 0x04:
 				{
 					color = 0x00;	/* 変換対象色→透過色 */
 					break;
@@ -152,14 +152,84 @@ void G_MyCar(void)
 			Draw_Pset(x, y, color);
 		}
 	}
+
 #else
 #endif
 }
 
 void G_Background(void)
 {
-#if 0
-	SI e;
+#if 1	/* 画像がしっかり作られてたらいらない処理 */
+	SS x,y;
+
+	APAGE(1);		/* グラフィックの書き込み */
+
+	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
+	
+	/* 画像変換(背景) */
+	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + 65; y++)
+	{
+		for(x=X_OFFSET-32; x<X_OFFSET - 32 + 284; x++)
+		{
+			US color;
+			
+			Draw_Pget(x, y, &color);
+
+			switch(color)
+			{
+				case 0x00:
+				{
+					color = 0x02;	/* 透過色→不透過色 */
+					break;
+				}
+				case 0x04:
+				{
+					color = 0x00;	/* 変換対象色→透過色 */
+					break;
+				}
+				default:
+				{
+					/* 何もしない*/
+					break;
+				}
+			}
+			Draw_Pset(x, y, color);
+		}
+	}
+
+	/* 画像変換(ライバル車) */
+	for(y=Y_OFFSET + 70; y<(Y_OFFSET + 70) + 65; y++)
+	{
+		for(x=X_OFFSET + 64; x<X_OFFSET + 64 + 65; x++)
+		{
+			US color;
+			
+			Draw_Pget(x, y, &color);
+
+			switch(color)
+			{
+				case 0x00:
+				{
+					color = 0x02;	/* 透過色→不透過色 */
+					break;
+				}
+				case 0x04:
+				{
+					color = 0x00;	/* 変換対象色→透過色 */
+					break;
+				}
+				default:
+				{
+					/* 何もしない*/
+					break;
+				}
+			}
+			Draw_Pset(x, y, color);
+		}
+	}
+
+#else
+	SS e;
 	
 	APAGE(2);				/* グラフィックの書き込み */
 
@@ -176,6 +246,7 @@ void G_Background(void)
 
 void G_Palette(void)
 {
+	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
 #if 0
 	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
 	GPALET( 1, SetRGB(16, 16, 16));	/* Glay1 */

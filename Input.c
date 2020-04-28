@@ -8,10 +8,10 @@
 
 
 /* 関数のプロトタイプ宣言 */
-SS get_key( SI );
+SS get_key( UC );
 
 /* 関数 */
-SS get_key( SI mode )
+SS get_key( UC mode )
 {
 	UI kd_k1,kd_k2_1,kd_k2_2,kd_b,kd_b2,kd_b3,kd_b4,kd_b5,kd_b6;
 	static SS repeat_flag_a = KEY_TRUE;

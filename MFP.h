@@ -15,17 +15,17 @@ enum{
 	DST_50us,
 };
 
-extern UI Init_MFP(void);
+extern SS Init_MFP(void);
 extern void interrupt Timer_D_Func(void);
 extern void interrupt Hsync_Func(void);
 extern void interrupt Raster_Func(void);
 extern void interrupt Vsync_Func(void);
-extern SI vwait(SI);
-extern SI GetNowTime(UI *);		/* 現在の時間を取得する */
-extern SI SetNowTime(UI);		/* 現在の時間を設定する */
+extern SS vwait(SS);
+extern SS GetNowTime(UI *);		/* 現在の時間を取得する */
+extern SS SetNowTime(UI);		/* 現在の時間を設定する */
 
-extern SI SetRasterVal(void *, size_t);	/* ラスター専用のバッファにコピーする */
-extern SI SetRasterPal(void *, size_t);	/* ラスター専用(PAL)のバッファにコピーする */
+extern SS SetRasterVal(void *, size_t);	/* ラスター専用のバッファにコピーする */
+extern SS SetRasterPal(void *, size_t);	/* ラスター専用(PAL)のバッファにコピーする */
 
 
 #endif	/* MFP_H */

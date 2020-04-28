@@ -13,12 +13,11 @@ all:	OverKata.x
 
 .PHONY: clean
 clean:
-	rm -f *.bak *.o *.x \
+	rm -f *.bak *.s *.o *.x \
 	inc/*.bak
 
 execonly:
-	rm -f *.ind *.bak *.o \
-	rmdir inc
+	rm -f *.ind *.bak *.s *.o \
 
 OverKata.x:	OverKata.o Draw.o FileManager.o Graphic.o Input.o MFP.o OutPut_Text.o PCG.o Text.o
 	$(LD) $^ -o $@ -l $(LIBS)

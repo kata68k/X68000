@@ -31,4 +31,6 @@
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
+extern SS get_key( UC );
+
 #endif	/* INPUT_H */

@@ -20,20 +20,20 @@ static US ras_val[256];
 static US ras_pal[256];
 
 /* 関数のプロトタイプ宣言 */
-UI Init_MFP(void);
+SS Init_MFP(void);
 void interrupt Timer_D_Func(void);
-SI GetNowTime(UI *);	/* 現在の時間を取得する */
-SI SetNowTime(UI);		/* 現在の時間を設定する */
+SS GetNowTime(UI *);	/* 現在の時間を取得する */
+SS SetNowTime(UI);		/* 現在の時間を設定する */
 void interrupt Hsync_Func(void);
 void interrupt Raster_Func(void);
 
-SI SetRasterVal(void *, size_t);		/* ラスター専用のバッファにコピーする */
-SI SetRasterPal(void *, size_t);		/* ラスター専用(PAL)のバッファにコピーする */
+SS SetRasterVal(void *, size_t);		/* ラスター専用のバッファにコピーする */
+SS SetRasterPal(void *, size_t);		/* ラスター専用(PAL)のバッファにコピーする */
 void interrupt Vsync_Func(void);
-SI vwait(SI);
+SS vwait(SS);
 
 /* 関数 */
-UI Init_MFP(void)	/* 現在の時間を取得する */
+SS Init_MFP(void)	/* 現在の時間を取得する */
 {
 	NowTime = 0;
 	ras_pal[0] = 0;
@@ -51,13 +51,13 @@ void interrupt Timer_D_Func(void)
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
-SI GetNowTime(UI *time)	/* 現在の時間を取得する */
+SS GetNowTime(UI *time)	/* 現在の時間を取得する */
 {
 	*time = NowTime;
 	return 0;
 }
 
-SI SetNowTime(UI time)	/* 現在の時間を設定する */
+SS SetNowTime(UI time)	/* 現在の時間を設定する */
 {
 	NowTime = time;
 	return 0;
@@ -74,30 +74,30 @@ void interrupt Hsync_Func(void)
 /* ２ライン飛ばしぐらいが精度の限界 */	/* EXCEED.さんのアドバイス */
 void interrupt Raster_Func(void)
 {
-	volatile US *scroll_x     = (US *)0xE80018;
 	volatile US *BG0scroll_x  = (US *)0xEB0800;
 	volatile US *BG0scroll_y  = (US *)0xEB0802;
 	volatile US *BG1scroll_x  = (US *)0xEB0804;
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
-	volatile US *raster_addr  = (US *)0xE80012;
+	volatile US *CRTC_R09  = (US *)0xE80012;	/* ラスター割り込み位置 */
+	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
+	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
 
 	US nNum = ras_count;
 	
 	ras_count += RASTER_NEXT;		/* 次のラスタ割り込み位置の計算 */
-	*raster_addr = ras_count;		/* 次のラスタ割り込み位置の設定 */
+	*CRTC_R09 = ras_count;			/* 次のラスタ割り込み位置の設定 */
 
 	*BG0scroll_x	= ras_val[nNum];	/* BG0のX座標の設定 */
 	*BG0scroll_y	= ras_pal[nNum];	/* BG0のY座標の設定 */
 	*BG1scroll_x	= 256;				/* BG1のX座標の設定 */
 	*BG1scroll_y	= ras_pal[1];		/* BG1のY座標の設定 */
-//	*scroll_x		= ras_val[nNum] + X_OFFSET;			/* GRのX座標の設定 */
-	
+//	*CRTC_R12		= ras_val[nNum] + X_OFFSET;			/* GRのX座標の設定 */
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
-SI SetRasterVal(void *pSrc, size_t n)
+SS SetRasterVal(void *pSrc, size_t n)
 {
-	SI ret = 0;
+	SS ret = 0;
 	if(memcpy(ras_val, pSrc, n) == NULL)
 	{
 		ret = -1;
@@ -105,9 +105,9 @@ SI SetRasterVal(void *pSrc, size_t n)
 	return ret;
 }
 
-SI SetRasterPal(void *pSrc, size_t n)
+SS SetRasterPal(void *pSrc, size_t n)
 {
-	SI ret = 0;
+	SS ret = 0;
 	if(memcpy(ras_pal, pSrc, n) == NULL)
 	{
 		ret = -1;
@@ -117,10 +117,8 @@ SI SetRasterPal(void *pSrc, size_t n)
 
 void interrupt Vsync_Func(void)
 {
-	volatile US *BG0scroll_x  = (US *)0xEB0800;
-	volatile US *BG0scroll_y  = (US *)0xEB0802;
-	volatile US *BG1scroll_x  = (US *)0xEB0804;
-	volatile US *BG1scroll_y  = (US *)0xEB0806;
+	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
+	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
 
 	//	VDISPST((void *)0, 0, 0);	/* stop */
 #if 0
@@ -149,16 +147,24 @@ void interrupt Vsync_Func(void)
 #endif
 	
 	ras_count = ras_pal[0];
-	CRTCRAS(Raster_Func, ras_count );	/* ラスター割り込み */
+	CRTCRAS( Raster_Func, ras_count );	/* ラスター割り込み */
 	Hsync_count = 0;
 //	HSYNCST(Hsync_Func);				/* H-Sync割り込み */
 	Vsync_count++;
 //	VDISPST(Vsync_Func, 0, 1);			/* V-Sync割り込み 帰線 */
-	
+
+#if 0
+	if((*CRTC_480 & 0x02u) == 0u)		/* クリア実行でない */
+	{
+		*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
+		*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
+	}
+#endif
+
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 
-SI vwait(SI count)				/* 約count／60秒待つ	*/
+SS vwait(SS count)				/* 約count／60秒待つ	*/
 {
 	volatile UC *mfp = (UC *)0xe88001;
 	

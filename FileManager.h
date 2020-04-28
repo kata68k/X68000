@@ -6,9 +6,10 @@
 #include "inc/usr_style.h"
 #include "inc/usr_define.h"
 
-extern SI File_Load(SC *, void *, size_t, size_t);
-extern SI File_Load_CSV(SC *, US *, UI *, UI *);
-extern void sp_dataload(void);
-extern SI APICG_DataLoad(SC *, US, US, US);
+extern SS File_Load(SC *, void *, size_t, size_t);
+extern SS File_Load_CSV(SC *, US *, UI *, UI *);
+extern SS PCG_SP_dataload(SC *);
+extern SS PCG_PAL_dataload(SC *);
+extern SS APICG_DataLoad(SC *, US, US, US);
 
 #endif	/* FILEMANAGER_H */

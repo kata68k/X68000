@@ -18,21 +18,21 @@ static unsigned char *pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
 static unsigned short pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ */
 
 /* 関数のプロトタイプ宣言 */
-SI File_Load(SC *, void *, size_t, size_t);
-SI File_Load_CSV(SC *, US *, UI *, UI *);
-SI PCG_SP_dataload(SC *);
-SI PCG_PAL_dataload(SC *);
-SI APICG_DataLoad(SC *, US, US, US);
+SS File_Load(SC *, void *, size_t, size_t);
+SS File_Load_CSV(SC *, US *, UI *, UI *);
+SS PCG_SP_dataload(SC *);
+SS PCG_PAL_dataload(SC *);
+SS APICG_DataLoad(SC *, US, US, US);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
 /* *ptr		格納先の先頭アドレス */
 /* size		データのサイズ */
 /* n		データの個数 */
-SI File_Load(SC *fname, void *ptr, size_t size, size_t n)
+SS File_Load(SC *fname, void *ptr, size_t size, size_t n)
 {
 	FILE *fp;
-	SI ret = 0;
+	SS ret = 0;
 
 	/* ファイルを開ける */
 	fp = fopen(fname, "rb");
@@ -59,10 +59,10 @@ SI File_Load(SC *fname, void *ptr, size_t size, size_t n)
 /* *ptr		格納先の先頭アドレス */
 /* size		データのサイズ */
 /* n		データの個数 */
-SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
+SS File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 {
 	FILE *fp;
-	SI ret = 0;
+	SS ret = 0;
 	UI x, y, flag, cnv_flag;
 	char buf[1000], *s, *p, *end;
 	
@@ -130,10 +130,10 @@ SI File_Load_CSV(SC *fname, US *ptr, UI *Col, UI *Row)
 	return ret;
 }
 
-SI PCG_SP_dataload(SC *fname)
+SS PCG_SP_dataload(SC *fname)
 {
 	FILE *fp;
-	SI ret = 0;
+	SS ret = 0;
 	UI i,j;
 
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
@@ -163,10 +163,10 @@ SI PCG_SP_dataload(SC *fname)
 	return ret;
 }
 
-SI PCG_PAL_dataload(SC *fname)
+SS PCG_PAL_dataload(SC *fname)
 {
 	FILE *fp;
-	SI ret = 0;
+	SS ret = 0;
 	UI i,j;
 
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
@@ -198,11 +198,11 @@ SI PCG_PAL_dataload(SC *fname)
 #define	PIC_FILE_BUF_SIZE	(16*1024)
 
 /* PICファイルを読み込み */
-SI APICG_DataLoad(SC *fname, US pos_x, US pos_y, US uArea)
+SS APICG_DataLoad(SC *fname, US pos_x, US pos_y, US uArea)
 {
 	US *GR;
 	UC *file_buf, *work_buf;
-	SI ret;
+	SS ret;
 	file_buf = _dos_malloc (PIC_FILE_BUF_SIZE);
 	work_buf = _dos_malloc (256 * 256);
 	

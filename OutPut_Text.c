@@ -9,15 +9,16 @@
 #define	TAB_SIZE	(4)
 
 /* 関数のプロトタイプ宣言 */
-void Message_Num(void *, SI, SI, US, UC);
-SI BG_TextPut(SC *, SI, SI);
-SI BG_PutToText(SI, SI, SI, SI, UC);
-SI BG_TimeCounter(UI, US, US);
-SI BG_Number(UI, US, US);
+void Message_Num(void *, SS, SS, US, UC);
+SS BG_TextPut(SC *, SS, SS);
+SS BG_PutToText(SS, SS, SS, SS, UC);
+SS BG_TimeCounter(UI, US, US);
+SS BG_Number(UI, US, US);
+SS Text_To_Text(US, SS, SS, UC);
 
 /* 関数 */
 
-void Message_Num(void *pNum, SI x, SI y, US nCol, UC mode)
+void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
 {
 	char str[64];
 
@@ -31,8 +32,8 @@ void Message_Num(void *pNum, SI x, SI y, US nCol, UC mode)
 		break;
 	case MONI_Type_SI:
 		{
-			SI *num;
-			num = (SI *)pNum;
+			SS *num;
+			num = (SS *)pNum;
 			sprintf(str, "%d", *num);
 		}
 		break;
@@ -87,7 +88,7 @@ void Message_Num(void *pNum, SI x, SI y, US nCol, UC mode)
 	B_PUTMES( nCol, x, y, 10-1, str);
 }
 
-SI BG_TextPut(SC *sString, SI x, SI y)
+SS BG_TextPut(SC *sString, SS x, SS y)
 {
 	US *BG_TEXT_HEAD = (US *)0xEB8800;
 	US *BG_NUM_HEAD  = (US *)0xEB8600;
@@ -100,7 +101,13 @@ SI BG_TextPut(SC *sString, SI x, SI y)
 	UC	*pDst1;
 	UC	*pDst2;
 	UC	*pDst3;
-	SI ret = 0;
+	SS ret = 0;
+	US	BitMask[4][4] = { 
+			0x1000, 0x2000, 0x4000, 0x8000,
+			0x0100, 0x0200, 0x0400, 0x0800,
+			0x0010, 0x0020, 0x0040, 0x0080,
+			0x0001, 0x0002, 0x0004, 0x0008
+	};
 
 	while(*sString != 0)
 	{
@@ -141,19 +148,21 @@ SI BG_TextPut(SC *sString, SI x, SI y)
 			}
 			default:	/* 表示 */
 			{
-				SI i, j;
+				SS i, j, k;
 				
-				j = (SI)((SC)*sString - '@');
+				j = (SS)((SC)*sString - '@');
 				if(j >= 33)j-=32;	/* 小文字を大文字化 */
 				pStPAT = BG_TEXT_HEAD + (US)(0x10 * j);
 
-				pDst0   = T0_HEAD + (y * 0x80) + (x/8);
-				pDst1   = T1_HEAD + (y * 0x80) + (x/8);
-				pDst2   = T2_HEAD + (y * 0x80) + (x/8);
-				pDst3   = T3_HEAD + (y * 0x80) + (x/8);
+				k = (y * 0x80) + (x >> 3);
+				pDst0   = T0_HEAD + k;
+				pDst1   = T1_HEAD + k;
+				pDst2   = T2_HEAD + k;
+				pDst3   = T3_HEAD + k;
 				
 				for(i=0; i < 8; i++)
 				{
+#if 1
 					US nTmp[4];
 					US nBuff[4];
 					
@@ -205,7 +214,41 @@ SI BG_TextPut(SC *sString, SI x, SI y)
 					nBuff[2] = (nTmp[1] & 0b0000000010000000) >> 6;
 					nBuff[3] = (nTmp[1] & 0b0000000000001000) >> 3;
 					*pDst3 |= (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]);
+#else
+					US nTmp[2];
 
+					/* 8bit(PCG) to 1bit(Text-VRAM) */
+					for(j=0; j < 8; j++)
+					{
+						UI	bitshift;
+
+						bitshift = j;
+
+						k = j % 4;
+						if(j < 4)	/* 上位4ドット */
+						{
+							/* P0 */
+							*pDst0 |= (((nTmp[0] & BitMask[k][0]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+							/* P1 */
+							*pDst1 |= (((nTmp[0] & BitMask[k][1]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+							/* P2 */
+							*pDst2 |= (((nTmp[0] & BitMask[k][2]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+							/* P3 */
+							*pDst3 |= (((nTmp[0] & BitMask[k][3]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+						}
+						else		/* 下位4ドット */
+						{
+							/* P0 */
+							*pDst0 |= (((nTmp[1] & BitMask[k][0]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+							/* P1 */
+							*pDst1 |= (((nTmp[1] & BitMask[k][1]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+							/* P2 */
+							*pDst2 |= (((nTmp[1] & BitMask[k][2]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+							/* P3 */
+							*pDst3 |= (((nTmp[1] & BitMask[k][3]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+						}
+					}
+#endif
 					pDst0 += 0x80;
 					pDst1 += 0x80;
 					pDst2 += 0x80;
@@ -219,7 +262,7 @@ SI BG_TextPut(SC *sString, SI x, SI y)
 	return ret;
 }
 
-SI BG_PutToText(SI nPatNum, SI x, SI y, SI mode, UC bClr)
+SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
 {
 	US *BG_HEAD = (US *)0xEB8000;
 	UC *T0_HEAD = (UC *)0xE00000;
@@ -231,8 +274,8 @@ SI BG_PutToText(SI nPatNum, SI x, SI y, SI mode, UC bClr)
 	UC	*pDst1;
 	UC	*pDst2;
 	UC	*pDst3;
-	SI	ret = 0;
-	SI	i, j;
+	SS	ret = 0;
+	SS	i, j, k;
 	US	BitMask[4][4] = { 
 			0x1000, 0x2000, 0x4000, 0x8000,
 			0x0100, 0x0200, 0x0400, 0x0800,
@@ -253,15 +296,15 @@ SI BG_PutToText(SI nPatNum, SI x, SI y, SI mode, UC bClr)
 		break;
 	}
 
-	pDst0   = T0_HEAD + (y * 0x80) + (x/8);
-	pDst1   = T1_HEAD + (y * 0x80) + (x/8);
-	pDst2   = T2_HEAD + (y * 0x80) + (x/8);
-	pDst3   = T3_HEAD + (y * 0x80) + (x/8);
+	k = (y * 0x80) + (x >> 3);
+	pDst0   = T0_HEAD + k;
+	pDst1   = T1_HEAD + k;
+	pDst2   = T2_HEAD + k;
+	pDst3   = T3_HEAD + k;
 	
 	for(i=0; i < 8; i++)
 	{
 		US nTmp[2];
-		US nBuff[8];
 		
 		switch(mode)
 		{
@@ -307,28 +350,28 @@ SI BG_PutToText(SI nPatNum, SI x, SI y, SI mode, UC bClr)
 				bitshift = (7-j);
 				break;
 			}
-
+			k = j % 4;
 			if(j < 4)	/* 上位4ドット */
 			{
 				/* P0 */
-				*pDst0 |= (((nTmp[0] & BitMask[j%4][0]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst0 |= (((nTmp[0] & BitMask[k][0]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 				/* P1 */
-				*pDst1 |= (((nTmp[0] & BitMask[j%4][1]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst1 |= (((nTmp[0] & BitMask[k][1]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 				/* P2 */
-				*pDst2 |= (((nTmp[0] & BitMask[j%4][2]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst2 |= (((nTmp[0] & BitMask[k][2]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 				/* P3 */
-				*pDst3 |= (((nTmp[0] & BitMask[j%4][3]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst3 |= (((nTmp[0] & BitMask[k][3]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 			}
 			else		/* 下位4ドット */
 			{
 				/* P0 */
-				*pDst0 |= (((nTmp[1] & BitMask[j%4][0]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst0 |= (((nTmp[1] & BitMask[k][0]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 				/* P1 */
-				*pDst1 |= (((nTmp[1] & BitMask[j%4][1]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst1 |= (((nTmp[1] & BitMask[k][1]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 				/* P2 */
-				*pDst2 |= (((nTmp[1] & BitMask[j%4][2]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst2 |= (((nTmp[1] & BitMask[k][2]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 				/* P3 */
-				*pDst3 |= (((nTmp[1] & BitMask[j%4][3]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
+				*pDst3 |= (((nTmp[1] & BitMask[k][3]) != 0u) << bitshift);	/* 0bitシフトの結果が前回値となるマイコンあるので注意 */
 			}
 		}
 		pDst0 += 0x80;
@@ -339,24 +382,24 @@ SI BG_PutToText(SI nPatNum, SI x, SI y, SI mode, UC bClr)
 	return ret;
 }
 
-SI BG_TimeCounter(UI unTime, US x, US y)
+SS BG_TimeCounter(UI unTime, US x, US y)
 {
-	SI ret = 0;
-	UI un100, un10, un1;
+	SS ret = 0;
+	UI un100=0, un10=0, un1=0;
 	US u100_view[2], u10_view[2], u1_view[2];
 
 	if(unTime >= 1000)unTime = 999;
-	
+#if 1
 	un100 = ((unTime % 1000) / 100);
 	un10 = ((unTime % 100) / 10);
 	un1 = (unTime % 10);
-
+#endif
 	/* 表示 */
-	u100_view[0] = 128 + (US)(un100 * 2);
+	u100_view[0] = 128 + (US)(un100 << 1);
 	u100_view[1] = u100_view[0]+1;
-	u10_view[0] = 128 + (US)(un10 * 2);
+	u10_view[0] = 128 + (US)(un10 << 1);
 	u10_view[1] = u10_view[0] + 1;
-	u1_view[0] = 128 + (US)(un1 * 2);
+	u1_view[0] = 128 + (US)(un1 << 1);
 	u1_view[1] = u1_view[0] + 1;
 	
 	BG_PutToText( u100_view[0], x-(BG_WIDTH<<1),		y,			BG_Normal, TRUE);	/* 100桁目 */
@@ -369,9 +412,9 @@ SI BG_TimeCounter(UI unTime, US x, US y)
 	return ret;
 }
 
-SI BG_Number(UI unNum, US x, US y)
+SS BG_Number(UI unNum, US x, US y)
 {
-	SI ret = 0;
+	SS ret = 0;
 	UC ucDigit[10];
 	UI unDigit, unDigitCal;
 	static UC ucOverFlow = FALSE;
@@ -396,8 +439,110 @@ SI BG_Number(UI unNum, US x, US y)
 #endif	
 	sprintf(ucDigit, "%7d", unNum);
 	
-	BG_TextPut(ucDigit, (SI)x, (SI)y);
+	BG_TextPut(ucDigit, x, y);
 	
+	return ret;
+}
+
+/* TEXT-RAMに展開したデータから数字情報を作る */	/* 処理負荷改善@kunichikoさんのアドバイス */
+SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
+{
+	UC	*T0_HEAD = (UC *)0xE00000;
+	UC	*T1_HEAD = (UC *)0xE20000;
+	UC	*T2_HEAD = (UC *)0xE40000;
+	UC	*T3_HEAD = (UC *)0xE60000;
+	UC	*pSrc0 = (UC *)0xE07400;
+	UC	*pSrc1 = (UC *)0xE27400;
+	UC	*pSrc2 = (UC *)0xE47400;
+	UC	*pSrc3 = (UC *)0xE67400;
+	UC	*pDst0;
+	UC	*pDst1;
+	UC	*pDst2;
+	UC	*pDst3;
+	UC	*pData0;
+	UC	*pData1;
+	UC	*pData2;
+	UC	*pData3;
+	UC	data;
+	UC	ucDigit[10];
+	UC	*pString;
+	SS	i, j, k, size;
+	SS	ret = 0;
+	
+	if(bLarge == TRUE)
+	{
+		pSrc0 += 0x400;
+		pSrc1 += 0x400;
+		pSrc2 += 0x400;
+		pSrc3 += 0x400;
+		size = 16;	/* 大 */
+	}
+	else
+	{
+		size = 8;	/* 小 */
+	}
+	
+	sprintf(ucDigit, "%d", uNum);
+	pString = &ucDigit[0];
+	
+	while(*pString != 0)
+	{
+		switch(*pString)
+		{
+			case 0x30:	/* 0 */
+			case 0x31:	/* 1 */
+			case 0x32:	/* 2 */
+			case 0x33:	/* 3 */
+			case 0x34:	/* 4 */
+			case 0x35:	/* 5 */
+			case 0x36:	/* 6 */
+			case 0x37:	/* 7 */
+			case 0x38:	/* 8 */
+			case 0x39:	/* 9 */
+			{
+				/* コピー元 */
+				data = *pString - '0';
+				pData0 = pSrc0 + data;
+				pData1 = pSrc1 + data;
+				pData2 = pSrc2 + data;
+				pData3 = pSrc3 + data;
+				
+				/* コピー先 */
+				k = (y * 0x80) + (x >> 3);
+				pDst0 = T0_HEAD + k;
+				pDst1 = T1_HEAD + k;
+				pDst2 = T2_HEAD + k;
+				pDst3 = T3_HEAD + k;
+				
+				for(i=0; i < size; i++)
+				{
+					/* 更新 */
+					*pDst0 = *pData0;
+					*pDst1 = *pData1;
+					*pDst2 = *pData2;
+					*pDst3 = *pData3;
+
+					pData0 += 0x80;
+					pData1 += 0x80;
+					pData2 += 0x80;
+					pData3 += 0x80;
+
+					pDst0 += 0x80;
+					pDst1 += 0x80;
+					pDst2 += 0x80;
+					pDst3 += 0x80;
+				}
+				x+=8;
+				break;
+			}
+			default:	/* 表示対象外 */
+			{
+				x+=8;
+				break;
+			}
+		}
+		pString++;
+	}
 	return ret;
 }
 
