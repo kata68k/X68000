@@ -100,10 +100,11 @@ void main(void)
 	
 	/* グラフィック表示 */
 	G_INIT();		/*画面の初期設定*/
-	APICG_DataLoad("data/cg/EVO256_gen.pic"	, X_OFFSET, 		Y_OFFSET - 32,	0);	/* 車載 */
-	APICG_DataLoad("data/cg/enemy.pic"		, X_OFFSET + 96,			  165,	0);	/* ライバル車 */
+	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET, 		Y_OFFSET - 32,	0);	/* FPS */
+	APICG_DataLoad("data/cg/Over_B.pic"	, X_OFFSET + 96,			  165,	0);	/* TPS */
 	G_MyCar();		/* 自車の表示 */
-	APICG_DataLoad("data/cg/GAROU_SP.pic"	, X_OFFSET - 32,	Y_OFFSET +  4,	1);	/* 背景 */
+	APICG_DataLoad("data/cg/Over_C.pic"	, 0,							0,	1);	/* ライバル車 */
+	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET - 32,	Y_OFFSET +  4,	1);	/* 背景 */
 	G_Background();	/* 背景の表示 */
 	
 	/* スプライト／ＢＧ表示 */
@@ -500,11 +501,26 @@ void main(void)
 				/* ライバル車 */
 				x = ras_tmp[ras_st + (uCountNum * 2)];
 				i = uCountNum;
+#if 1
+				if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
+				{
+					G_Stretch_Pict(
+									X_OFFSET + (WIDTH>>1) - x,	ENEMY_CAR_1_W>>((48 - i) / 12),
+									nHorizon + (2 * i) - (1*i),	ENEMY_CAR_1_H>>((48 - i) / 12),
+//									X_OFFSET + 70,				ENEMY_CAR_1_W,
+//									Y_OFFSET + nHorizon,		ENEMY_CAR_1_H,
+									1,
+									0,	ENEMY_CAR_1_W,
+									0,	ENEMY_CAR_1_H,
+									1);
+				}
+#else
 				Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (1*i),
 							nHorizon  + (2 * i) - (1*i),
 							X_OFFSET + (WIDTH>>1) - x + (1*i),
 							nHorizon  + (2 * i),
 							1);
+#endif
 				break;
 			}
 			case 1:
@@ -514,11 +530,26 @@ void main(void)
 				/* ライバル車 */
 				x = ras_tmp[ras_st + (uCountNum * 2)];
 				i = uCountNum;
+#if 1
+				if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
+				{
+					G_Stretch_Pict(
+									X_OFFSET + (WIDTH>>1) - x,				ENEMY_CAR_1_W>>((48 - i) / 12),
+									Y_OFFSET + nHorizon  + (4 * i) - (3*i),	ENEMY_CAR_1_H>>((48 - i) / 12),
+//									X_OFFSET + 70,				ENEMY_CAR_1_W,
+//									Y_OFFSET + nHorizon,		ENEMY_CAR_1_H,
+									1,
+									0,	ENEMY_CAR_1_W,
+									0,	ENEMY_CAR_1_H,
+									1);
+				}
+#else
 				Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (2*i),
 							Y_OFFSET + nHorizon  + (4 * i) - (3*i),
 							X_OFFSET + (WIDTH>>1) - x + (2*i),
 							Y_OFFSET + nHorizon  + (4 * i),
 							1);
+#endif
 				break;
 			}
 			default:

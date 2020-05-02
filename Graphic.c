@@ -6,11 +6,15 @@
 #include "inc/usr_macro.h"
 #include "Graphic.h"
 
+#define	CONV_PAL	(0xCB)
+#define	TRANS_PAL	(0x00)
+
 /* 関数のプロトタイプ宣言 */
 void G_INIT(void);
 void G_MyCar(void);
 void G_Background(void);
 void G_Palette(void);
+SS G_Stretch_Pict(US , US, US, US, UC, US, US, US, US, UC);
 
 /* 関数 */
 void G_INIT(void)
@@ -123,9 +127,9 @@ void G_MyCar(void)
 	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
 	
 	/* 画像変換 */
-	for(y=Y_OFFSET-32-1; y<(Y_OFFSET-32)+HEIGHT+1; y++)
+	for(y=Y_OFFSET-32-1; y<(Y_OFFSET-32)+MY_CAR_1_H+1; y++)
 	{
-		for(x=X_OFFSET-1; x<X_OFFSET+WIDTH+1; x++)
+		for(x=X_OFFSET-1; x<X_OFFSET+MY_CAR_1_W+1; x++)
 		{
 			US color;
 			
@@ -133,14 +137,14 @@ void G_MyCar(void)
 
 			switch(color)
 			{
-				case 0x00:
+				case TRANS_PAL:
 				{
-					color = 0x02;	/* 透過色→不透過色 */
+					color = 0x01;	/* 透過色→不透過色 */
 					break;
 				}
-				case 0x04:
+				case CONV_PAL:
 				{
-					color = 0x00;	/* 変換対象色→透過色 */
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
 					break;
 				}
 				default:
@@ -153,10 +157,9 @@ void G_MyCar(void)
 		}
 	}
 
-	/* 画像変換(ライバル車) */
-	for(y= 165; y<(165 + 65); y++)
+	for(y= 165; y<(165 + MY_CAR_0_H); y++)
 	{
-		for(x=(X_OFFSET + 96); x<(X_OFFSET + 96 + 65); x++)
+		for(x=(X_OFFSET + 96); x<(X_OFFSET + 96 + MY_CAR_0_W); x++)
 		{
 			US color;
 			
@@ -164,14 +167,14 @@ void G_MyCar(void)
 
 			switch(color)
 			{
-				case 0x00:
+				case TRANS_PAL:
 				{
-					color = 0x02;	/* 透過色→不透過色 */
+					color = 0x01;	/* 透過色→不透過色 */
 					break;
 				}
-				case 0x04:
+				case CONV_PAL:
 				{
-					color = 0x00;	/* 変換対象色→透過色 */
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
 					break;
 				}
 				default:
@@ -197,10 +200,10 @@ void G_Background(void)
 
 	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
 	
-	/* 画像変換(背景) */
-	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + 65; y++)
+	/* 画像変換(ライバル車) */
+	for(y=0; y<ENEMY_CAR_1_H; y++)
 	{
-		for(x=X_OFFSET-32; x<X_OFFSET - 32 + 284; x++)
+		for(x=0; x<ENEMY_CAR_1_W; x++)
 		{
 			US color;
 			
@@ -208,14 +211,45 @@ void G_Background(void)
 
 			switch(color)
 			{
-				case 0x00:
+				case TRANS_PAL:
 				{
-					color = 0x02;	/* 透過色→不透過色 */
+					color = 0x01;	/* 透過色→不透過色 */
 					break;
 				}
-				case 0x04:
+				case CONV_PAL:
 				{
-					color = 0x00;	/* 変換対象色→透過色 */
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
+					break;
+				}
+				default:
+				{
+					/* 何もしない*/
+					break;
+				}
+			}
+			Draw_Pset(x, y, color);
+		}
+	}
+
+	/* 画像変換(背景) */
+	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + BG_1_H; y++)
+	{
+		for(x=X_OFFSET-32; x<X_OFFSET - 32 + BG_1_W; x++)
+		{
+			US color;
+			
+			Draw_Pget(x, y, &color);
+
+			switch(color)
+			{
+				case TRANS_PAL:
+				{
+					color = 0x01;	/* 透過色→不透過色 */
+					break;
+				}
+				case CONV_PAL:
+				{
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
 					break;
 				}
 				default:
@@ -277,4 +311,59 @@ void G_Palette(void)
 
 }
 
+SS G_Stretch_Pict(	US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
+					US src_x, US src_w, US src_y, US src_h, UC ubSrcScrn)
+{
+	US	*pDstGR,	*pSrcGR;
+	UI	DstGR_H,	SrcGR_H;
+	US	dst_ex,	dst_ey;
+	US	src_ex,	src_ey;
+	US	x, y;
+	US	rate_x, rate_y;
+
+	dst_ex	= dst_x + dst_w;
+	dst_ey	= dst_y + dst_h;
+	src_ex	= src_x + src_w;
+	src_ey	= src_y + src_h;
+
+	/* 倍率演算 */
+	rate_x = src_w / dst_w;
+	rate_y = src_h / dst_h;
+
+	/* アドレス算出 */
+	if(ubDstScrn != 0)
+	{
+		DstGR_H = 0xC80000;	/* Screen1 */
+	}
+	else{
+		DstGR_H = 0xC00000;	/* Screen0 */
+	}
+
+	if(ubSrcScrn != 0)
+	{
+		SrcGR_H = 0xC80000;	/* Screen1 */
+	}
+	else{
+		SrcGR_H = 0xC00000;	/* Screen0 */
+	}
+#if 1
+	for(y = dst_y; y < dst_ey; y++)
+	{
+		/* アドレス算出 */
+		pDstGR = (UC *)(DstGR_H + ((y << 10) + (dst_x << 1)));
+
+		pSrcGR = (UC *)(SrcGR_H + ((((src_y + (y - dst_y)) * rate_y) << 10) + (src_x << 1)));
+	
+		for(x = dst_x; x < dst_ex; x++)
+		{
+			*pDstGR = *pSrcGR;
+			
+			pDstGR++;
+			pSrcGR+=rate_x;
+		}
+	}
+#else
+
+#endif
+}
 #endif	/* GRAPHIC_C */
