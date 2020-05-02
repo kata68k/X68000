@@ -4,6 +4,7 @@
 #include "inc/usr_style.h"
 #include "inc/usr_define.h"
 
+#define	DEBUG
 
 enum{
 	MONI_Type_UI=0,

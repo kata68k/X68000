@@ -22,6 +22,7 @@
 SS moni;
 SS moni_MAX;
 SS speed;
+UC g_mode;
 
 /* 関数のプロトタイプ宣言 */
 void main(void);
@@ -44,20 +45,19 @@ void main(void)
 	SS	a,b,c,d,e,f,i;
 	SS	loop;
 	SS	RD[1024];
-	SS	nHorizon;
+	SS	nHorizon, nHorizon_tmp, nHorizon_ras, nHorizon_offset;
 	SS	vx, vy;
 	SS	road;
 	SS	road_offset_x, road_offset_y;
-	SS	nRoad_strch;
+	US	uRoad_rate, uRoad_strch;
 	SS	input;
 	UI	start_time;
 	UI	time_cal = 0;
 	UI	time_cal_PH = 0;
 	SI	superchk;
 	SI	crtmod;
+	UC	mode_flag = 0;
 	
-	volatile US *text_addr  = (US *)0xE00000;
-	volatile US *CRTC_R20 = (US *)0xE80028u;	/* メモリ・モード・セット、表示モードセット */
 	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
 	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
 
@@ -100,10 +100,10 @@ void main(void)
 	
 	/* グラフィック表示 */
 	G_INIT();		/*画面の初期設定*/
-	APICG_DataLoad("data/cg/EVO256_gen.pic", X_OFFSET, 		Y_OFFSET - 32,	0);	/* 車載 */
+	APICG_DataLoad("data/cg/EVO256_gen.pic"	, X_OFFSET, 		Y_OFFSET - 32,	0);	/* 車載 */
+	APICG_DataLoad("data/cg/enemy.pic"		, X_OFFSET + 96,			  165,	0);	/* ライバル車 */
 	G_MyCar();		/* 自車の表示 */
-	APICG_DataLoad("data/cg/enemy.pic"		, X_OFFSET + 64,	Y_OFFSET + 70,	1);	/* ライバル車 */
-	APICG_DataLoad("data/cg/GAROU_SP.pic"	, X_OFFSET - 32,	Y_OFFSET + 4,	1);	/* 背景 */
+	APICG_DataLoad("data/cg/GAROU_SP.pic"	, X_OFFSET - 32,	Y_OFFSET +  4,	1);	/* 背景 */
 	G_Background();	/* 背景の表示 */
 	
 	/* スプライト／ＢＧ表示 */
@@ -168,6 +168,7 @@ void main(void)
 	c = 0;
 	d = 0;
 	e = 0;
+	g_mode = 1;
 	speed = 0;
 	road = 0;
 	loop = 1;
@@ -178,6 +179,7 @@ void main(void)
 	do
 	{
 		SI nHantei = 0;
+		US uCount = 0;
 		UI time, time_old, time_now;
 		
 		GetNowTime(&time_old);
@@ -187,6 +189,21 @@ void main(void)
 		if((input & KEY_b_ESC ) != 0u) loop = 0;	/* ＥＳＣポーズ */
 		if(loop == 0)break;
 		
+		if((input & KEY_b_M   ) != 0u)	/* Ｍでモード切替 */
+		{
+			if( mode_flag == FALSE )
+			{
+				mode_flag = TRUE;
+				if(g_mode == 0u)g_mode = 1u;
+				else			g_mode = 0u;
+			}
+		}
+		else
+		{
+			mode_flag = FALSE;
+		}
+			
+		
 #if 1
 		if( ((usFreeRunCount % (RD[usFreeRunCount & 0x03FFu])) == 0)
 			&& ((usFreeRunCount % 5) == 0)
@@ -194,11 +211,11 @@ void main(void)
 		{
 			if(updown_flag == 0){
 				vy += 1;
-				if(vy > 48)updown_flag = 1;
+				if(vy > 24)updown_flag = 1;
 			}
 			else{
 				vy -= 1;
-				if(vy < -5)updown_flag = 0;
+				if(vy < -28)updown_flag = 0;
 			}
 		}
 #else
@@ -207,7 +224,7 @@ void main(void)
 		/* 下 */
 		if((input & KEY_LOWER) != 0u)	vy -= 1;
 #endif
-		vy = Mmax(Mmin(vy, 48), -5);
+		vy = Mmax(Mmin(vy, 24), -28);
 
 		/* 右 */
 		if((input & KEY_RIGHT) != 0u)	vx += 1;
@@ -231,6 +248,8 @@ void main(void)
 		else
 		{
 		}
+
+		/* コーナーの表現 */
 #if 1
 		if( ((usFreeRunCount % (RD[usFreeRunCount & 0x03FFu])) == 0)
 			&& ((usFreeRunCount % 3) == 0)
@@ -248,73 +267,96 @@ void main(void)
 #else
 		road = 0;
 #endif
-		/* 画面の振動 */
+
+#if 1
 		if(speed == 0){
 			d = e;
-			f = 0;
 		}
-		else{
-			if((usFreeRunCount % 5) == 0)f = 1;
-			else f = 0;
-		}
-
-		/* 画面の位置 */
-		HOME(0b01, X_OFFSET, Y_OFFSET + f );						/* Screen 0 */
-		HOME(0b10, X_OFFSET + vx + road * 2, Y_OFFSET + f - vy);	/* Screen 1 */
 		
+		/* 水平線 */
 		/* ラスター割り込み処理の開始・終了位置 */
-		nHorizon = Mmax(Y_HORIZON + vy, RASTER_MIN);										/* 水平線 */
+		switch(g_mode)
+		{
+			case 0:		/* TPS */
+			{
+				nHorizon_tmp = Y_HORIZON_0;
+				nHorizon = Mmax(Mmin(nHorizon_tmp + vy, Y_HORIZON_0), RASTER_MIN);
+				break;
+			}
+			case 1:		/* FPS */
+			{
+				nHorizon_tmp = Y_HORIZON_1;
+				nHorizon = Mmax(Mmin(nHorizon_tmp + vy, Y_HORIZON_1), RASTER_MIN);
+				break;
+			}
+			default:	/* FPS */
+			{
+				nHorizon_tmp = Y_HORIZON_1;
+				break;
+			}
+		}
+		nHorizon_offset = ROAD_POINT - nHorizon;	/* 実際のデータと表示位置との差異 */
 		ras_st = Mmax(Mmin(nHorizon + RASTER_MIN - RASTER_NEXT, RASTER_MAX - RASTER_NEXT), RASTER_MIN);	/* ラスター開始位置 */
-		ras_ed = Mmin(Mmax(ras_st + ROAD_SIZE, 154+RASTER_MIN), RASTER_MAX);				/* ラスター終了位置 */
-		pal_tmp[0] = ras_st;
+//		ras_ed = Mmin(Mmax(ras_st + ROAD_SIZE, 154+RASTER_MIN), RASTER_MAX);				/* ラスター終了位置 */
+		ras_ed = RASTER_MAX;			/* ラスター終了位置 */
+		ras_size = ras_ed - ras_st;		/* ラスターの範囲 */
+		pal_tmp[0] = ras_st;			/* 割り込み位置の設定 */
 		
-#if 1
-		ras_size = ras_ed - ras_st;
-		if(ROAD_SIZE < ras_size)
-		{
-			nRoad_strch = ras_size - ROAD_SIZE;
-		}
-		else
-		{
-			nRoad_strch = 0;
-		}
+		uRoad_rate = ras_size / ROAD_SIZE;
+		uRoad_strch = 0;
+		uCount = 0;
 		
 		for(y=ras_st; y < ras_ed; y+=RASTER_NEXT)
 		{
 			SI num = y - ras_st;
 			SI Anime;
 			US uBG_pat[4] = {0, 96, 192, 288};
+			US ras_cal;
 			
 			Anime = num;
 			
 			/* Y座標 */
 			if(num == 0u)	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
 			{
-				pal_tmp[y] = 0 + uBG_pat[0];
+				ras_cal = 0 + uBG_pat[0];
 				nHantei = 0;
 				road_offset_y = 0;
 				c = 0;
 				e = d;
-			}				/* 下り坂 */
-			else if(ras_size > ROAD_SIZE)
+				uCount = 0;
+			}
+			else if(vy < 0)	/* 下り坂 */
 			{
-				if(nRoad_strch > 0){
-					nRoad_strch--;
+				if(uCount > uRoad_rate)
+				{
+					uRoad_strch ++;
+					if(uRoad_strch >= ROAD_SIZE)uRoad_strch=ROAD_SIZE;
+					uCount = 0;
 				}
-				pal_tmp[y] = Mmax(Mmin(nHorizon - (vy<<1) - (nRoad_strch << 1), 128), 32) + uBG_pat[d];
+				if(nHorizon_offset - uRoad_strch < 0)
+				{
+					ras_cal = 512 + nHorizon_offset - uRoad_strch + uBG_pat[d];
+				}
+				else
+				{
+					ras_cal = nHorizon_offset - uRoad_strch + uBG_pat[d];
+				}
 			}
-#if 0
-			else if(ras_size < ROAD_SIZE)
+			else if(vy > 0)	/* 上り坂 */
 			{
-				pal_tmp[y] = Mmax(Mmin(nHorizon + (vy<<1) - nRoad_strch, 128), 32) + uBG_pat[d];
+				if(uCount > uRoad_rate)
+				{
+					uRoad_strch ++;
+					uCount = 0;
+				}
+				ras_cal = nHorizon_offset + vy - uRoad_strch + uBG_pat[d];
 			}
-#endif
-			else			/* 平坦or上り坂 */
+			else							/* 平坦 */
 			{
-				pal_tmp[y] = Mmax(Mmin(nHorizon - (vy<<1) - nRoad_strch, 128), 32) + uBG_pat[d];
-//				pal_tmp[y] = Mmax(Mmin(nHorizon, 128), 32) + uBG_pat[d];
-//				pal_tmp[y] = Mmin(nHorizon + uBG_pat[d] + vy, 1024);
+				ras_cal = nHorizon_offset + uBG_pat[d];
 			}
+			pal_tmp[y] = ras_cal;
+			
 			if( Anime > nHantei + f ){		/* 縁石の色の間隔 */
 				switch(c)
 				{
@@ -356,63 +398,31 @@ void main(void)
 				ras_tmp[y+i] = ras_tmp[y];
 				pal_tmp[y+i] = pal_tmp[y];
 			}
+			uCount++;
 		}
 		SetRasterVal(ras_tmp, sizeof(US)*RASTER_MAX);
 		SetRasterPal(pal_tmp, sizeof(US)*RASTER_MAX);
 #endif
-		
-		/* デバッグコーナー */
-#if 1
-		/* 描画処理 */
-		if((usFreeRunCount % 2u) == 0u)
-		{
-			if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
-			{
-				*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
-				*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
-				uCountNum++;
-			}
-			else{
-			}
-			if(uCountNum > 32)uCountNum = 0;
-		}
-		else{
-			/* ライバル車 */
-			x = ras_tmp[ras_st + (uCountNum * 2)];
-			i = uCountNum;
-			Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (2*i),
-						Y_OFFSET + Y_HORIZON  + (4 * i) - (3*i),
-						X_OFFSET + (WIDTH>>1) - x + (2*i),
-						Y_OFFSET + Y_HORIZON  + (4 * i),
-						1);
-		}
-//		BG_TextPut("OverKata", 4, 10);
-//		BG_TextPut("OverKata", 128, 128);
-//		BG_TextPut("OVER KATA", 128, 128);
-#endif
-		
 		if((usFreeRunCount % 10) == 0)
 		{
 			/* 処理負荷改善要 */
 			UI nTimeCounter, nPassTime, nTimer;
 			US uScore;
 			static US uScoreMax = 3000;
-
 			/* Score */
 			uScore = usFreeRunCount;
 #if 1
-			Text_To_Text(uScore, 200, 8, FALSE);
+			Text_To_Text(uScore, 176, 8, FALSE);
 #else
 			BG_Number( uScore, 200, 8);
 #endif
 			/* Top Score */
 			uScoreMax = Mmax(uScore, uScoreMax);
 #if 1
-			Text_To_Text(uScoreMax, 40, 8, FALSE);
+			Text_To_Text(uScoreMax, 16, 8, FALSE);
 #else
 			BG_Number( uScoreMax, 40, 8);
 #endif
-			
 			/* Time Count */
 			GetNowTime(&time_now);
 			nPassTime = (time_now - start_time);
@@ -427,30 +437,97 @@ void main(void)
 				nTimeCounter = nTimer / 1000;
 			}
 #if 1
-			Text_To_Text(nTimeCounter, 112, 24, TRUE);
+			Text_To_Text(nTimeCounter, 108, 24, TRUE);
 #else
 			BG_TimeCounter( nTimeCounter, (BG_WIDTH * 16), 24);
 #endif
 
-#if 1
+#ifdef DEBUG
 			/* モニタ */
 			Message_Num(&time_cal,	 		 0,  8, 2, MONI_Type_UI);
-			Message_Num(&time_cal_PH,		 5,  8, 2, MONI_Type_UI);
+			Message_Num(&time_cal_PH,		10,  8, 2, MONI_Type_UI);
 			Message_Num(&speed,				 0,  9, 2, MONI_Type_SS);
-			Message_Num(&vx, 				 5,  9, 2, MONI_Type_SS);
-			Message_Num(&vy, 				10,  9, 2, MONI_Type_SS);
+			Message_Num(&vx, 				 6,  9, 2, MONI_Type_SS);
+			Message_Num(&vy, 				12,  9, 2, MONI_Type_SS);
 			Message_Num(&ras_st,			 0, 10, 2, MONI_Type_US);
-			Message_Num(&ras_ed,			 5, 10, 2, MONI_Type_US);
-			Message_Num(&ras_size,			10, 10, 2, MONI_Type_US);
+			Message_Num(&ras_ed,			 7, 10, 2, MONI_Type_US);
+			Message_Num(&ras_size,			13, 10, 2, MONI_Type_US);
 			Message_Num(&pal_tmp[ras_st],	 0, 11, 2, MONI_Type_US);
-			Message_Num(&nHorizon,			 5, 11, 2, MONI_Type_SS);
+			Message_Num(&uRoad_rate,		 6, 11, 2, MONI_Type_US);
+			Message_Num(&uRoad_strch,		12, 11, 2, MONI_Type_US);
 			Message_Num(&ras_tmp[ras_st],	 0, 12, 2, MONI_Type_SS);
-			Message_Num(&road,			 	 5, 12, 2, MONI_Type_SS);
+			Message_Num(&road,			 	 6, 12, 2, MONI_Type_SS);
 #endif
 		}
-
+#ifdef DEBUG
+		/* デバッグコーナー */
+		if((usFreeRunCount % 2u) == 0u)
+		{
+			if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
+			{
+				*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
+				*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
+				
+				if(speed == 0)uCountNum = Mdec(uCountNum, 1);	/* 抜かれる */
+				else if( (speed > 0) && (speed < 31) );			/* 保持*/
+				else uCountNum++;								/* 抜かす */
+			}
+			if(uCountNum >= 48)uCountNum = 0;
+			if(uCountNum == 0)uCountNum = 0;
+		}
+		else{
+		}
+//		BG_TextPut("OverKata", 4, 10);
+//		BG_TextPut("OverKata", 128, 128);
+//		BG_TextPut("OVER KATA", 128, 128);
+#endif
+		/* 描画処理 */
+		if(speed == 0){	/* 停車 */
+			f = 0;
+		}
+		else{			/* 走行中 */
+			if((usFreeRunCount % 5) == 0)f = 1;	/* 画面の振動 */
+			else f = 0;
+		}
+		
+		/* 画面の位置 */
+		switch(g_mode)
+		{
+			case 0:
+			{
+				HOME(0b01, X_OFFSET, f );	/* Screen 0(TPS) */
+				HOME(0b10, X_OFFSET, f );	/* Screen 1 */
+				/* ライバル車 */
+				x = ras_tmp[ras_st + (uCountNum * 2)];
+				i = uCountNum;
+				Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (1*i),
+							nHorizon  + (2 * i) - (1*i),
+							X_OFFSET + (WIDTH>>1) - x + (1*i),
+							nHorizon  + (2 * i),
+							1);
+				break;
+			}
+			case 1:
+			{
+				HOME(0b01, X_OFFSET, Y_OFFSET + f );	/* Screen 0(FPS) */
+				HOME(0b10, X_OFFSET, Y_OFFSET + f );	/* Screen 1 */
+				/* ライバル車 */
+				x = ras_tmp[ras_st + (uCountNum * 2)];
+				i = uCountNum;
+				Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (2*i),
+							Y_OFFSET + nHorizon  + (4 * i) - (3*i),
+							X_OFFSET + (WIDTH>>1) - x + (2*i),
+							Y_OFFSET + nHorizon  + (4 * i),
+							1);
+				break;
+			}
+			default:
+			{
+				HOME(0b01, X_OFFSET, Y_OFFSET + f );						/* Screen 0(FPS) */
+				break;
+			}
+		}
 		usFreeRunCount++;	/* フリーランカウンタ更新 */
-
 #if 1
 		/* 処理時間計測 */
 		GetNowTime(&time_now);
@@ -483,10 +560,10 @@ void main(void)
 	SUPER(superchk);
 
 #if 1
-	printf("pal_tmp[0]の中身 = %d(vy=%d)\n", (SS)pal_tmp[0], vy );
+	printf("pal_tmp[0]の中身 = %d(vy=%d)\n", pal_tmp[0], vy );
 	for(y=ras_st; y < RASTER_MAX; y+=RASTER_NEXT)
 	{
-		printf("[%3d]=(%5d),", y, (SS)pal_tmp[y] );
+		printf("[%3d]=(%5d),", y, pal_tmp[y] );
 		if((y%5) == 0)printf("\n");
 	}
 	printf("\n");

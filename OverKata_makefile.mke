@@ -6,7 +6,7 @@ AS		= has
 LD		= hlk
 INC		= 
 LIBS	= libc.a libgnu.a LIB/APICGLIB.a
-LZH		= OverKata100
+LZH		= OverKata001
 
 .PHONY: all
 all:	OverKata.x 

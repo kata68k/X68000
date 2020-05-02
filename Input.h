@@ -14,23 +14,20 @@
 #define ESC_S	(27)
 
 /* ジョイスティック１のその１ */
-#define KEY_NULL		(0x00)
-#define KEY_UPPER		(0x04)
-#define KEY_LOWER		(0x08)
-#define KEY_LEFT		(0x01)
-#define KEY_UP_LEFT		(0x05)
-#define KEY_DW_LEFT		(0x09)
-#define KEY_RIGHT		(0x02)
-#define KEY_UP_RIGHT	(0x06)
-#define KEY_DW_RIGHT	(0x0A)
-#define KEY_A			(0x10)
-#define KEY_B			(0x20)
-#define KEY_b_ESC		(0x40)
-#define KEY_b_Q			(0x80)
+#define KEY_NULL		(0x0000)
+#define KEY_LEFT		(0x0001)
+#define KEY_RIGHT		(0x0002)
+#define KEY_UPPER		(0x0004)
+#define KEY_LOWER		(0x0008)
+#define KEY_A			(0x0010)
+#define KEY_B			(0x0020)
+#define KEY_b_ESC		(0x0040)
+#define KEY_b_Q			(0x0080)
+#define KEY_b_M			(0x0100)
 
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
-extern SS get_key( UC );
+extern US get_key( UC );
 
 #endif	/* INPUT_H */

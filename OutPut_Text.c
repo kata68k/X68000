@@ -21,55 +21,58 @@ SS Text_To_Text(US, SS, SS, UC);
 void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
 {
 	char str[64];
+	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
+
+	memset(str, 0, sizeof(str));
 
 	switch(mode){
 	case MONI_Type_UI:
 		{
 			UI *num;
 			num = (UI *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%10d", *num);
 		}
 		break;
 	case MONI_Type_SI:
 		{
 			SS *num;
 			num = (SS *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%11d", *num);
 		}
 		break;
 	case MONI_Type_US:
 		{
 			US *num;
 			num = (US *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%5d", *num);
 		}
 		break;
 	case MONI_Type_SS:
 		{
 			SS *num;
 			num = (SS *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%6d", *num);
 		}
 		break;
 	case MONI_Type_UC:
 		{
 			UC *num;
 			num = (UC *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%3d", *num);
 		}
 		break;
 	case MONI_Type_SC:
 		{
 			SC *num;
 			num = (SC *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%4d", *num);
 		}
 		break;
 	case MONI_Type_FL:
 		{
 			FL *num;
 			num = (FL *)pNum;
-			sprintf(str, "%f", *num);
+			sprintf(str, "%7f", *num);
 		}
 		break;
 	case MONI_Type_PT:
@@ -81,15 +84,24 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
 		{
 			US *num;
 			num = (US *)pNum;
-			sprintf(str, "%d", *num);
+			sprintf(str, "%6d", *num);
 		}
 		break;
 	}
-	B_PUTMES( nCol, x, y, 10-1, str);
+	//BG_TextPut(str, x << 4, y  << 4);
+	//Text_To_Text(atoi(str), x << 4, y << 4, FALSE);
+	if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
+	{
+		B_PUTMES( nCol, x, y, 64, str);	/* 高速クリアの処理を阻害している */
+		//B_LOCATE(x, y);
+		//B_PRINT(str);
+		//B_CUROFF();
+	}
 }
 
 SS BG_TextPut(SC *sString, SS x, SS y)
 {
+	US *BG_HEAD 		= (US *)0xEB8000;
 	US *BG_TEXT_HEAD = (US *)0xEB8800;
 	US *BG_NUM_HEAD  = (US *)0xEB8600;
 	UC *T0_HEAD = (UC *)0xE00000;
@@ -118,19 +130,6 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 				x += 32;		/* 4TAB分動かす */
 				break;
 			}
-			case 0x0a:	/* LF(改行) */
-			{
-				break;
-			}
-			case 0x0d:	/* CR(復帰) */
-			{
-				break;
-			}
-			case 0x20:	/* SP(空白) */
-			{
-				x += 8;		/* 一文字分動かす */
-				break;
-			}
 			case 0x30:	/* 0 */
 			case 0x31:	/* 1 */
 			case 0x32:	/* 2 */
@@ -146,15 +145,55 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 				x += 8;		/* 一文字分動かす */
 				break;
 			}
-			default:	/* 表示 */
+			case 0x20:	/* SP(空白) */
+			case 0x2D:	/* -(マイナス) */
+			case 0x40:	/* @ */
+			case 0x41:	/* A */
+			case 0x42:	/* B */
+			case 0x43:	/* C */
+			case 0x44:	/* D */
+			case 0x45:	/* E */
+			case 0x46:	/* F */
+			case 0x47:	/* G */
+			case 0x48:	/* H */
+			case 0x49:	/* I */
+			case 0x4A:	/* J */
+			case 0x4B:	/* K */
+			case 0x4C:	/* L */
+			case 0x4D:	/* M */
+			case 0x4E:	/* N */
+			case 0x4F:	/* O */
+			case 0x50:	/* P */
+			case 0x51:	/* Q */
+			case 0x52:	/* R */
+			case 0x53:	/* S */
+			case 0x54:	/* T */
+			case 0x55:	/* U */
+			case 0x56:	/* V */
+			case 0x57:	/* W */
+			case 0x58:	/* X */
+			case 0x59:	/* Y */
+			case 0x5A:	/* X */
 			{
 				SS i, j, k;
 				
-				j = (SS)((SC)*sString - '@');
-				if(j >= 33)j-=32;	/* 小文字を大文字化 */
-				pStPAT = BG_TEXT_HEAD + (US)(0x10 * j);
+				if(*sString == 0x20)		/* SP(空白) */
+				{
+					pStPAT = BG_HEAD;
+					
+				}
+				else if(*sString == 0x2D)	/* -(マイナス) */
+				{
+					pStPAT = BG_TEXT_HEAD;
+				}
+				else	/* アルファベット */
+				{
+					j = (SS)((SC)*sString - '@');
+					pStPAT = BG_TEXT_HEAD + (US)(0x10 * j);
+				}
 
 				k = (y * 0x80) + (x >> 3);
+				if( (k < 0) || ((k+8) > 0x1FFFF) ) break;
 				pDst0   = T0_HEAD + k;
 				pDst1   = T1_HEAD + k;
 				pDst2   = T2_HEAD + k;
@@ -255,6 +294,12 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 					pDst3 += 0x80;
 				}
 				x += 8;		/* 一文字分動かす */
+			}
+			case 0x0a:	/* LF(改行) */
+			case 0x0d:	/* CR(復帰) */
+			default:	/* 表示しない */
+			{
+				break;
 			}
 		}
 		sString++;
@@ -455,6 +500,7 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
 	UC	*pSrc1 = (UC *)0xE27400;
 	UC	*pSrc2 = (UC *)0xE47400;
 	UC	*pSrc3 = (UC *)0xE67400;
+	UC	*T3_END = (UC *)0xE7FFFF;
 	UC	*pDst0;
 	UC	*pDst1;
 	UC	*pDst2;
@@ -464,10 +510,12 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
 	UC	*pData2;
 	UC	*pData3;
 	UC	data;
-	UC	ucDigit[10];
+	UC	ucDigit[10] = {0};
 	UC	*pString;
 	SS	i, j, k, size;
 	SS	ret = 0;
+	
+	if( (x < 0) || (y < 0) || (x > 1023) || (y > 1023) ) return -1;
 	
 	if(bLarge == TRUE)
 	{
@@ -476,13 +524,13 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
 		pSrc2 += 0x400;
 		pSrc3 += 0x400;
 		size = 16;	/* 大 */
+		sprintf(ucDigit, "%03d", uNum);
 	}
 	else
 	{
 		size = 8;	/* 小 */
+		sprintf(ucDigit, "%10d", uNum);
 	}
-	
-	sprintf(ucDigit, "%d", uNum);
 	pString = &ucDigit[0];
 	
 	while(*pString != 0)
@@ -509,6 +557,7 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
 				
 				/* コピー先 */
 				k = (y * 0x80) + (x >> 3);
+				if( (k < 0) || ((k+size) > 0x1FFFF) ) break;
 				pDst0 = T0_HEAD + k;
 				pDst1 = T1_HEAD + k;
 				pDst2 = T2_HEAD + k;

@@ -78,7 +78,7 @@ void interrupt Raster_Func(void)
 	volatile US *BG0scroll_y  = (US *)0xEB0802;
 	volatile US *BG1scroll_x  = (US *)0xEB0804;
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
-	volatile US *CRTC_R09  = (US *)0xE80012;	/* ラスター割り込み位置 */
+	volatile US *CRTC_R09 = (US *)0xE80012u;	/* ラスター割り込み位置 */
 	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
 	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
 
@@ -117,8 +117,6 @@ SS SetRasterPal(void *pSrc, size_t n)
 
 void interrupt Vsync_Func(void)
 {
-	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
-	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
 
 	//	VDISPST((void *)0, 0, 0);	/* stop */
 #if 0
@@ -154,10 +152,15 @@ void interrupt Vsync_Func(void)
 //	VDISPST(Vsync_Func, 0, 1);			/* V-Sync割り込み 帰線 */
 
 #if 0
-	if((*CRTC_480 & 0x02u) == 0u)		/* クリア実行でない */
 	{
-		*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
-		*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
+		volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
+		volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
+
+		if((*CRTC_480 & 0x02u) == 0u)		/* クリア実行でない */
+		{
+			*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
+			*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
+		}
 	}
 #endif
 

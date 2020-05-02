@@ -153,23 +153,10 @@ void G_MyCar(void)
 		}
 	}
 
-#else
-#endif
-}
-
-void G_Background(void)
-{
-#if 1	/* 画像がしっかり作られてたらいらない処理 */
-	SS x,y;
-
-	APAGE(1);		/* グラフィックの書き込み */
-
-	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
-	
-	/* 画像変換(背景) */
-	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + 65; y++)
+	/* 画像変換(ライバル車) */
+	for(y= 165; y<(165 + 65); y++)
 	{
-		for(x=X_OFFSET-32; x<X_OFFSET - 32 + 284; x++)
+		for(x=(X_OFFSET + 96); x<(X_OFFSET + 96 + 65); x++)
 		{
 			US color;
 			
@@ -197,10 +184,23 @@ void G_Background(void)
 		}
 	}
 
-	/* 画像変換(ライバル車) */
-	for(y=Y_OFFSET + 70; y<(Y_OFFSET + 70) + 65; y++)
+#else
+#endif
+}
+
+void G_Background(void)
+{
+#if 1	/* 画像がしっかり作られてたらいらない処理 */
+	SS x,y;
+
+	APAGE(1);		/* グラフィックの書き込み */
+
+	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
+	
+	/* 画像変換(背景) */
+	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + 65; y++)
 	{
-		for(x=X_OFFSET + 64; x<X_OFFSET + 64 + 65; x++)
+		for(x=X_OFFSET-32; x<X_OFFSET - 32 + 284; x++)
 		{
 			US color;
 			
