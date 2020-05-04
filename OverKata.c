@@ -57,6 +57,7 @@ void main(void)
 	SI	superchk;
 	SI	crtmod;
 	UC	mode_flag = 0;
+	UC	bUpdate;
 	
 	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
 	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
@@ -176,6 +177,7 @@ void main(void)
 	vx = vy =0;
 	usFreeRunCount = 0;
 	uCountNum = 0;
+	bUpdate = FALSE;
 	
 	do
 	{
@@ -443,10 +445,20 @@ void main(void)
 			BG_TimeCounter( nTimeCounter, (BG_WIDTH * 16), 24);
 #endif
 
+		}
 #ifdef DEBUG
+		/* デバッグコーナー */
+//		BG_TextPut("OverKata", 4, 10);
+//		BG_TextPut("OverKata", 128, 128);
+//		BG_TextPut("OVER KATA", 128, 128);
+#endif
+#ifdef DEBUG
+		if((usFreeRunCount % 10) == 0)
+		{
 			/* モニタ */
 			Message_Num(&time_cal,	 		 0,  8, 2, MONI_Type_UI);
 			Message_Num(&time_cal_PH,		10,  8, 2, MONI_Type_UI);
+#if 0
 			Message_Num(&speed,				 0,  9, 2, MONI_Type_SS);
 			Message_Num(&vx, 				 6,  9, 2, MONI_Type_SS);
 			Message_Num(&vy, 				12,  9, 2, MONI_Type_SS);
@@ -460,29 +472,37 @@ void main(void)
 			Message_Num(&road,			 	 6, 12, 2, MONI_Type_SS);
 #endif
 		}
-#ifdef DEBUG
-		/* デバッグコーナー */
-		if((usFreeRunCount % 2u) == 0u)
+#endif
+		/* 描画処理 */
+		/* 描画のクリア処理 */	/* 必ずテキスト表示処理の後に行うこと */
+		if( bUpdate == TRUE )	/* 前回描画更新だった */
 		{
-			if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
+			if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
 			{
 				*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
 				*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
-				
-				if(speed == 0)uCountNum = Mdec(uCountNum, 1);	/* 抜かれる */
-				else if( (speed > 0) && (speed < 31) );			/* 保持*/
-				else uCountNum++;								/* 抜かす */
+				bUpdate = FALSE;
 			}
-			if(uCountNum >= 48)uCountNum = 0;
-			if(uCountNum == 0)uCountNum = 0;
 		}
-		else{
+		else
+		{
+			if(speed == 0)								/* 抜かれる */
+			{
+				uCountNum = Mdec(uCountNum, 1);
+				bUpdate = TRUE;
+			}
+			else if( (speed > 0) && (speed < 31) )		/* 保持*/
+			{
+			}
+			else
+			{
+				uCountNum++;							/* 抜かす */
+				bUpdate = TRUE;
+			}
 		}
-//		BG_TextPut("OverKata", 4, 10);
-//		BG_TextPut("OverKata", 128, 128);
-//		BG_TextPut("OVER KATA", 128, 128);
-#endif
-		/* 描画処理 */
+		if(uCountNum >= 48)uCountNum = 0;
+		if(uCountNum <= 0)uCountNum = 0;
+
 		if(speed == 0){	/* 停車 */
 			f = 0;
 		}
@@ -498,12 +518,12 @@ void main(void)
 			{
 				HOME(0b01, X_OFFSET, f );	/* Screen 0(TPS) */
 				HOME(0b10, X_OFFSET, f );	/* Screen 1 */
-				/* ライバル車 */
-				x = ras_tmp[ras_st + (uCountNum * 2)];
-				i = uCountNum;
-#if 1
-				if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
+				if( bUpdate == TRUE )
 				{
+					/* ライバル車 */
+					x = ras_tmp[ras_st + (uCountNum * 2)];
+					i = uCountNum;
+#if 1
 					G_Stretch_Pict(
 									X_OFFSET + (WIDTH>>1) - x,	ENEMY_CAR_1_W>>((48 - i) / 12),
 									nHorizon + (2 * i) - (1*i),	ENEMY_CAR_1_H>>((48 - i) / 12),
@@ -513,26 +533,26 @@ void main(void)
 									0,	ENEMY_CAR_1_W,
 									0,	ENEMY_CAR_1_H,
 									1);
-				}
 #else
-				Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (1*i),
-							nHorizon  + (2 * i) - (1*i),
-							X_OFFSET + (WIDTH>>1) - x + (1*i),
-							nHorizon  + (2 * i),
-							1);
+					Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (1*i),
+								nHorizon  + (2 * i) - (1*i),
+								X_OFFSET + (WIDTH>>1) - x + (1*i),
+								nHorizon  + (2 * i),
+								1);
 #endif
+				}
 				break;
 			}
 			case 1:
 			{
 				HOME(0b01, X_OFFSET, Y_OFFSET + f );	/* Screen 0(FPS) */
 				HOME(0b10, X_OFFSET, Y_OFFSET + f );	/* Screen 1 */
-				/* ライバル車 */
-				x = ras_tmp[ras_st + (uCountNum * 2)];
-				i = uCountNum;
-#if 1
-				if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行でない */
+				if( bUpdate == TRUE )
 				{
+					/* ライバル車 */
+					x = ras_tmp[ras_st + (uCountNum * 2)];
+					i = uCountNum;
+#if 1
 					G_Stretch_Pict(
 									X_OFFSET + (WIDTH>>1) - x,				ENEMY_CAR_1_W>>((48 - i) / 12),
 									Y_OFFSET + nHorizon  + (4 * i) - (3*i),	ENEMY_CAR_1_H>>((48 - i) / 12),
@@ -542,14 +562,14 @@ void main(void)
 									0,	ENEMY_CAR_1_W,
 									0,	ENEMY_CAR_1_H,
 									1);
-				}
 #else
-				Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (2*i),
-							Y_OFFSET + nHorizon  + (4 * i) - (3*i),
-							X_OFFSET + (WIDTH>>1) - x + (2*i),
-							Y_OFFSET + nHorizon  + (4 * i),
-							1);
+					Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (2*i),
+								Y_OFFSET + nHorizon  + (4 * i) - (3*i),
+								X_OFFSET + (WIDTH>>1) - x + (2*i),
+								Y_OFFSET + nHorizon  + (4 * i),
+								1);
 #endif
+				}
 				break;
 			}
 			default:

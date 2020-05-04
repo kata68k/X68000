@@ -6,7 +6,7 @@
 #include "inc/usr_macro.h"
 #include "Graphic.h"
 
-#define	CONV_PAL	(0xCB)
+#define	CONV_PAL	(0xB7)
 #define	TRANS_PAL	(0x00)
 
 /* 関数のプロトタイプ宣言 */
@@ -186,13 +186,13 @@ void G_MyCar(void)
 			Draw_Pset(x, y, color);
 		}
 	}
-
 #else
 #endif
 }
 
 void G_Background(void)
 {
+	SS i;
 #if 1	/* 画像がしっかり作られてたらいらない処理 */
 	SS x,y;
 
@@ -229,6 +229,17 @@ void G_Background(void)
 			}
 			Draw_Pset(x, y, color);
 		}
+	}
+	/* パターンを */
+	for(i=0; i<4; i++)
+	{
+		G_Stretch_Pict(
+						0,					ENEMY_CAR_1_W>>i,
+						ENEMY_CAR_1_H * i,	ENEMY_CAR_1_H>>i,
+						1,
+						0,	ENEMY_CAR_1_W,
+						0,	ENEMY_CAR_1_H,
+						1);
 	}
 
 	/* 画像変換(背景) */

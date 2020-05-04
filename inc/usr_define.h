@@ -58,8 +58,8 @@
 #define	BG_HEIGHT	(8)
 
 /* ‰æ‘œƒTƒCƒY */
-#define MY_CAR_0_W	(67)
-#define MY_CAR_0_H	(45)
+#define MY_CAR_0_W	(65)
+#define MY_CAR_0_H	(52)
 #define MY_CAR_1_W	(256)
 #define MY_CAR_1_H	(256)
 #define ENEMY_CAR_0_W	(67)
