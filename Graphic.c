@@ -15,6 +15,7 @@ void G_MyCar(void);
 void G_Background(void);
 void G_Palette(void);
 SS G_Stretch_Pict(US , US, US, US, UC, US, US, US, US, UC);
+SS G_BitBlt(US, US, US, US, UC, US, US, US, US, UC, UC);
 
 /* 関数 */
 void G_INIT(void)
@@ -377,4 +378,123 @@ SS G_Stretch_Pict(	US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 
 #endif
 }
+
+SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
+			US src_x, US src_w, US src_y, US src_h, UC ubSrcScrn,
+			UC ubMode)
+{
+	US	*pDstGR,	*pSrcGR;
+	UI	DstGR_H,	SrcGR_H;
+	US	dst_ex,	dst_ey;
+	US	src_ex,	src_ey;
+	US	x, y;
+	US	x_min, y_min;
+	US	x_max, y_max;
+	US	rate_x, rate_y;
+
+	dst_ex	= dst_x + dst_w;
+	dst_ey	= dst_y + dst_h;
+	src_ex	= src_x + src_w;
+	src_ey	= src_y + src_h;
+
+	/* 倍率演算 */
+	if(src_w != dst_w)return -1;
+	if(src_h != dst_h)return -1;
+	
+	/* アドレス算出 */
+	if(ubDstScrn != 0)
+	{
+		DstGR_H = 0xC80000;	/* Screen1 */
+	}
+	else{
+		DstGR_H = 0xC00000;	/* Screen0 */
+	}
+
+	if(ubSrcScrn != 0)
+	{
+		SrcGR_H = 0xC80000;	/* Screen1 */
+	}
+	else{
+		SrcGR_H = 0xC00000;	/* Screen0 */
+	}
+	
+	/* 表示エリア内クリップ */
+	if( ubMode == 0u )
+	{
+		x_min = X_OFFSET;
+		x_max = X_MAX_DRAW;
+		y_min = Y_MIN_DRAW;
+		y_max = V_SYNC_MAX;
+	}
+	else
+	{
+		x_min = X_OFFSET;
+		x_max = X_MAX_DRAW;
+		y_min = Y_OFFSET;
+		y_max = Y_OFFSET + V_SYNC_MAX;
+	}
+
+	if(dst_ex < x_min)		/* 画面外 */
+	{
+		return -1;
+	}
+	else if((dst_x < x_min) && (dst_ex >= x_min))
+	{
+		src_x += x_min - dst_x;
+		dst_x = x_min;
+	}
+	else if((dst_x >= x_min) && (dst_ex > x_max))
+	{
+		src_ex -= dst_ex - X_MAX_DRAW;
+		dst_ex = X_MAX_DRAW;
+	}
+	else if(dst_x > x_max)	/* 画面外 */
+	{
+		return -1;
+	}
+	else						/* 範囲内 */
+	{
+		/* 何もしない */
+	}
+	
+	if(dst_ey < y_min)		/* 画面外 */
+	{
+		return -1;
+	}
+	else if((dst_y < y_min) && (dst_ey >= y_min))
+	{
+		src_y += y_min - dst_y;
+		dst_y = y_min;
+	}
+	else if((dst_y < y_max) && (dst_ey > y_max))
+	{
+		src_ey -= dst_ey - y_max;
+		dst_ey = y_max;
+	}
+	else if(dst_y > y_max)	/* 画面外 */
+	{
+		return -1;
+	}
+	else						/* 範囲内 */
+	{
+		/* 何もしない */
+	}
+	
+	for(y = dst_y; y < dst_ey; y++)
+	{
+		/* アドレス算出 */
+		pDstGR = (UC *)(DstGR_H + ((y << 10) + (dst_x << 1)));
+
+		pSrcGR = (UC *)(SrcGR_H + (((src_y + (y - dst_y)) << 10) + (src_x << 1)));
+	
+		for(x = dst_x; x < dst_ex; x++)
+		{
+			*pDstGR = *pSrcGR;
+			
+			pDstGR++;
+			pSrcGR++;
+		}
+	}
+}
+
 #endif	/* GRAPHIC_C */

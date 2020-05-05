@@ -49,6 +49,7 @@ void main(void)
 	SS	vx, vy;
 	SS	road;
 	SS	road_offset_x, road_offset_y;
+	SS	view_offset_x, view_offset_y;
 	US	uRoad_rate, uRoad_strch;
 	SS	input;
 	UI	start_time;
@@ -205,7 +206,29 @@ void main(void)
 		{
 			mode_flag = FALSE;
 		}
-			
+		
+		/* モード切替による設定値の変更 */
+		switch(g_mode)
+		{
+			case 0:		/* Screen 0(TPS) */
+			{
+				view_offset_x = X_OFFSET;
+				view_offset_y = Y_MIN_DRAW;
+				break;
+			}
+			case 1:		/* Screen 0(FPS) */
+			{
+				view_offset_x = X_OFFSET;
+				view_offset_y = Y_OFFSET;
+				break;
+			}
+			default:
+			{
+				view_offset_x = 0;
+				view_offset_y = 0;
+				break;
+			}
+		}
 		
 #if 1
 		if( ((usFreeRunCount % (RD[usFreeRunCount & 0x03FFu])) == 0)
@@ -214,11 +237,17 @@ void main(void)
 		{
 			if(updown_flag == 0){
 				vy += 1;
-				if(vy > 24)updown_flag = 1;
+				if(vy > 24)
+				{
+					updown_flag = 1;
+				}
 			}
 			else{
 				vy -= 1;
-				if(vy < -28)updown_flag = 0;
+				if(vy < -28)
+				{
+					updown_flag = 0;
+				}
 			}
 		}
 #else
@@ -458,7 +487,6 @@ void main(void)
 			/* モニタ */
 			Message_Num(&time_cal,	 		 0,  8, 2, MONI_Type_UI);
 			Message_Num(&time_cal_PH,		10,  8, 2, MONI_Type_UI);
-#if 0
 			Message_Num(&speed,				 0,  9, 2, MONI_Type_SS);
 			Message_Num(&vx, 				 6,  9, 2, MONI_Type_SS);
 			Message_Num(&vy, 				12,  9, 2, MONI_Type_SS);
@@ -470,13 +498,7 @@ void main(void)
 			Message_Num(&uRoad_strch,		12, 11, 2, MONI_Type_US);
 			Message_Num(&ras_tmp[ras_st],	 0, 12, 2, MONI_Type_SS);
 			Message_Num(&road,			 	 6, 12, 2, MONI_Type_SS);
-#endif
-		}
-#endif
-		/* 描画処理 */
-		/* 描画のクリア処理 */	/* 必ずテキスト表示処理の後に行うこと */
-		if( bUpdate == TRUE )	/* 前回描画更新だった */
-		{
+
 			if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
 			{
 				*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
@@ -484,14 +506,22 @@ void main(void)
 				bUpdate = FALSE;
 			}
 		}
-		else
+#endif
+		/* 描画処理 */
+		/* 描画のクリア処理 */	/* 必ずテキスト表示処理の後に行うこと */
+#if 0
+		if( bUpdate == TRUE )	/* 前回描画更新だった */
 		{
-			if(speed == 0)								/* 抜かれる */
+		}
+		else
+#endif
+		{
+			if(speed <= 8)								/* 抜かれる */
 			{
 				uCountNum = Mdec(uCountNum, 1);
 				bUpdate = TRUE;
 			}
-			else if( (speed > 0) && (speed < 31) )		/* 保持*/
+			else if( (speed > 8) && (speed < 31) )		/* 保持*/
 			{
 			}
 			else
@@ -500,9 +530,10 @@ void main(void)
 				bUpdate = TRUE;
 			}
 		}
-		if(uCountNum >= 48)uCountNum = 0;
+		if(uCountNum >= 64)uCountNum = 0;
 		if(uCountNum <= 0)uCountNum = 0;
 
+		/* 画面を揺らす */
 		if(speed == 0){	/* 停車 */
 			f = 0;
 		}
@@ -511,73 +542,46 @@ void main(void)
 			else f = 0;
 		}
 		
+
 		/* 画面の位置 */
-		switch(g_mode)
+		HOME(0b01, view_offset_x, view_offset_y + f );	/* Screen 0(TPS/FPS) */
+		HOME(0b10, view_offset_x, view_offset_y );		/* Screen 1 */
+
+		if( bUpdate == TRUE )
 		{
-			case 0:
+			/* ライバル車 */
+			US	j,w,h;
+			i = uCountNum;
+			j = (64-uCountNum)>>4;
+			w = ENEMY_CAR_1_W>>j;
+			h = ENEMY_CAR_1_H>>j;
+			x = view_offset_x + (WIDTH>>1) - ras_tmp[ras_st + (uCountNum << 1)];
+			y = view_offset_y + nHorizon + i - 6;
+
+			G_BitBlt(	x,	w,
+						y,	h,
+						1,
+						0,					w,
+						ENEMY_CAR_1_H * j,	h,
+						1,
+						g_mode);
+#if 0
+			/* 障害物 */
+			w = MY_CAR_0_W>>j;
+			h = MY_CAR_0_W>>j;
+			for(i=0; i<2; i++)
 			{
-				HOME(0b01, X_OFFSET, f );	/* Screen 0(TPS) */
-				HOME(0b10, X_OFFSET, f );	/* Screen 1 */
-				if( bUpdate == TRUE )
-				{
-					/* ライバル車 */
-					x = ras_tmp[ras_st + (uCountNum * 2)];
-					i = uCountNum;
-#if 1
-					G_Stretch_Pict(
-									X_OFFSET + (WIDTH>>1) - x,	ENEMY_CAR_1_W>>((48 - i) / 12),
-									nHorizon + (2 * i) - (1*i),	ENEMY_CAR_1_H>>((48 - i) / 12),
-//									X_OFFSET + 70,				ENEMY_CAR_1_W,
-//									Y_OFFSET + nHorizon,		ENEMY_CAR_1_H,
-									1,
-									0,	ENEMY_CAR_1_W,
-									0,	ENEMY_CAR_1_H,
-									1);
-#else
-					Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (1*i),
-								nHorizon  + (2 * i) - (1*i),
-								X_OFFSET + (WIDTH>>1) - x + (1*i),
-								nHorizon  + (2 * i),
-								1);
+				US obj_x, obj_y;
+				obj_x = x-32;
+				obj_y = y;
+				Draw_Fill(obj_x,obj_y,obj_x-w,obj_y-6,0xC2u);
+				obj_x = x+32;
+				obj_y = y;
+				Draw_Fill(obj_x,obj_y,obj_x+w,obj_y-6,0xC2u);
+			}
 #endif
-				}
-				break;
-			}
-			case 1:
-			{
-				HOME(0b01, X_OFFSET, Y_OFFSET + f );	/* Screen 0(FPS) */
-				HOME(0b10, X_OFFSET, Y_OFFSET + f );	/* Screen 1 */
-				if( bUpdate == TRUE )
-				{
-					/* ライバル車 */
-					x = ras_tmp[ras_st + (uCountNum * 2)];
-					i = uCountNum;
-#if 1
-					G_Stretch_Pict(
-									X_OFFSET + (WIDTH>>1) - x,				ENEMY_CAR_1_W>>((48 - i) / 12),
-									Y_OFFSET + nHorizon  + (4 * i) - (3*i),	ENEMY_CAR_1_H>>((48 - i) / 12),
-//									X_OFFSET + 70,				ENEMY_CAR_1_W,
-//									Y_OFFSET + nHorizon,		ENEMY_CAR_1_H,
-									1,
-									0,	ENEMY_CAR_1_W,
-									0,	ENEMY_CAR_1_H,
-									1);
-#else
-					Draw_Fill(	X_OFFSET + (WIDTH>>1) - x - (2*i),
-								Y_OFFSET + nHorizon  + (4 * i) - (3*i),
-								X_OFFSET + (WIDTH>>1) - x + (2*i),
-								Y_OFFSET + nHorizon  + (4 * i),
-								1);
-#endif
-				}
-				break;
-			}
-			default:
-			{
-				HOME(0b01, X_OFFSET, Y_OFFSET + f );						/* Screen 0(FPS) */
-				break;
-			}
 		}
+
 		usFreeRunCount++;	/* フリーランカウンタ更新 */
 #if 1
 		/* 処理時間計測 */
