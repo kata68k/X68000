@@ -35,8 +35,8 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
 		break;
 	case MONI_Type_SI:
 		{
-			SS *num;
-			num = (SS *)pNum;
+			SI *num;
+			num = (SI *)pNum;
 			sprintf(str, "%11d", *num);
 		}
 		break;

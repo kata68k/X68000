@@ -5,7 +5,7 @@ CFLAGS	= -O -fomit-frame-pointer -fstrength-reduce
 AS		= has
 LD		= hlk
 INC		= 
-LIBS	= libc.a libgnu.a LIB/APICGLIB.a
+LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
 LZH		= OverKata001
 
 .PHONY: all

@@ -11,6 +11,7 @@
 #include "inc/usr_define.h"
 #include "inc/usr_macro.h"
 #include "inc/apicglib.h"
+#include "inc/ZMUSIC.H"
 
 #include "OverKata.h"
 #include "Draw.h"
@@ -59,25 +60,17 @@ void main(void)
 	SI	crtmod;
 	UC	mode_flag = 0;
 	UC	bUpdate;
+	UI	unZmusicVer;
+	UI	unExplosion_time;
 	
 	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
 	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
 
 	/* デバッグコーナー */
 #if 0
-	UI	vi, vj;
-	/* マップデータ読み込み */
-	File_Load_CSV("data/map.csv", map_data, &vi, &vj);
+	/* ↓自由にコードを書いてね */
 	
-	for(y=0;y<vi;y++)
-	{
-		for(x=0;x<vj;x++)
-		{
-			printf("%d,", map_data[y][x]);
-		}
-		printf("->(%d,%d)\n",vj, vi);
-	}
-	
+	/* ↑自由にコードを書いてね */
 	loop = 1;
 	do
 	{
@@ -88,18 +81,40 @@ void main(void)
 	
 	exit(0);
 #endif
+	/* サウンド常駐確認 */
+	unZmusicVer = zm_ver();
+	if(unZmusicVer == 0)	/* 0:常駐ナシ */
+	{
+		puts("Z-MUSIC Ver2を常駐してください。");
+		exit(0);
+	}
+	if((unZmusicVer&0xF000u)>>12 != 2u)	/* Ver2.0x判定 */
+	{
+		puts("Z-MUSIC Ver2を常駐してください。");
+		exit(0);
+	}
+	if((unZmusicVer&0xFFFF000u)>>16 == 0u)	/* PCM8判定 */
+	{
+		puts("PCM8Aを常駐してください。");
+		exit(0);
+	}
 	
 	/* スーパーバイザーモード開始 */
 	/*ＤＯＳのスーパーバイザーモード開始*/
 	superchk = SUPER(0);
 	if( superchk < 0 ) {
-		puts("すでに入ってる。");
+		puts("すでにスーパーバイザーモード");
 	} else {
-		puts("入った。");
+		puts("スーパーバイザーモード開始");
 	}
 	
 	crtmod = CRTMOD(-1);	/* 現在のモードを返す */
 	
+	/* サウンド初期化 */
+	m_init();		/* 初期化 */
+	m_ch("fm");		/* FM */
+	zmd_play("data\\music\\X68K.ZMD");	/* ローディングBGM */
+
 	/* グラフィック表示 */
 	G_INIT();		/*画面の初期設定*/
 	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET, 		Y_OFFSET - 32,	0);	/* FPS */
@@ -128,7 +143,7 @@ void main(void)
 		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
 		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
 	}
-
+	
 	/* 変数の初期化 */
 	speed = 0;
 	road_offset_x = 0;
@@ -157,14 +172,15 @@ void main(void)
 		}
 	}
 	
+	/* 音楽 */
+	zmd_play("data\\music\\PT034MK.ZMD");	/* BGM */
+
+	/* MFP */
 	Init_MFP();						/* MFP関連の初期化 */
 	TIMERDST(Timer_D_Func, 7, 20);	/* Timer-Dセット */	/* 50us(7) x 20cnt = 1ms */
 	SetNowTime(0);					/* 時間の初期化 */
 	GetNowTime(&start_time);		/* Time Count用 */
 	VDISPST(Vsync_Func, 0, 1);		/* V-Sync割り込み 帰線 */
-	
-	/* 音楽 */
-	
 	
 	a = 0;
 	b = 0;
@@ -266,16 +282,26 @@ void main(void)
 		
 		/* Aボタン */
 		if((input & KEY_A) != 0u){
-			if((usFreeRunCount % 5) == 0)speed += 1;
+			if((usFreeRunCount % 20) == 0)speed += 1;
 		}
 		else{
-			speed -= 1;
+			if((usFreeRunCount % 10) == 0)speed -= 1;
 		}
 		speed = Mmax(Mmin(speed, 32), 0);
 		
 		/* Bボタン */
 		if( (input & KEY_B) != 0U )
 		{
+			SI	adpcm_sns;
+			
+			adpcm_sns = m_stat(9/*Mmin(Mmax(25, vx), 31)*/);	/* ADPCM ch1(9) ch2-8(25-31) */
+			if(    ((adpcm_sns & 0xF000u) == 0u)
+				&& ((time_old - unExplosion_time) > (80 / Mmax(speed,1))) )
+			{
+				unExplosion_time = time_old;
+				m_pcmplay(9,3,4);
+			}
+//			Message_Num(&adpcm_sns,	 0, 13, 2, MONI_Type_SI);
 		}
 		else
 		{
@@ -521,7 +547,7 @@ void main(void)
 				uCountNum = Mdec(uCountNum, 1);
 				bUpdate = TRUE;
 			}
-			else if( (speed > 8) && (speed < 31) )		/* 保持*/
+			else if( (speed > 8) && (speed < 16) )		/* 保持*/
 			{
 			}
 			else
@@ -606,6 +632,9 @@ void main(void)
 
 	B_CURON();
 	TextClear();
+
+	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
+	m_init();		/* 初期化 */
 
 	CRTMOD(crtmod);			/* モードをもとに戻す */
 	
