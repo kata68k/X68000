@@ -14,7 +14,7 @@ SS BG_TextPut(SC *, SS, SS);
 SS BG_PutToText(SS, SS, SS, SS, UC);
 SS BG_TimeCounter(UI, US, US);
 SS BG_Number(UI, US, US);
-SS Text_To_Text(US, SS, SS, UC);
+SS Text_To_Text(US, SS, SS, UC, UC *);
 
 /* 関数 */
 
@@ -490,7 +490,7 @@ SS BG_Number(UI unNum, US x, US y)
 }
 
 /* TEXT-RAMに展開したデータから数字情報を作る */	/* 処理負荷改善@kunichikoさんのアドバイス */
-SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
+SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 {
 	UC	*T0_HEAD = (UC *)0xE00000;
 	UC	*T1_HEAD = (UC *)0xE20000;
@@ -524,12 +524,12 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
 		pSrc2 += 0x400;
 		pSrc3 += 0x400;
 		size = 16;	/* 大 */
-		sprintf(ucDigit, "%03d", uNum);
+		sprintf(ucDigit, sFormat, uNum);
 	}
 	else
 	{
 		size = 8;	/* 小 */
-		sprintf(ucDigit, "%10d", uNum);
+		sprintf(ucDigit, sFormat, uNum);
 	}
 	pString = &ucDigit[0];
 	
@@ -537,6 +537,37 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge)
 	{
 		switch(*pString)
 		{
+			case 0x20:	/* SP */
+			{
+				/* コピー先 */
+				k = (y * 0x80) + (x >> 3);
+				if( (k < 0) || ((k+size) > 0x1FFFF) ) break;
+				pDst0 = T0_HEAD + k;
+				pDst1 = T1_HEAD + k;
+				pDst2 = T2_HEAD + k;
+				pDst3 = T3_HEAD + k;
+				
+				for(i=0; i < size; i++)
+				{
+					/* 更新 */
+					*pDst0 = 0;
+					*pDst1 = 0;
+					*pDst2 = 0;
+					*pDst3 = 0;
+
+					pData0 += 0x80;
+					pData1 += 0x80;
+					pData2 += 0x80;
+					pData3 += 0x80;
+
+					pDst0 += 0x80;
+					pDst1 += 0x80;
+					pDst2 += 0x80;
+					pDst3 += 0x80;
+				}
+				x+=8;
+				break;
+			}
 			case 0x30:	/* 0 */
 			case 0x31:	/* 1 */
 			case 0x32:	/* 2 */

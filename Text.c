@@ -13,6 +13,8 @@ void TextClear(void);
 void T_TopScore(void);
 void T_Time(void);
 void T_Score(void);
+void T_Speed(void);
+void T_Gear(void);
 
 /* ä÷êî */
 void T_INIT(void)
@@ -108,5 +110,20 @@ void T_Score(void)
 	BG_PutToText( 15, (BG_WIDTH * 23), 16, BG_H_rev, FALSE);	/* âEâ∫ */
 
 }
+
+void T_Speed(void)
+{
+	/* SPEED */
+	BG_TextPut("SPEED", 164, 24);
+	/* KM */
+	BG_TextPut("KM", 232, 24);
+}
+
+void T_Gear(void)
+{
+	/* GEAR */
+	BG_TextPut("GEAR", 172, 32);
+}
+
 #endif	/* TEXT_C */
 

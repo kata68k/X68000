@@ -32,6 +32,6 @@ extern SS BG_TextPut(SC *, SS, SS);
 extern SS BG_PutToText(SS, SS, SS, SS, UC);
 extern SS BG_TimeCounter(UI, US, US);
 extern SS BG_Number(UI, US, US);
-extern SS Text_To_Text(US, SS, SS, UC);
+extern SS Text_To_Text(US, SS, SS, UC, UC *);
 
 #endif	/* OUTPUT_TEXT_H */

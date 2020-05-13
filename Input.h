@@ -24,10 +24,12 @@
 #define KEY_b_ESC		(0x0040)
 #define KEY_b_Q			(0x0080)
 #define KEY_b_M			(0x0100)
+#define KEY_b_SP		(0x0200)
 
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
-extern US get_key( UC );
+extern US	get_key( UC );
+extern US	DirectInputKeyNum( US );
 
 #endif	/* INPUT_H */

@@ -8,7 +8,8 @@
 
 
 /* ŠÖ”‚Ìƒvƒƒgƒ^ƒCƒvéŒ¾ */
-US get_key( UC );
+US	get_key( UC );
+US	DirectInputKeyNum( US );
 
 /* ŠÖ” */
 US get_key( UC mode )
@@ -29,9 +30,10 @@ US get_key( UC mode )
 	kd_k2_2	= BITSNS( 9 );
 	kd_b	= BITSNS(10 );
 	
-	if( (kd_b3  & 0x02 ) != 0 ) ret |= KEY_b_Q;		/* ‚p‚ÅI—¹ */
-	if( (kd_b4  & 0x02 ) != 0 ) ret |= KEY_b_ESC;	/* ‚d‚r‚bƒ|[ƒY */
-	if( (kd_b7  & 0x01 ) != 0 ) ret |= KEY_b_M;		/* ‚l‚Åƒ‚[ƒhØ‘Ö */
+	if( (kd_b3  & 0x02 ) != 0 ) ret |= KEY_b_Q;		/* ‚p */
+	if( (kd_b4  & 0x02 ) != 0 ) ret |= KEY_b_ESC;	/* ‚d‚r‚b */
+	if( (kd_b7  & 0x01 ) != 0 ) ret |= KEY_b_M;		/* ‚l */
+	if( (kd_b7  & 0x20 ) != 0 ) ret |= KEY_b_SP;	/* ƒXƒy[ƒXƒL[ */
 
 	if( !( JOYGET( 0 ) & UP    ) || ( kd_k1 & 0x10 ) || ( kd_k2_1 & 0x10 ) || ( kd_b3 & 0x04 ) ) ret |= KEY_UPPER;	/* ã ª 8 w */
 	if( !( JOYGET( 0 ) & DOWN  ) || ( kd_k1 & 0x40 ) || ( kd_k2_2 & 0x10 ) || ( kd_b5 & 0x80 ) ) ret |= KEY_LOWER;	/* ‰º « 2 s */
@@ -66,5 +68,89 @@ US get_key( UC mode )
 	return ret;
 }
 
+US	DirectInputKeyNum(US uDigit)
+{
+	US ret = 0;
+	static US uNum[10] = {0};
+	static US uResultNum = 0;
+	static US uCount = 0;
+	static UC bKeyFlag1 = FALSE;
+	static UC bKeyFlag2 = FALSE;
+	UI i, kd_g0, kd_g1;
+	
+	if(uDigit > 10)return -1;
+	
+	kd_g0	= (BITSNS( 0 ) & 0xFCu);
+	kd_g1	= (BITSNS( 1 ) & 0x0Fu);
+
+	if(kd_g0 != 0)
+	{
+		if(bKeyFlag1 == FALSE)
+		{
+			bKeyFlag1 = TRUE;
+			
+			for(i = 0; i < 8; i++)
+			{
+				if( ((kd_g0 >> i) & 0x01) != 0u )
+				{
+					uNum[uCount] = i - 1;
+					break;
+				}
+			}
+			uCount++;
+		}
+	}
+	else
+	{
+		bKeyFlag1 = FALSE;
+	}
+	
+	if(kd_g1 != 0)
+	{
+		if(bKeyFlag2 == FALSE)
+		{
+			bKeyFlag2 = TRUE;
+
+			for(i = 0; i < 8; i++)
+			{
+				if( ((kd_g1 >> i) & 0x01) != 0u )
+				{
+					uNum[uCount] = (i + 7) % 10;
+					break;
+				}
+			}
+			uCount++;
+		}
+	}
+	else
+	{
+		bKeyFlag2 = FALSE;
+	}
+
+	if(uCount == uDigit)
+	{
+		US uCal = 0;
+		US uD = 1;
+		
+		for(i = 0; i < uDigit; i++)
+		{
+			if(i == 0)
+			{
+				uCal += uNum[uDigit-1];
+			}
+			else
+			{
+				uCal += uNum[(uDigit-1) - i] * uD;
+			}
+			uD *= 10;
+		}
+		uResultNum = uCal;
+		uCount = 0;
+	}
+	
+	ret = uResultNum;
+	
+	return ret;
+}
 #endif	/* INPUT_C */
 
