@@ -9,7 +9,7 @@
 #define	TAB_SIZE	(4)
 
 /* 関数のプロトタイプ宣言 */
-void Message_Num(void *, SS, SS, US, UC);
+void Message_Num(void *, SS, SS, US, UC, UC *);
 SS BG_TextPut(SC *, SS, SS);
 SS BG_PutToText(SS, SS, SS, SS, UC);
 SS BG_TimeCounter(UI, US, US);
@@ -18,7 +18,7 @@ SS Text_To_Text(US, SS, SS, UC, UC *);
 
 /* 関数 */
 
-void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
+void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode, UC *sFormat)
 {
 	char str[64];
 	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
@@ -30,49 +30,49 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
 		{
 			UI *num;
 			num = (UI *)pNum;
-			sprintf(str, "%10d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SI:
 		{
 			SI *num;
 			num = (SI *)pNum;
-			sprintf(str, "%11d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_US:
 		{
 			US *num;
 			num = (US *)pNum;
-			sprintf(str, "%5d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SS:
 		{
 			SS *num;
 			num = (SS *)pNum;
-			sprintf(str, "%6d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_UC:
 		{
 			UC *num;
 			num = (UC *)pNum;
-			sprintf(str, "%3d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SC:
 		{
 			SC *num;
 			num = (SC *)pNum;
-			sprintf(str, "%4d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_FL:
 		{
 			FL *num;
 			num = (FL *)pNum;
-			sprintf(str, "%7f", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_PT:
@@ -84,7 +84,7 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode)
 		{
 			US *num;
 			num = (US *)pNum;
-			sprintf(str, "%6d", *num);
+			sprintf(str, sFormat, *num);
 		}
 		break;
 	}

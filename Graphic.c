@@ -392,6 +392,8 @@ SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 	US	x_max, y_max;
 	US	rate_x, rate_y;
 
+	dst_x	= dst_x - (dst_w>>1);
+	dst_y	= dst_y - (dst_h>>1);
 	dst_ex	= dst_x + dst_w;
 	dst_ey	= dst_y + dst_h;
 	src_ex	= src_x + src_w;

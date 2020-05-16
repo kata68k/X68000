@@ -40,17 +40,20 @@ void BG_TEXT_SET(SC *fname)
 {
 	US	usV_pat;
 	UI	pal = 0;
-	SI	i,j,x,y;
+	US	i,j;
+	SI	x,y;
 	US	map_data[64][64];
 
 	/* マップデータ読み込み */
 	File_Load_CSV( fname, map_data, &i, &j);
 	
-	pal = 0x0E;
 	for(y=0; y<16; y++)
 	{
 		for(x=0; x<i; x++)
 		{
+			if(y < 12)		pal = 0x0E;
+			else if(x > 31)	pal = 0x0F;
+			else 			pal = 0x0E;
 			BGTEXTST(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
 			BGTEXTST(1,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
 		}

@@ -1,6 +1,8 @@
 #ifndef	USR_DEFINE_H
 #define	USR_DEFINE_H
 
+#include "usr_style.h"
+
 #define FALSE	(0)
 #define TRUE	(!FALSE)
 
@@ -70,5 +72,40 @@
 #define BG_0_H	(63)
 #define BG_1_W	(280)
 #define BG_1_H	(63)
+
+/* 構造体 */
+
+/* コースの構造体 */
+typedef struct
+{
+	UC	bHeight;	/* 道の標高	(0x80センター) */
+	UC	bWidth;		/* 道の幅	(0x80センター) */
+	UC	bAngle;		/* 道の角度	(0x80センター) */
+	UC	bfriction;	/* 道の摩擦	(0x80センター) */
+	UC	bPat;		/* 道の種類	 */
+	UC	bObject;	/* 出現ポイントのオブジェクトの種類 */
+	UC	bRepeatCount;	/* 繰り返し回数 */
+}	ST_ROADDATA;
+
+/* 車の構造体 */
+typedef struct
+{
+	UC	ubCarType;			/* 車の種類 */
+	US	uEngineRPM;			/* エンジン回転数 */
+	SS	VehicleSpeed;		/* 車速 */
+	SS	Steering;			/* ステア */
+	UC	ubShiftPos;			/* ギア段 */
+	SC	bThrottle;			/* スロットル開度 */
+	UC	ubBrakeLights;		/* ブレーキライト */
+	UC	ubHeadLights;		/* ヘッドライト */
+	UC	ubWiper;			/* ワイパー */
+	SC	bTire;				/* タイヤの状態 */
+	UC	ubOBD;				/* 故障の状態 */
+}	ST_CARDATA;
+
+
+
+/* データテーブル */
+
 
 #endif	/* USR_DEFINE_H */

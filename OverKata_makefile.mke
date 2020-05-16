@@ -19,9 +19,11 @@ clean:
 execonly:
 	rm -f *.ind *.bak *.s *.o \
 
-OverKata.x:	OverKata.o Draw.o FileManager.o Graphic.o Input.o MFP.o OutPut_Text.o PCG.o Text.o
+OverKata.x:	OverKata.o APL_Math.o Draw.o FileManager.o Graphic.o Input.o MFP.o MyCar.o OutPut_Text.o PCG.o Text.o
 	$(LD) $^ -o $@ -l $(LIBS)
 OverKata.o:	OverKata.c
+	$(CC) $(CFLAGS) -c $<
+APL_Math.o:	APL_Math.c
 	$(CC) $(CFLAGS) -c $<
 Draw.o:	Draw.c
 	$(CC) $(CFLAGS) -c $<
@@ -32,6 +34,8 @@ Graphic.o:	Graphic.c
 Input.o:	Input.c
 	$(CC) $(CFLAGS) -c $<
 MFP.o:	MFP.c
+	$(CC) $(CFLAGS) -c $<
+MyCar.o:	MyCar.c
 	$(CC) $(CFLAGS) -c $<
 OutPut_Text.o:	OutPut_Text.c
 	$(CC) $(CFLAGS) -c $<

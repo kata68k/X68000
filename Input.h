@@ -1,7 +1,6 @@
 #ifndef	INPUT_H
 #define	INPUT_H
 
-#include "inc/usr_style.h"
 #include "inc/usr_define.h"
 
 /* ジョイスティック１のその１ */

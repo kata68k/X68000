@@ -4,7 +4,6 @@
 #include <iocslib.h>
 #include <interrupt.h>
 
-#include "inc/usr_define.h"
 #include "inc/usr_macro.h"
 
 #include "OverKata.h"

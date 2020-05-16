@@ -2,7 +2,7 @@
 #define	MFP_H
 
 #include <string.h>
-#include "inc/usr_style.h"
+#include "inc/usr_define.h"
 
 enum{
 	DST_none=0,

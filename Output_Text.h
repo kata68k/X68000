@@ -1,7 +1,6 @@
 #ifndef	OUTPUT_TEXT_H
 #define	OUTPUT_TEXT_H
 
-#include "inc/usr_style.h"
 #include "inc/usr_define.h"
 
 #define	DEBUG
@@ -27,7 +26,7 @@ enum{
 extern SS moni;
 extern SS moni_MAX;
 
-extern void Message_Num(void *, SS, SS, US, UC);
+extern void Message_Num(void *, SS, SS, US, UC, UC *);
 extern SS BG_TextPut(SC *, SS, SS);
 extern SS BG_PutToText(SS, SS, SS, SS, UC);
 extern SS BG_TimeCounter(UI, US, US);

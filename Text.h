@@ -1,7 +1,6 @@
 #ifndef	TEXT_H
 #define	TEXT_H
 
-#include "inc/usr_style.h"
 #include "inc/usr_define.h"
 
 extern void T_INIT(void);

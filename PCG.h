@@ -1,7 +1,6 @@
 #ifndef	PCG_H
 #define	PCG_H
 
-#include "inc/usr_style.h"
 #include "inc/usr_define.h"
 
 extern void PCG_INIT(void);
