@@ -19,6 +19,7 @@
 #include "MyCar.h"
 #include "Input.h"
 #include "Output_Text.h"
+#include "Task.h"
 
 /* グローバル変数 */
 SS moni = 0;
@@ -27,6 +28,8 @@ SS speed = 0;
 UC g_mode = 0;
 ST_ROADDATA	stRoadData[256] = {0};
 ST_CARDATA	stMyCar = {0};
+ST_TASK		stTask = {0}; 
+ST_TEXTINFO stTextInfo = {0};
 
 /* 関数のプロトタイプ宣言 */
 void main(void);
@@ -34,13 +37,11 @@ void main(void);
 /* 関数 */
 void main(void)
 {
-	static US uScoreMax = 10000;
 	UC	road_flag = 0;
 	UC	updown_flag = 0;
 	US	x,y;
 	US	ras_tmp[256] = {0};
 	US	ras_debug[256] = {0};
-	US	ras_tmp_final;
 	US	pal_tmp[256] = {0};
 	US	usFreeRunCount=0;
 	US	uCountNum;
@@ -53,7 +54,6 @@ void main(void)
 	SS	road;
 	SS	road_offset_x, road_offset_y, road_offset_val;
 	SS	view_offset_x, view_offset_y;
-	US	uRoad_rate, uRoad_strch;
 	SS	input;
 	UI	start_time;
 	UI	time_cal = 0;
@@ -74,23 +74,12 @@ void main(void)
 	UI	unExplosion_time;
 	UC	bExplosion;
 	
-	UI	un8ms_time;
-	UC	b8ms_time;
-	UI	un16ms_time;
-	UC	b16ms_time;
-	UI	un32ms_time;
-	UC	b32ms_time;
-	UI	un96ms_time;
-	UC	b96ms_time;
-	
 	SS	rpm, Vs, speed_min;
-	SS	ShiftPos;
 	UC	bShiftPosFlag;
 	US	uRoadAnime, uRoadAnime_old, uRoadAnimeBase, uRoadAnimeBase_old;
 	US	uRoadAnimeCount;
 	UI	unRoadAnimeTime;
 	SS	nVibration;
-	FLOAT	rad;
 	US	cal_tan;
 	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
 	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
@@ -98,6 +87,7 @@ void main(void)
 	/* デバッグコーナー */
 #if 0
 	/* ↓自由にコードを書いてね */
+	FLOAT	rad;
 	rad = APL_Atan2(1,1);
 	printf("%f\n", rad);
 	/* ↑自由にコードを書いてね */
@@ -186,7 +176,7 @@ void main(void)
 	road_offset_y = 0;
 	road_offset_val = 0;
 	g_mode = 1;
-	ShiftPos = 1;		/* 1速 */
+	stMyCar.ubShiftPos = 1;		/* 1速 */
 	rpm = 0;
 	Vs = 0;
 	speed = 0;
@@ -202,9 +192,10 @@ void main(void)
 	uRoadAnime_old = 0;
 	uRoadAnimeCount = 0;
 	nVibration = 0;
-	bDebugMode = TRUE;
+	bDebugMode = FALSE;
 	uDebugNum = 0x80;
 	bCounter = 0;
+	stTextInfo.uScoreMax = 10000;
 
 	/* 乱数 */
 	{
@@ -245,51 +236,13 @@ void main(void)
 	
 	do
 	{
-		US uCount = 0;
 		UI time, time_old, time_now;
 		
 		GetNowTime(&time_old);
 		
-		/* 時間判定 */
-		if( (time_old - un8ms_time) > 8)	/* 8ms周期 */
-		{
-			un8ms_time = time_old;
-			b8ms_time = TRUE;
-		}
-		else
-		{
-			b8ms_time = FALSE;
-		}
-		
-		if( (time_old - un16ms_time) > 16)	/* 16ms周期 */
-		{
-			un16ms_time = time_old;
-			b16ms_time = TRUE;
-		}
-		else
-		{
-			b16ms_time = FALSE;
-		}
+		/* タスクの情報を得る */
+		GetTaskInfo(&stTask, time_old);
 
-		if( (time_old - un32ms_time) > 32)	/* 32ms周期 */
-		{
-			un32ms_time = time_old;
-			b32ms_time = TRUE;
-		}
-		else
-		{
-			b32ms_time = FALSE;
-		}
-
-		if( (time_old - un96ms_time) > 96)	/* 96ms周期 */
-		{
-			un96ms_time = time_old;
-			b96ms_time = TRUE;
-		}
-		else
-		{
-			b96ms_time = FALSE;
-		}
 		/* 入力処理 */
 		input = get_key(1);	/* キーボード＆ジョイスティック入力 */
 		if((input & KEY_b_Q   ) != 0u) loop = 0;	/* Ｑで終了 */
@@ -324,7 +277,7 @@ void main(void)
 			bDebugMode_flag = FALSE;
 		}
 		
-		if(b96ms_time == TRUE)
+		if(stTask.b496ms == TRUE)
 		{
 			/* モード切替による設定値の変更 */
 			switch(g_mode)
@@ -350,34 +303,40 @@ void main(void)
 			}
 		}
 #if 1
-		/* コースデータ読み込み */
-		vy = (SS)stRoadData[bCounter].bHeight - 0x80;
+		if(bDebugMode == FALSE)
+		{
+			/* コースデータ読み込み */
+			vy = (SS)stRoadData[bCounter].bHeight - 0x80;
+		}
+		else
+		{
+			/* キー操作 */
+			if((input & KEY_UPPER) != 0u)
+			{
+				if(bKeyUP_flag == TRUE)
+				{
+					vy += 1;
+					bKeyUP_flag = FALSE;
+				}
+			}
+			else
+			{
+				bKeyUP_flag = TRUE;
+			}
+			if((input & KEY_LOWER) != 0u)
+			{
+				if(bKeyDOWN_flag == TRUE)
+				{
+					vy -= 1;
+					bKeyDOWN_flag = FALSE;
+				}
+			}
+			else
+			{
+				bKeyDOWN_flag = TRUE;
+			}
+		}
 #else
-		/* キー操作 */
-		if((input & KEY_UPPER) != 0u)
-		{
-			if(bKeyUP_flag == TRUE)
-			{
-				vy += 1;
-				bKeyUP_flag = FALSE;
-			}
-		}
-		else
-		{
-			bKeyUP_flag = TRUE;
-		}
-		if((input & KEY_LOWER) != 0u)
-		{
-			if(bKeyDOWN_flag == TRUE)
-			{
-				vy -= 1;
-				bKeyDOWN_flag = FALSE;
-			}
-		}
-		else
-		{
-			bKeyDOWN_flag = TRUE;
-		}
 
 		/* ランプ操作 */
 		if( ((usFreeRunCount % (RD[usFreeRunCount & 0x03FFu])) == 0)
@@ -407,7 +366,6 @@ void main(void)
 		GetMyCarInfo(&stMyCar, input);
 		rpm			= stMyCar.uEngineRPM;
 		Vs			= stMyCar.VehicleSpeed;
-		ShiftPos	= stMyCar.ubShiftPos;
 		vx			= stMyCar.Steering;
 		
 		if( (stMyCar.ubBrakeLights == TRUE)		/* ブレーキランプON */
@@ -450,7 +408,7 @@ void main(void)
 		road = Mmax(Mmin(road, 12), -12);
 
 #if 1
-//		if(b8ms_time == TRUE)
+//		if(stTask.b8ms == TRUE)
 		{
 //			memset(&pal_tmp[0], 0, sizeof(pal_tmp));
 //			memset(&ras_tmp[0], 0, sizeof(ras_tmp));
@@ -485,11 +443,19 @@ void main(void)
 			ras_size = ras_ed - ras_st;			/* ラスターの範囲 */
 			pal_tmp[0] = ras_st;				/* 割り込み位置の設定 */
 			
-			uRoad_rate = (ras_size << 12) / ROAD_SIZE;
-			uRoad_strch = 0;
-			uCount = 0;
-			
 			/* 角度算出 */
+			/* 底辺と高さから角度を求めて、角度からY座標を演算していたが*/
+			/* 角度演算は不要とのこと @runshiwaさんより指摘 */
+#if 1
+			if(Mabs(vy) <= 1)
+			{
+				cal_tan = 0;
+			}
+			else
+			{
+				cal_tan = (Mabs(vy) << 1) - 4;	/* 下記演算結果をExcelから式を算出した */
+			}
+#else
 			if(Mmax(ras_size-ROAD_SIZE, 0) == 0)
 			{
 				rad = 0.0;
@@ -498,7 +464,8 @@ void main(void)
 			{
 				rad = APL_Atan2( ROAD_SIZE, ras_size-ROAD_SIZE);
 			}
-			cal_tan = APL_Tan256((US)rad);
+			cal_tan = APL_Tan256((SS)rad);
+#endif
 			
 			/* ロードパターン*/
 			/* センターラインの長さと間隔は５ｍ */
@@ -542,16 +509,17 @@ void main(void)
 			
 			for(y=ras_st; y < ras_ed; y++)
 			{
-				SS num;
-				US offset;
-				US ras_cal;
-				US uBG_pat[4][4] = {288,   0,  96, 192,
-					 				192, 288,   0,  96,
-					 				 96, 192, 288,   0,
-					 				  0,  96, 192, 288};
+				SS	num;
+				US	uRoad_strch;
+				US	offset;
+				US	ras_cal;
+				US	uBG_pat[4][4] = {288,   0,  96, 192,
+					 				 192, 288,   0,  96,
+					 				  96, 192, 288,   0,
+					 				   0,  96, 192, 288};
 				
-				num = y - ras_st;
-				offset = ras_size - num;
+				num = y - ras_st;			/* 0 -> ras_size */
+				offset = ras_size - num;	/* ras_size -> 0 */
 				
 				/* X座標 */
 				if(num == 0u)
@@ -565,31 +533,30 @@ void main(void)
 					//ras_tmp[y] += road * ( (RASTER_MAX - ras_st) / (float)(Mmax(y-ras_st, 1)) );
 					ras_tmp[y] += (Mmin(Mmax((road * ras_size), -256), 512) / num );	/* HUYEさんのアドバイス箇所 */
 				}
-				ras_tmp_final = ras_tmp[y];
 
 				/* Y座標 */
 				if(num == 0u)	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
 				{
 					ras_cal = 0;
-					ras_debug[y] = cal_tan;
 					road_offset_y = 3;
 					road_offset_val = 1;
 					uRoadAnime_old = uRoadAnime;
 					uRoadAnimeBase_old = uRoadAnimeBase;
-					uCount = 0;
+
+					ras_debug[y] = cal_tan;	/* Debug */
 				}
 				else if(vy < 0)	/* 下り坂 */
 				{
 					uRoad_strch = (offset * cal_tan) >> 8;
-					ras_debug[y] = uRoad_strch;
 					ras_cal = nHorizon_offset + uRoad_strch + uBG_pat[uRoadAnimeBase][uRoadAnime];
+					ras_debug[y] = uRoad_strch;	/* Debug */
 				}
 				else if(vy > 0)	/* 上り坂 */
 				{
 					uRoad_strch = (offset * cal_tan) >> 8;
-					ras_debug[y] = uRoad_strch;
 					//ras_cal = nHorizon_offset + vy + uRoad_strch + uBG_pat[uRoadAnimeBase][uRoadAnime];
 					ras_cal = nHorizon_offset + uRoad_strch + uBG_pat[uRoadAnimeBase][uRoadAnime];
+					ras_debug[y] = uRoad_strch;	/* Debug */
 				}
 				else			/* 平坦 */
 				{
@@ -620,42 +587,43 @@ void main(void)
 				{
 					uRoadAnime = 0;
 				}
-				
-				uCount++;
 			}
 			SetRasterVal(ras_tmp, sizeof(US)*RASTER_MAX);
 			SetRasterPal(pal_tmp, sizeof(US)*RASTER_MAX);
 		}
 #endif
-		if(b96ms_time == TRUE)
+		if(stTask.b496ms == TRUE)
 		{
-			/* 処理負荷改善要 */
-			UI nTimeCounter, nPassTime, nTimer;
-			US uScore;
+			UI unPassTime, unTimer;
+			US uTimeCounter;
 			/* Score */
-			uScore = usFreeRunCount;
-			Text_To_Text(uScore, 192, 8, FALSE, "%7d");
+			stTextInfo.uScore = usFreeRunCount;
+
 			/* Top Score */
-			uScoreMax = Mmax(uScore, uScoreMax);
-			Text_To_Text(uScoreMax, 40, 8, FALSE, "%7d");
+			stTextInfo.uScoreMax = Mmax(stTextInfo.uScore, stTextInfo.uScoreMax);
+			
 			/* Time Count */
 			GetNowTime(&time_now);
-			nPassTime = (time_now - start_time);
-			nTimer = 120000 - nPassTime;
-			
-			if(120000 < nTimer)
+			unPassTime = (time_now - start_time);
+			unTimer = 120000 - unPassTime;
+			if(120000 < unTimer)
 			{
-				nTimeCounter = 0;
+				uTimeCounter = 0;
 			}
 			else
 			{
-				nTimeCounter = nTimer / 1000;
+				uTimeCounter = (US)(unTimer / 1000);
 			}
-			Text_To_Text(nTimeCounter, 112, 24, TRUE, "%3d");
+			stTextInfo.uTimeCounter = uTimeCounter;
+			
 			/* Speed */
-			Text_To_Text(Vs, 208, 24, FALSE, "%3d");
+			stTextInfo.uVs = Vs;
+			
 			/* Gear */
-			Text_To_Text(ShiftPos, 224, 32, FALSE, "%d");
+			stTextInfo.uShiftPos = (US)stMyCar.ubShiftPos;
+
+			/* 描画 */
+			PutTextInfo(stTextInfo);
 		}
 #ifdef DEBUG	/* デバッグコーナー */
 
@@ -694,13 +662,13 @@ void main(void)
 #ifdef DEBUG
 		if(bDebugMode == TRUE)
 		{
-			if(b96ms_time == TRUE)
+			if(stTask.b496ms == TRUE)
 			{
 				/* モニタ */
 				Message_Num(&rpm,	 			12,  6, 2, MONI_Type_SS, "%4d");
 				
 				Message_Num(&time_cal,	 		 0,  8, 2, MONI_Type_UI, "%3d");
-				Message_Num(&time_cal_PH,		10,  8, 2, MONI_Type_UI, "%3d");
+				Message_Num(&time_cal_PH,		 6,  8, 2, MONI_Type_UI, "%3d");
 				
 				Message_Num(&speed,				 0,  9, 2, MONI_Type_SS, "%3d");
 				Message_Num(&vx, 				 6,  9, 2, MONI_Type_SS, "%2d");
@@ -709,19 +677,20 @@ void main(void)
 				Message_Num(&ras_st,			 0, 10, 2, MONI_Type_US, "%3d");
 				Message_Num(&ras_ed,			 7, 10, 2, MONI_Type_US, "%3d");
 				Message_Num(&ras_size,			13, 10, 2, MONI_Type_US, "%3d");
-				Message_Num(&nHorizon_offset,	20, 10, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&nHorizon_offset,	20, 10, 2, MONI_Type_SS, "%3d");
 				
-				Message_Num(&pal_tmp[ras_st],	 0, 11, 2, MONI_Type_US, "%d");
-				Message_Num(&rad,				12, 11, 2, MONI_Type_FL, "%f");
+				Message_Num(&pal_tmp[ras_st],	 0, 11, 2, MONI_Type_US, "%3d");
+//				Message_Num(&cal_tan,			 6, 11, 2, MONI_Type_US, "%3d");
+//				Message_Num(&rad,				12, 11, 2, MONI_Type_FL, "%f");
 				
-				Message_Num(&ras_tmp[ras_st],	 0, 12, 2, MONI_Type_SS, "%d");
-				Message_Num(&road,			 	 6, 12, 2, MONI_Type_US, "%d");
-				Message_Num(&uDebugNum,		 	12, 12, 2, MONI_Type_US, "%d");
+				Message_Num(&ras_tmp[ras_st],	 0, 12, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&road,			 	 6, 12, 2, MONI_Type_US, "%3d");
+				Message_Num(&uDebugNum,		 	12, 12, 2, MONI_Type_US, "%3d");
 			}
 		}
 #endif
 		/* 描画のクリア処理 */	/* 必ずテキスト表示処理の後に行うこと */
-		if(b96ms_time == TRUE)
+		if(stTask.b96ms == TRUE)
 		{
 			if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
 			{
@@ -730,7 +699,7 @@ void main(void)
 			}
 		}
 		/* 描画処理 */
-		if(b32ms_time == TRUE)
+		if(stTask.b32ms == TRUE)
 		{
 			if(speed <= 8)								/* 抜かれる */
 			{
@@ -770,7 +739,7 @@ void main(void)
 				w = ENEMY_CAR_1_W>>j;
 				h = ENEMY_CAR_1_H>>j;
 				/* xもyも、倍率変化時に座標がセンター調整のため違和感あり */
-				x = view_offset_x + (WIDTH>>1) - ras_tmp[Mmin(ras_st + uCountNum, ras_ed)];//ras_tmp_final
+				x = view_offset_x + (WIDTH>>1) - ras_tmp[Mmin(ras_st + uCountNum, ras_ed)];
 				y = view_offset_y + nHorizon + i;
 
 				G_BitBlt(	x,	w,

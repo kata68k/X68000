@@ -23,6 +23,18 @@ enum{
 	BG_VH_rev
 };
 
+/* ç\ë¢ëÃ */
+
+/* âÊñ èÓïÒèoóÕÇÃç\ë¢ëÃ */
+typedef struct
+{
+	US	uTimeCounter;
+	US	uScore;
+	US	uScoreMax;
+	US	uVs;
+	US	uShiftPos;
+}	ST_TEXTINFO;
+
 extern SS moni;
 extern SS moni_MAX;
 
@@ -32,5 +44,6 @@ extern SS BG_PutToText(SS, SS, SS, SS, UC);
 extern SS BG_TimeCounter(UI, US, US);
 extern SS BG_Number(UI, US, US);
 extern SS Text_To_Text(US, SS, SS, UC, UC *);
+extern SS PutTextInfo(ST_TEXTINFO);
 
 #endif	/* OUTPUT_TEXT_H */

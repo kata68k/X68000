@@ -15,6 +15,7 @@ SS BG_PutToText(SS, SS, SS, SS, UC);
 SS BG_TimeCounter(UI, US, US);
 SS BG_Number(UI, US, US);
 SS Text_To_Text(US, SS, SS, UC, UC *);
+SS PutTextInfo(ST_TEXTINFO);
 
 /* ä÷êî */
 
@@ -623,6 +624,25 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 		}
 		pString++;
 	}
+	return ret;
+}
+
+
+SS PutTextInfo(ST_TEXTINFO stTextInfo)
+{
+	SS	ret = 0;
+
+	/* Top Score */
+	Text_To_Text(stTextInfo.uScoreMax,		 40,  8, FALSE, "%7d");
+	/* Score */
+	Text_To_Text(stTextInfo.uScore,			192,  8, FALSE, "%7d");
+	/* Time Count */
+	Text_To_Text(stTextInfo.uTimeCounter,	112, 24,  TRUE, "%3d");
+	/* Speed */
+	Text_To_Text(stTextInfo.uVs,			208, 24, FALSE, "%3d");
+	/* Gear */
+	Text_To_Text(stTextInfo.uShiftPos,		224, 32, FALSE,  "%d");
+
 	return ret;
 }
 
