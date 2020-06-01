@@ -58,6 +58,9 @@ SS	GetMyCarInfo(ST_CARDATA *stCarData, SS input)
 	{
 		bShiftPosFlag = FALSE;
 	}
+#if 0
+	stCarData->ubShiftPos = 2;
+#endif	
 	stCarData->ubShiftPos = Mmax(Mmin(stCarData->ubShiftPos, 5), 0);
 	
 	/* ŽÔ‘¬ */

@@ -72,6 +72,8 @@
 #define BG_0_H	(63)
 #define BG_1_W	(280)
 #define BG_1_H	(63)
+#define BG_0_UNDER	(280)	/* ñ¢åà */
+#define BG_1_UNDER	(64)
 
 /* ç\ë¢ëÃ */
 

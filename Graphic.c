@@ -122,6 +122,7 @@ void G_MyCar(void)
 {
 #if 1	/* 画像がしっかり作られてたらいらない処理 */
 	SS x,y;
+	SS x_offset, y_offset;
 
 	APAGE(0);		/* グラフィックの書き込み */
 
@@ -158,9 +159,12 @@ void G_MyCar(void)
 		}
 	}
 
-	for(y= 165; y<(165 + MY_CAR_0_H); y++)
+	x_offset = X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1));
+	y_offset = V_SYNC_MAX - RASTER_MIN - MY_CAR_0_H - 16;
+	
+	for(y = y_offset; y < (y_offset + MY_CAR_0_H); y++)
 	{
-		for(x=(X_OFFSET + 96); x<(X_OFFSET + 96 + MY_CAR_0_W); x++)
+		for(x = x_offset; x < x_offset + MY_CAR_0_W; x++)
 		{
 			US color;
 			
@@ -187,6 +191,7 @@ void G_MyCar(void)
 			Draw_Pset(x, y, color);
 		}
 	}
+	Draw_Fill(X_OFFSET, (y_offset + MY_CAR_0_H), X_OFFSET + WIDTH, V_SYNC_MAX, 0xFF);
 #else
 #endif
 }

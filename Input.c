@@ -9,7 +9,8 @@
 
 /* 関数のプロトタイプ宣言 */
 US	get_key( UC );
-US	DirectInputKeyNum( US );
+US	DirectInputKeyNum(US *, US );
+UC	ChatCancelSW(UC , UC *);
 
 /* 関数 */
 US get_key( UC mode )
@@ -34,6 +35,8 @@ US get_key( UC mode )
 	if( (kd_b4  & 0x02 ) != 0 ) ret |= KEY_b_ESC;	/* ＥＳＣ */
 	if( (kd_b7  & 0x01 ) != 0 ) ret |= KEY_b_M;		/* Ｍ */
 	if( (kd_b7  & 0x20 ) != 0 ) ret |= KEY_b_SP;	/* スペースキー */
+	if( (kd_k1  & 0x01 ) != 0 ) ret |= KEY_b_RLUP;	/* ロールアップ */
+	if( (kd_k1  & 0x02 ) != 0 ) ret |= KEY_b_RLDN;	/* ロールダウン */
 
 	if( !( JOYGET( 0 ) & UP    ) || ( kd_k1 & 0x10 ) || ( kd_k2_1 & 0x10 ) || ( kd_b3 & 0x04 ) ) ret |= KEY_UPPER;	/* 上 ↑ 8 w */
 	if( !( JOYGET( 0 ) & DOWN  ) || ( kd_k1 & 0x40 ) || ( kd_k2_2 & 0x10 ) || ( kd_b5 & 0x80 ) ) ret |= KEY_LOWER;	/* 下 ↓ 2 s */
@@ -68,11 +71,10 @@ US get_key( UC mode )
 	return ret;
 }
 
-US	DirectInputKeyNum(US uDigit)
+US	DirectInputKeyNum(US *uVal, US uDigit)
 {
 	US ret = 0;
 	static US uNum[10] = {0};
-	static US uResultNum = 0;
 	static US uCount = 0;
 	static UC bKeyFlag1 = FALSE;
 	static UC bKeyFlag2 = FALSE;
@@ -98,6 +100,21 @@ US	DirectInputKeyNum(US uDigit)
 				}
 			}
 			uCount++;
+			switch(uCount)	/* SE */
+			{
+			case 1:
+				m_pcmplay(1,3,4);
+				break;
+			case 2:
+				m_pcmplay(2,3,4);
+				break;
+			case 3:
+				m_pcmplay(3,3,4);
+				break;
+			default:
+				m_pcmplay(1,3,4);
+				break;
+			}
 		}
 	}
 	else
@@ -120,6 +137,22 @@ US	DirectInputKeyNum(US uDigit)
 				}
 			}
 			uCount++;
+			
+			switch(uCount)	/* SE */
+			{
+			case 1:
+				m_pcmplay(1,3,4);
+				break;
+			case 2:
+				m_pcmplay(2,3,4);
+				break;
+			case 3:
+				m_pcmplay(3,3,4);
+				break;
+			default:
+				m_pcmplay(1,3,4);
+				break;
+			}
 		}
 	}
 	else
@@ -127,7 +160,8 @@ US	DirectInputKeyNum(US uDigit)
 		bKeyFlag2 = FALSE;
 	}
 
-	if(uCount == uDigit)
+	if( ( (kd_g0 != 0) || (kd_g1 != 0) )
+		&& (uCount == uDigit) )
 	{
 		US uCal = 0;
 		US uD = 1;
@@ -144,13 +178,33 @@ US	DirectInputKeyNum(US uDigit)
 			}
 			uD *= 10;
 		}
-		uResultNum = uCal;
+		*uVal = uCal;
 		uCount = 0;
+		ret = 1;
 	}
-	
-	ret = uResultNum;
 	
 	return ret;
 }
+
+/* チャタリング防止SW */
+UC	ChatCancelSW(UC bJudge, UC *bFlag)
+{
+	UC	ret = FALSE;
+	
+	if(bJudge != 0u)
+	{
+		if(*bFlag == TRUE)
+		{
+			ret = TRUE;
+			*bFlag = FALSE;
+		}
+	}
+	else
+	{
+		*bFlag = TRUE;
+	}
+	return ret;
+}
+
 #endif	/* INPUT_C */
 

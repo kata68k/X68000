@@ -75,11 +75,11 @@ void interrupt Raster_Func(void)
 {
 	volatile US *BG0scroll_x  = (US *)0xEB0800;
 	volatile US *BG0scroll_y  = (US *)0xEB0802;
-	volatile US *BG1scroll_x  = (US *)0xEB0804;
-	volatile US *BG1scroll_y  = (US *)0xEB0806;
+//	volatile US *BG1scroll_x  = (US *)0xEB0804;
+//	volatile US *BG1scroll_y  = (US *)0xEB0806;
 	volatile US *CRTC_R09 = (US *)0xE80012u;	/* ラスター割り込み位置 */
-	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
-	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
+//	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
+//	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
 
 	US nNum = ras_count;
 	
@@ -88,8 +88,10 @@ void interrupt Raster_Func(void)
 
 	*BG0scroll_x	= ras_val[nNum];	/* BG0のX座標の設定 */
 	*BG0scroll_y	= ras_pal[nNum];	/* BG0のY座標の設定 */
-	*BG1scroll_x	= 256;				/* BG1のX座標の設定 */
-	*BG1scroll_y	= ras_pal[1];		/* BG1のY座標の設定 */
+//	*BG1scroll_x	= ras_val[nNum];	/* BG1のX座標の設定 */
+//	*BG1scroll_y	= ras_pal[nNum];	/* BG1のY座標の設定 */
+//	*BG1scroll_x	= 256;				/* BG1のX座標の設定 *//* 空のコントロール */
+//	*BG1scroll_y	= ras_pal[1];		/* BG1のY座標の設定 *//* 空のコントロール */
 //	*CRTC_R12		= ras_val[nNum] + X_OFFSET;			/* GRのX座標の設定 */
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
@@ -116,6 +118,11 @@ SS SetRasterPal(void *pSrc, size_t n)
 
 void interrupt Vsync_Func(void)
 {
+	volatile US *BG1scroll_x  = (US *)0xEB0804;
+	volatile US *BG1scroll_y  = (US *)0xEB0806;
+
+	*BG1scroll_x	= 256;				/* BG1のX座標の設定 *//* 空のコントロール */
+	*BG1scroll_y	= ras_pal[1];		/* BG1のY座標の設定 *//* 空のコントロール */
 
 	//	VDISPST((void *)0, 0, 0);	/* stop */
 #if 0
