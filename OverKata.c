@@ -20,22 +20,29 @@
 #include "Input.h"
 #include "Output_Text.h"
 #include "Task.h"
+#include "Trap14.h"
 
 /* グローバル変数 */
-SS moni = 0;
-SS moni_MAX = 0;
-SS speed = 0;
-UC g_mode = 0;
-ST_ROADDATA	stRoadData[256] = {0};
+SI	nSuperchk = 0;
+SI	nCrtmod = 0;
+SS	moni = 0;
+SS	moni_MAX = 0;
+SS	speed = 0;
+UC	g_mode = 0;
+
+/* グローバル構造体 */
+ST_ROADDATA	stRoadData[1024] = {0};
 ST_CARDATA	stMyCar = {0};
 ST_TASK		stTask = {0}; 
 ST_TEXTINFO stTextInfo = {0};
 
 /* 関数のプロトタイプ宣言 */
-void main(void);
+SS main(void);
+void App_Init(void);
+void App_exit(void);
 
 /* 関数 */
-void main(void)
+SS main(void)
 {
 	FLOAT	rad;
 
@@ -43,9 +50,6 @@ void main(void)
 	UI	unTime_cal = 0;
 	UI	unTime_cal_PH = 0;
 	UI	unRoadAnimeTime;
-	
-	SI	nSuperchk;
-	SI	nCrtmod;
 	
 	US	x,y;
 	US	uRas_tmp[256] = {0};
@@ -57,6 +61,7 @@ void main(void)
 	US	uDebugNum;
 	US	uRoadAnime, uRoadAnime_old, uRoadAnimeBase, uRoadAnimeBase_old;
 	US	uRoadAnimeCount;
+	US	uCounter;
 	
 	SS	i;
 	SS	loop;
@@ -86,16 +91,19 @@ void main(void)
 	UC	bUpdate;
 	UC	bDebugMode;
 	UC	bDebugMode_flag;
-	UC	bCounter;
 	UC	bShiftPosFlag;
+	UC	bRoad_Anime_flag;
 	
-	UI	unZmusicVer;
 	UI	unExplosion_time;
 	UC	bExplosion;
 	
 	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
 	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
 
+	usr_abort = App_exit;	/* 例外発生で終了処理を実施する */
+	
+	init_trap14();	/* デバッグ用致命的エラーハンドリング */
+	
 	/* デバッグコーナー */
 #if 0
 	/* ↓自由にコードを書いてね */
@@ -112,74 +120,8 @@ void main(void)
 	
 	exit(0);
 #endif
-	/* サウンド常駐確認 */
-	unZmusicVer = zm_ver();
-	if(unZmusicVer == 0)	/* 0:常駐ナシ */
-	{
-		puts("Z-MUSIC Ver2を常駐してください。");
-		exit(0);
-	}
-	if((unZmusicVer&0xF000u)>>12 != 2u)	/* Ver2.0x判定 */
-	{
-		puts("Z-MUSIC Ver2を常駐してください。");
-		exit(0);
-	}
-	if((unZmusicVer&0xFFFF000u)>>16 == 0u)	/* PCM8判定 */
-	{
-		puts("PCM8Aを常駐してください。");
-		exit(0);
-	}
-	
-	/* スーパーバイザーモード開始 */
-	/*ＤＯＳのスーパーバイザーモード開始*/
-	nSuperchk = SUPER(0);
-	if( nSuperchk < 0 ) {
-		puts("すでにスーパーバイザーモード");
-	} else {
-		puts("スーパーバイザーモード開始");
-	}
-	
-	nCrtmod = CRTMOD(-1);	/* 現在のモードを返す */
-	
-	/* サウンド初期化 */
-	m_init();		/* 初期化 */
-	m_ch("fm");		/* FM */
-	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
-	zmd_play("data\\music\\X68K.ZMD");	/* ローディングBGM */
 
-	/* コースデータの読み込み */
-	File_Load_Course_CSV("data/map/course01.csv", &stRoadData[0], &x, &y);
-	
-	/* グラフィック表示 */
-	G_INIT();		/*画面の初期設定*/
-	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET, 				Y_OFFSET - 32,	0);	/* FPS */
-	APICG_DataLoad("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
-	G_MyCar();		/* 自車の表示 */
-	APICG_DataLoad("data/cg/Over_C.pic"	, 0,							0,	1);	/* ライバル車 */
-	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET - 32,	Y_OFFSET +  4,	1);	/* 背景 */
-	G_Background();	/* 背景の表示 */
-	
-	/* スプライト／ＢＧ表示 */
-	PCG_INIT();							/* スプライト／ＢＧの初期化 */
-	PCG_SP_dataload("data/sp/BG.SP");	/* スプライトのデータ読み込み */
-	PCG_PAL_dataload("data/sp/BG.PAL");	/* スプライトのパレットデータ読み込み */
-	BG_TEXT_SET("data/map/map.csv");	/* マップデータによるＢＧの配置 */
-	
-	/* テキスト表示 */
-	T_INIT();		/* テキストＶＲＡＭ初期化 */
-	T_TopScore();	/* TOP */
-	T_Time();		/* TIME */
-	T_Score();		/* SCORE */
-	T_Speed();		/* SPEED */
-	T_Gear();		/* GEAR */
-	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 232);
-	for(i=0; i < 10; i++)
-	{
-		x = 0;
-		y = 240;
-		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
-		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
-	}
+	App_Init();	/* 初期化 */
 	
 	/* 変数の初期化 */
 	speed = 0;
@@ -210,10 +152,11 @@ void main(void)
 	uRoadAnime = 0;
 	uRoadAnime_old = 0;
 	uRoadAnimeCount = 0;
+	bRoad_Anime_flag = FALSE;
 	Vibration = 0;
 	bDebugMode = FALSE;
 	uDebugNum = 0x80;
-	bCounter = 0;
+	uCounter = 0;
 	stTextInfo.uScoreMax = 10000;
 
 	/* 乱数 */
@@ -223,12 +166,9 @@ void main(void)
 		a = 0;
 		b = 0;
 		c = 0;
-		for(a=0; a < 1024; a++)
-		{
-			RD[a] = 0;
-		}
 
 		srandom(TIMEGET());
+
 		for(a=0; a < 16; a++)
 		{
 			d = a * 64;
@@ -248,13 +188,19 @@ void main(void)
 //	zmd_play("data\\music\\KATAYS3X.zmd");	/* BGM */
 //	zmd_play("data\\music\\STSL_PUP.zmd");	/* BGM */
 	
-	/* MFP */
-	Init_MFP();						/* MFP関連の初期化 */
-	TIMERDST(Timer_D_Func, 7, 20);	/* Timer-Dセット */	/* 50us(7) x 20cnt = 1ms */
-	SetNowTime(0);					/* 時間の初期化 */
 	GetNowTime(&unStart_time);		/* Time Count用 */
-	VDISPST(Vsync_Func, 0, 1);		/* V-Sync割り込み 帰線 */
 	
+#if 0
+	{
+		/* アドレスエラー発生 */
+		char buf[10];
+
+		int *A = (int *)&buf[1];
+		int B = *A;
+		return B;
+	}
+#endif
+
 	do
 	{
 		UI time, time_old, time_now;
@@ -375,6 +321,7 @@ void main(void)
 			uRoadAnime = uRoadAnime_old;
 			uRoadAnimeBase = uRoadAnimeBase_old;
 			uRoadAnimeCount = 0;
+			bRoad_Anime_flag = FALSE;
 			
 			unRoadAnimeTime = time_old;	/* 前回値を更新 */
 		}
@@ -389,6 +336,7 @@ void main(void)
 			uRoadAnime = uRoadAnime_old;
 			uRoadAnimeBase = uRoadAnimeBase_old;
 			uRoadAnimeCount = 0;
+			bRoad_Anime_flag = FALSE;
 		}
 		else
 		{
@@ -397,6 +345,7 @@ void main(void)
 			uRoadAnimeCount = 0xFFF;	/* 逆走アニメーション防止 */
 
 			uRoadAnime = 0;
+			bRoad_Anime_flag = TRUE;
 /*
 			uRoadAnime++;
 			if(uRoadAnime >= 4u)
@@ -408,81 +357,86 @@ void main(void)
 			if(uRoadAnimeBase >= 4)
 			{	
 				uRoadAnimeBase = 0;
-				bCounter++;			/*  8bit フリーランカウンタ更新 */
+				uCounter++;			/* カウンタ更新 */
+				if(uCounter >= 1024)uCounter = 0;
 			}
 		}
-		/* 角度算出 */
-		road_height_old = road_height;	/* 前回値更新 */
-		if(bDebugMode == FALSE)
+		
+		if(bRoad_Anime_flag == TRUE)
 		{
-			/* コースデータ読み込み */
-			road_height = (SS)(stRoadData[bCounter].bHeight - 0x80);	/* 道の標高	(0x80センター) */
-		}
-		else
-		{
-			/* デバッグ入力 */
-			road_height = r_height;	/* デバッグ入力 */
-		}
-		road_height = Mmax(Mmin(road_height, 31), -32);
-#if 1
-		// 高低差から傾きを出す(-45～+45) rad = APL_Atan2( road_slope_old - road_slope,  );
-		if(road_height != road_height_old)
-		{
-			road_slope_old = road_slope;	/* 前回値更新 */
-			if(road_height > road_height_old)
+			/* 角度算出 */
+			road_height_old = road_height;	/* 前回値更新 */
+			if(bDebugMode == FALSE)
 			{
-				road_slope++;
+				/* コースデータ読み込み */
+				road_height = (SS)(stRoadData[uCounter].bHeight - 0x80);	/* 道の標高	(0x80センター) */
 			}
 			else
 			{
-				road_slope--;
+				/* デバッグ入力 */
+				road_height = r_height;	/* デバッグ入力 */
 			}
-		}
-		else{
-			/* 前回値保持 */
-		}
-#else
-		road_slope = vy;		/* デバッグ入力 */
-#endif
-		/* 角度からtanθ*/
+			road_height = Mmax(Mmin(road_height, 31), -32);
 #if 1
-		if(road_slope == 0)
-		{
-			cal_tan = 0;
-			road_distance = 0;
-		}
-		else
-		{
-			if(road_slope != road_slope_old)
+			// 高低差から傾きを出す(-45～+45) rad = APL_Atan2( road_slope_old - road_slope,  );
+			if(road_height != road_height_old)
 			{
-				cal_tan = APL_Tan256(road_slope);	/* tanθ */
-				cal_cos = APL_Cos(road_slope);
+				road_slope_old = road_slope;	/* 前回値更新 */
+				if(road_height > road_height_old)
+				{
+					road_slope++;
+				}
+				else
+				{
+					road_slope--;
+				}
 			}
-		}
+			else{
+				/* 前回値保持 */
+			}
 #else
-		/* 底辺と高さから角度を求めて、角度からY座標を演算していたが*/
-		/* 角度演算は不要とのこと。単純に距離と角度から高さを算出できる @runshiwaさんより指摘 */
-		if(vy == 0)
-		{
-			rad = 0.0;
-		}
-		else
-		{
-			rad = APL_Atan2( vy, uRas_mid );
-		}
-		cal_tan = APL_Tan256((SS)rad);
+			road_slope = vy;		/* デバッグ入力 */
 #endif
-		/* 高さと角度から最適なラスター開始位置の補正値を算出 */
-		road_distance_old = road_distance;	/* 前回値更新 */
-		if(cal_tan != 0u)
-		{
-			road_distance = ((0 - road_height) * cal_cos) >> 8;
+			/* 角度からtanθ*/
+#if 1
+			if(road_slope == 0)
+			{
+				cal_tan = 0;
+				road_distance = 0;
+			}
+			else
+			{
+				if(road_slope != road_slope_old)
+				{
+					cal_tan = APL_Tan256(road_slope);	/* tanθ */
+					cal_cos = APL_Cos(road_slope);
+				}
+			}
+#else
+			/* 底辺と高さから角度を求めて、角度からY座標を演算していたが*/
+			/* 角度演算は不要とのこと。単純に距離と角度から高さを算出できる @runshiwaさんより指摘 */
+			if(vy == 0)
+			{
+				rad = 0.0;
+			}
+			else
+			{
+				rad = APL_Atan2( vy, uRas_mid );
+			}
+			cal_tan = APL_Tan256((SS)rad);
+#endif
+			/* 高さと角度から最適なラスター開始位置の補正値を算出 */
+			road_distance_old = road_distance;	/* 前回値更新 */
+			if(cal_tan != 0u)
+			{
+				road_distance = ((0 - road_height) * cal_cos) >> 8;
+			}
+			else
+			{
+				road_distance = 0 - road_height;
+			}
+	//		road_distance = Mmax(Mmin(road_distance, 32), -40);
 		}
-		else
-		{
-			road_distance = 0 - road_height;
-		}
-//		road_distance = Mmax(Mmin(road_distance, 32), -40);
 		
 		/* 空のコントロール */
 		uPal_tmp[1] = BG_offset_y;
@@ -492,7 +446,7 @@ void main(void)
 		if(bDebugMode == FALSE)
 		{
 			/* コースデータ読み込み */
-			road_angle = (SS)stRoadData[bCounter].bAngle - 0x80;	/* 道の角度	(0x80センター) */
+			road_angle = (SS)stRoadData[uCounter].bAngle - 0x80;	/* 道の角度	(0x80センター) */
 		}
 		else
 		{
@@ -619,6 +573,7 @@ void main(void)
 					uRoadAnimeBase_old = uRoadAnimeBase;
 					col = 0xBB;
 				}
+#if 1
 				else if( y < uRas_mid )	/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
 				{
 					SS	Road_strch;
@@ -627,6 +582,8 @@ void main(void)
 					offset_size = uRas_mid - y;	/* uRas_size -> 0 */
 					
 					Road_strch = (offset_size * cal_tan) >> 8;	/* 高さ＝底辺×tanθ */
+//					Road_strch = (offset_size * APL_Cos(num)) >> 8;
+//					Road_strch = (offset_size * APL_Sin(num)) >> 8;
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
 					ras_cal_y = Horizon_offset + Road_strch + ((SS)uDebugNum - 0x80);
 
@@ -678,6 +635,35 @@ void main(void)
 
 					col = 0xFF;
 				}
+#else
+				else
+				{
+					SS	Road_strch;
+					SS	offset_size;
+
+					offset_size = uRas_ed - y;	/* uRas_size -> 0 */
+//					offset_size = uRas_mid - y;	/* uRas_size -> 0 */
+					
+//					Road_strch = (offset_size * cal_tan) >> 8;	/* 高さ＝底辺×tanθ */
+//					Road_strch = (offset_size * APL_Cos(num<<1)) >> 8;
+					Road_strch = (offset_size * APL_Sin(num<<1)) >> 8;
+					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
+					ras_cal_y = Horizon_offset + Road_strch + ((SS)uDebugNum - 0x80);
+
+					/* ロードパターン*/
+					uRoadAnimeCount++;
+					if(uRoadAnimeCount >= road_offset_y)
+					{
+						road_offset_y = 4;
+						
+						uRoadAnimeCount = 0;
+						uRoadAnime++;
+					}
+					if(uRoadAnime >= 4u){uRoadAnime = 0;}
+
+					col = 0xB7;
+				}
+#endif
 				
 				if(bDebugMode == TRUE)	/* デバッグモード */
 				{
@@ -890,7 +876,106 @@ void main(void)
 		vwait(1);
 	}
 	while( loop );
+	
+	App_exit();	/* 終了処理 */
 
+#if 1
+	printf("uPal_tmp[0]の中身 = %d(vy=%d)\n", uRas_debug[0], vy );
+	for(y=uRas_st; y < uRas_ed; y++)
+	{
+		printf("[%3d]=(%5d),", y, uRas_debug[y] );
+		//printf("[%3d]=(%5d),", y, uRas_debug[y] );
+		if((y%5) == 0)printf("\n");
+	}
+	printf("\n");
+#endif
+	
+}
+
+void App_Init(void)
+{
+	UI	unZmusicVer;
+	SS	i;
+	US	x,y;
+
+	/* サウンド常駐確認 */
+	unZmusicVer = zm_ver();
+	if(unZmusicVer == 0)	/* 0:常駐ナシ */
+	{
+		puts("Z-MUSIC Ver2を常駐してください。");
+		exit(0);
+	}
+	if((unZmusicVer&0xF000u)>>12 != 2u)	/* Ver2.0x判定 */
+	{
+		puts("Z-MUSIC Ver2を常駐してください。");
+		exit(0);
+	}
+	if((unZmusicVer&0xFFFF000u)>>16 == 0u)	/* PCM8判定 */
+	{
+		puts("PCM8Aを常駐してください。");
+		exit(0);
+	}
+	
+	/* スーパーバイザーモード開始 */
+	/*ＤＯＳのスーパーバイザーモード開始*/
+	nSuperchk = SUPER(0);
+	if( nSuperchk < 0 ) {
+		puts("すでにスーパーバイザーモード");
+	} else {
+		puts("スーパーバイザーモード開始");
+	}
+	
+	nCrtmod = CRTMOD(-1);	/* 現在のモードを返す */
+	
+	/* サウンド初期化 */
+	m_init();		/* 初期化 */
+	m_ch("fm");		/* FM */
+	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
+	zmd_play("data\\music\\X68K.ZMD");	/* ローディングBGM */
+
+	/* コースデータの読み込み */
+	File_Load_Course_CSV("data/map/course01.csv", &stRoadData[0], &x, &y);
+	
+	/* グラフィック表示 */
+	G_INIT();		/*画面の初期設定*/
+	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET, 				Y_OFFSET - 32,	0);	/* FPS */
+	APICG_DataLoad("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
+	G_MyCar();		/* 自車の表示 */
+	APICG_DataLoad("data/cg/Over_C.pic"	, 0,							0,	1);	/* ライバル車 */
+	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET - 32,	Y_OFFSET +  4,	1);	/* 背景 */
+	G_Background();	/* 背景の表示 */
+	
+	/* スプライト／ＢＧ表示 */
+	PCG_INIT();							/* スプライト／ＢＧの初期化 */
+	PCG_SP_dataload("data/sp/BG.SP");	/* スプライトのデータ読み込み */
+	PCG_PAL_dataload("data/sp/BG.PAL");	/* スプライトのパレットデータ読み込み */
+	BG_TEXT_SET("data/map/map.csv");	/* マップデータによるＢＧの配置 */
+	
+	/* テキスト表示 */
+	T_INIT();		/* テキストＶＲＡＭ初期化 */
+	T_TopScore();	/* TOP */
+	T_Time();		/* TIME */
+	T_Score();		/* SCORE */
+	T_Speed();		/* SPEED */
+	T_Gear();		/* GEAR */
+	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 232);
+	for(i=0; i < 10; i++)
+	{
+		x = 0;
+		y = 240;
+		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
+		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
+	}
+
+	/* MFP */
+	Init_MFP();						/* MFP関連の初期化 */
+	TIMERDST(Timer_D_Func, 7, 20);	/* Timer-Dセット */	/* 50us(7) x 20cnt = 1ms */
+	SetNowTime(0);					/* 時間の初期化 */
+	VDISPST(Vsync_Func, 0, 1);		/* V-Sync割り込み 帰線 */
+}
+
+void App_exit(void)
+{
 	CRTCRAS((void *)0, 0);		/* stop */
 	HSYNCST((void *)0);			/* stop */
 	VDISPST((void *)0, 0, 0);	/* stop */
@@ -912,18 +997,5 @@ void main(void)
 
 	/*スーパーバイザーモード終了*/
 	SUPER(nSuperchk);
-
-#if 1
-	printf("uPal_tmp[0]の中身 = %d(vy=%d)\n", uRas_debug[0], vy );
-	for(y=uRas_st; y < uRas_ed; y++)
-	{
-		printf("[%3d]=(%5d),", y, uRas_debug[y] );
-		//printf("[%3d]=(%5d),", y, uRas_debug[y] );
-		if((y%5) == 0)printf("\n");
-	}
-	printf("\n");
-#endif
-	
 }
-
 #endif	/* OVERKATA_C */
