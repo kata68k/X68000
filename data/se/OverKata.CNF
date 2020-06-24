@@ -2,10 +2,10 @@
 1 = ONE.PCM,v20
 2 = TWO.PCM,v20
 3 = THREE.PCM,v20
-4 = GMSE_008.pcm,v20
-5 = RAI03_.pcm,v20
-6 = RECCA1.pcm,v20
-7 = RECCA3.pcm,v20
+4 = brake1.PCM,v20
+5 = braking1.PCM,v20
+6 = braking2.PCM,v20
+7 = gear_chg.PCM,v20
 8 = AJ03_.pcm,v20
 9 = BOM1.pcm,v20
 10 = DANGER.PCM,v20

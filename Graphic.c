@@ -6,7 +6,7 @@
 #include "inc/usr_macro.h"
 #include "Graphic.h"
 
-#define	CONV_PAL	(0xB7)
+#define	CONV_PAL	(0xB4)
 #define	TRANS_PAL	(0x00)
 
 /* 関数のプロトタイプ宣言 */
@@ -16,6 +16,7 @@ void G_Background(void);
 void G_Palette(void);
 SS G_Stretch_Pict(US , US, US, US, UC, US, US, US, US, UC);
 SS G_BitBlt(US, US, US, US, UC, US, US, US, US, UC, UC);
+SS G_CLR_AREA(US, US, US, US, UC);
 
 /* 関数 */
 void G_INIT(void)
@@ -120,18 +121,20 @@ void G_INIT(void)
 
 void G_MyCar(void)
 {
-#if 1	/* 画像がしっかり作られてたらいらない処理 */
 	SS x,y;
 	SS x_offset, y_offset;
 
 	APAGE(0);		/* グラフィックの書き込み */
 
 	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
+
+	/* 画像がしっかり作られてたらいらない処理 */
 	
 	/* 画像変換 */
-	for(y=Y_OFFSET-32-1; y<(Y_OFFSET-32)+MY_CAR_1_H+1; y++)
+//	for(y=Y_OFFSET; y<=(Y_OFFSET)+MY_CAR_1_H; y++)
+	for(y=0; y<=Y_MAX_DRAW; y++)
 	{
-		for(x=X_OFFSET-1; x<X_OFFSET+MY_CAR_1_W+1; x++)
+		for(x=X_OFFSET; x<=X_OFFSET+MY_CAR_1_W; x++)
 		{
 			US color;
 			
@@ -158,7 +161,7 @@ void G_MyCar(void)
 			Draw_Pset(x, y, color);
 		}
 	}
-
+#if 0	/* TPS */
 	x_offset = X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1));
 	y_offset = V_SYNC_MAX - RASTER_MIN - MY_CAR_0_H - 16;
 	
@@ -201,6 +204,7 @@ void G_Background(void)
 	SS i;
 #if 1	/* 画像がしっかり作られてたらいらない処理 */
 	SS x,y;
+	US height_sum = 0u;
 
 	APAGE(1);		/* グラフィックの書き込み */
 
@@ -236,15 +240,65 @@ void G_Background(void)
 			Draw_Pset(x, y, color);
 		}
 	}
+	
 	/* パターンを */
-	for(i=0; i<4; i++)
+	height_sum = 0u;
+	for(i=1; i<4; i++)
 	{
+		height_sum += (ENEMY_CAR_1_H >> (i-1));
+		
 		G_Stretch_Pict(
-						0,					ENEMY_CAR_1_W>>i,
-						ENEMY_CAR_1_H * i,	ENEMY_CAR_1_H>>i,
+						0,				ENEMY_CAR_1_W>>i,
+						height_sum,		ENEMY_CAR_1_H>>i,
 						1,
 						0,	ENEMY_CAR_1_W,
 						0,	ENEMY_CAR_1_H,
+						1);
+	}
+
+	/* 画像変換(ヤシの木) */
+	for(y=0; y<PINETREE_1_H; y++)
+	{
+		for(x=140; x<=140+PINETREE_1_W; x++)
+		{
+			US color;
+			
+			Draw_Pget(x, y, &color);
+
+			switch(color)
+			{
+				case TRANS_PAL:
+				{
+					color = 0x01;	/* 透過色→不透過色 */
+					break;
+				}
+				case CONV_PAL:
+				{
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
+					break;
+				}
+				default:
+				{
+					/* 何もしない*/
+					break;
+				}
+			}
+			Draw_Pset(x, y, color);
+		}
+	}
+
+	/* パターンを */
+	height_sum = 0u;
+	for(i=1; i<4; i++)
+	{
+		height_sum += (PINETREE_1_H >> (i-1));
+
+		G_Stretch_Pict(
+						140,		140+PINETREE_1_W>>i,
+						height_sum,		PINETREE_1_H>>i,
+						1,
+						140,	140+PINETREE_1_W,
+						0,		PINETREE_1_H,
 						1);
 	}
 
@@ -384,6 +438,9 @@ SS G_Stretch_Pict(	US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 #endif
 }
 
+/* 画像のコピー */
+/* 同じサイズの画像を任意の位置に描画する */
+/* 表示先はx,y座標を画像の中心とした位置 */
 SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 			US src_x, US src_w, US src_y, US src_h, UC ubSrcScrn,
 			UC ubMode)
@@ -426,19 +483,33 @@ SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 	}
 	
 	/* 表示エリア内クリップ */
-	if( ubMode == 0u )
+	switch(ubMode)
 	{
-		x_min = X_OFFSET;
-		x_max = X_MAX_DRAW;
-		y_min = Y_MIN_DRAW;
-		y_max = V_SYNC_MAX;
-	}
-	else
-	{
-		x_min = X_OFFSET;
-		x_max = X_MAX_DRAW;
-		y_min = Y_OFFSET;
-		y_max = Y_OFFSET + V_SYNC_MAX;
+		case 0:
+		{
+			x_min = X_OFFSET;
+			x_max = X_MAX_DRAW;
+			y_min = Y_MIN_DRAW;
+			y_max = V_SYNC_MAX;
+			break;
+		}
+		case 1:
+		default:
+		{
+			x_min = X_OFFSET;
+			x_max = X_MAX_DRAW;
+			y_min = Y_OFFSET;
+			y_max = Y_OFFSET + V_SYNC_MAX;
+			break;
+		}
+		case 2:
+		{
+			x_min = X_OFFSET;
+			x_max = X_MAX_DRAW;
+			y_min = Y_MIN_DRAW;
+			y_max = Y_MIN_DRAW + V_SYNC_MAX;
+			break;
+		}
 	}
 
 	if(dst_ex < x_min)		/* 画面外 */
@@ -486,7 +557,7 @@ SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 	{
 		/* 何もしない */
 	}
-	
+
 	for(y = dst_y; y < dst_ey; y++)
 	{
 		/* アドレス算出 */
@@ -496,12 +567,48 @@ SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 	
 		for(x = dst_x; x < dst_ex; x++)
 		{
-			*pDstGR = *pSrcGR;
-			
+			if(*pSrcGR != 0)
+			{
+				*pDstGR = *pSrcGR;
+			}
 			pDstGR++;
 			pSrcGR++;
 		}
 	}
+}
+
+/* 画面のクリア */
+SS G_CLR_AREA(US x, US w, US y, US h, UC Screen)
+{
+	SS	ret = 0;
+	SS	i;
+	UL	ulGR_H;
+	UL	ulPoint;
+	UI	unSize;
+	
+	switch(Screen)
+	{
+		case 0:
+		{
+			ulGR_H = 0xC00000;	/* Screen0 */
+			break;
+		}
+		case 1:
+		default:
+		{
+			ulGR_H = 0xC80000;	/* Screen1 */
+			break;
+		}
+	}
+	
+	unSize = (w << 1);
+	ulPoint = (x << 1) + (y * 0x400u);
+	
+	for(i=0; i<h; i++)
+	{
+		memset((ulGR_H + ulPoint + (i * 0x400u)), 0, unSize);
+	}
+	return	ret;
 }
 
 #endif	/* GRAPHIC_C */

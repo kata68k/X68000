@@ -9,7 +9,7 @@ SS	GetMyCarInfo(ST_CARDATA *, SS);
 
 SS	GetMyCarInfo(ST_CARDATA *stCarData, SS input)
 {
-	static UC bShiftPosFlag = FALSE;
+	static UC bShiftPosFlag[2] = {FALSE};
 
 	US	uTM[6] = { 0, 2857, 1950, 1444, 1096, 761 };/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 */
 	
@@ -36,30 +36,19 @@ SS	GetMyCarInfo(ST_CARDATA *stCarData, SS input)
 	stCarData->uEngineRPM = Mmax(Mmin(9000, stCarData->uEngineRPM), 750);
 
 	/* シフト操作 */
-	if((input & KEY_UPPER) != 0u)
+	if(ChatCancelSW((input & KEY_UPPER)!=0u, &bShiftPosFlag[0]) == TRUE)
 	{
-		if(bShiftPosFlag == FALSE)
-		{
-			if(stCarData->ubShiftPos != 5)	m_pcmplay(5,3,4);	/* SE:シフトアップ */
-			stCarData->ubShiftPos = Mmin(stCarData->ubShiftPos+1, 5);	/* 上 */
-			bShiftPosFlag = TRUE;
-		}
-	}	
-	else if((input & KEY_LOWER) != 0u)
-	{
-		if(bShiftPosFlag == FALSE)
-		{
-			if(stCarData->ubShiftPos != 0)	m_pcmplay(5,3,4);	/* SE:シフトダウン */
-			stCarData->ubShiftPos = Mmax(stCarData->ubShiftPos-1, 0);	/* 下 */
-			bShiftPosFlag = TRUE;
-		}
+		if(stCarData->ubShiftPos != 5)	m_pcmplay(7,3,4);	/* SE:シフトアップ */
+		stCarData->ubShiftPos = Mmin(stCarData->ubShiftPos+1, 5);	/* 上 */
 	}
-	else
+	
+	if(ChatCancelSW((input & KEY_LOWER)!=0u, &bShiftPosFlag[1]) == TRUE)
 	{
-		bShiftPosFlag = FALSE;
+		if(stCarData->ubShiftPos != 0)	m_pcmplay(7,3,4);	/* SE:シフトダウン */
+		stCarData->ubShiftPos = Mmax(stCarData->ubShiftPos-1, 0);	/* 下 */
 	}
 #if 0
-	stCarData->ubShiftPos = 2;
+	stCarData->ubShiftPos = 2;	/* テスト用変速固定 */
 #endif	
 	stCarData->ubShiftPos = Mmax(Mmin(stCarData->ubShiftPos, 5), 0);
 	
@@ -80,6 +69,7 @@ SS	GetMyCarInfo(ST_CARDATA *stCarData, SS input)
 	{
 		stCarData->VehicleSpeed -= 30;	/* 変速比で変えたい */
 		stCarData->ubBrakeLights = TRUE;	/* ブレーキランプ ON */
+		m_pcmplay(4,3,4);	/* ブレーキ音 */
 	}
 	else
 	{
