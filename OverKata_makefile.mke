@@ -19,13 +19,17 @@ clean:
 execonly:
 	rm -f *.ind *.bak *.s *.o \
 
-OverKata.x:	OverKata.o APL_Math.o EnemyCAR.o Draw.o FileManager.o Graphic.o Input.o MFP.o MyCar.o OutPut_Text.o PCG.o Task.o Text.o Trap14.o
+OverKata.x:	OverKata.o APL_Math.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o FileManager.o Graphic.o Input.o MFP.o MyCar.o OutPut_Text.o PCG.o Task.o Text.o Trap14.o
 	$(LD) $^ -o $@ -l $(LIBS)
 OverKata.o:	OverKata.c
 	$(CC) $(CFLAGS) -c $<
 APL_Math.o:	APL_Math.c
 	$(CC) $(CFLAGS) -c $<
+Course_Obj.o:	Course_Obj.c
+	$(CC) $(CFLAGS) -c $<
 EnemyCAR.o:	EnemyCAR.c
+	$(CC) $(CFLAGS) -c $<
+DMAC.o:	DMAC.c
 	$(CC) $(CFLAGS) -c $<
 Draw.o:	Draw.c
 	$(CC) $(CFLAGS) -c $<

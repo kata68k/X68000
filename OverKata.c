@@ -14,30 +14,20 @@
 
 #include "OverKata.h"
 #include "APL_Math.h"
-#include "EnemyCAR.h"
+#include "Course_Obj.h"
+#include "DMAC.h"
 #include "Draw.h"
+#include "EnemyCAR.h"
+#include "FileManager.h"
+#include "Graphic.h"
+#include "Input.h"
 #include "MFP.h"
 #include "MyCar.h"
-#include "Input.h"
 #include "Output_Text.h"
+#include "PCG.h"
 #include "Task.h"
+#include "Text.h"
 #include "Trap14.h"
-
-enum
-{
-	Clear_G=0,
-	Enemy1_G,
-	Enemy2_G,
-	Enemy3_G,
-	Enemy4_G,
-	Object1_G,
-	Object2_G,
-	Object3_G,
-	Object4_G,
-	Object5_G,
-	Object6_G,
-	Flip_G
-};
 
 /* グローバル変数 */
 SI	nSuperchk = 0;
@@ -46,17 +36,18 @@ SS	moni = 0;
 SS	moni_MAX = 0;
 SS	speed = 0;
 UC	g_mode = 0;
+UC	g_mode_rev = 1;
 
 /* グローバル構造体 */
 ST_ROADDATA	stRoadData[1024] = {0};
-ST_CARDATA	stMyCar = {0};
 ST_TASK		stTask = {0}; 
-ST_TEXTINFO stTextInfo = {0};
+ST_TEXTINFO	stTextInfo = {0};
 
 /* 関数のプロトタイプ宣言 */
 SS main(void);
 void App_Init(void);
 void App_exit(void);
+SS BG_main(UC*);
 
 /* 関数 */
 SS main(void)
@@ -70,16 +61,18 @@ SS main(void)
 	
 	US	x,y;
 	US	uRas_tmp[256] = {0};
+	US	uRas_tmp_sub[256] = {0};
 	US	uRas_debug[256] = {0};
 	US	uPal_tmp[256] = {0};
 	US	uFreeRunCount=0;
-	US	uCountNum;
 	US	uRas_st, uRas_mid, uRas_ed, uRas_size;
 	US	uDebugNum;
 	US	uRoadAnime, uRoadAnime_old, uRoadAnimeBase, uRoadAnimeBase_old;
 	US	uRoadAnimeCount;
 	US	uRoadCycleCount;
+	US	uRoadCycleCountLamp;
 	US	uCounter;
+	US	BGprocces_ct = 0;
 	
 	SS	i;
 	SS	loop;
@@ -99,7 +92,6 @@ SS main(void)
 	SS	BG_under;
 	SS	input;
 	SS	rpm, Vs, speed_min;
-	SS	Vibration;
 	SS	cal_tan = 0;
 	SS	cal_cos = 0;
 	
@@ -113,16 +105,13 @@ SS main(void)
 	UC	bShiftPosFlag;
 	UC	bRoad_Anime_flag;
 	UC	bRoadCycleCountRst = FALSE;
+	UC	bRoadCycleCountLamp = TRUE;
 	UC	bFlip = TRUE;
-	UC	bFlipState;
-	UC	bMode_rev;
-	
-	UI	unExplosion_time;
-	UC	bExplosion;
-	
-	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
-	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
 
+	ST_CARDATA	stMyCar = {0};
+	ST_CRT		stCRT = {0};
+	ST_RAS_INFO	stRasInfo = {0};
+	
 	usr_abort = App_exit;	/* 例外発生で終了処理を実施する */
 	
 	init_trap14();	/* デバッグ用致命的エラーハンドリング */
@@ -169,21 +158,20 @@ SS main(void)
 	loop = 1;
 	vx = vy =0;
 	uFreeRunCount = 0;
-	uCountNum = 0;
 	uRoadAnimeBase = 0;
 	uRoadAnimeBase_old = 0;
 	uRoadAnime = 0;
 	uRoadAnime_old = 0;
 	uRoadAnimeCount = 0;
 	uRoadCycleCount = 0;
+	uRoadCycleCountLamp = 0;
 	bRoad_Anime_flag = FALSE;
-	Vibration = 0;
 	bDebugMode = TRUE;
 	uDebugNum = 0x80;
 	uCounter = 0;
 	stTextInfo.uScoreMax = 10000;
-	bFlipState = Clear_G;
-	bMode_rev != g_mode;
+	
+	uRas_size = 0xFFFF;
 	
 	/* 乱数 */
 	{
@@ -206,6 +194,11 @@ SS main(void)
 		}
 	}
 	
+	/* ライバル車の初期化 */
+	InitEnemyCAR();
+	/* コースのオブジェクトの初期化 */
+	InitCourseObj();
+	
 	/* 音楽 */
 	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
 //	zmd_play("data\\music\\PT034MK.ZMD");	/* BGM */
@@ -214,6 +207,7 @@ SS main(void)
 //	zmd_play("data\\music\\KATAYS3X.zmd");	/* BGM */
 //	zmd_play("data\\music\\STSL_PUP.zmd");	/* BGM */
 //	zmd_play("data\\music\\1943_0020.zmd");	/* BGM */
+//	zmd_play("data\\music\\FZ_BIG.zmd");	/* BGM */
 	
 	GetNowTime(&unStart_time);		/* Time Count用 */
 	
@@ -230,12 +224,13 @@ SS main(void)
 
 	do
 	{
-		UI time, time_old, time_now;
+		UI time_st, time_now;
 		
-		GetNowTime(&time_old);
+		GetNowTime(&time_st);	/* メイン処理の開始時刻を取得 */
+		SetStartTime(time_st);	/* メイン処理の開始時刻を記憶 */
 		
 		/* タスクの情報を得る */
-		GetTaskInfo(&stTask, time_old);
+		GetTaskInfo(&stTask);
 
 		/* 入力処理 */
 		input = get_key(1);	/* キーボード＆ジョイスティック入力 */
@@ -248,68 +243,33 @@ SS main(void)
 			if(g_mode == 1u)
 			{
 				g_mode = 2u;
-				bMode_rev = 1u;
+				g_mode_rev = 1u;
 			}
 			else
 			{
 				g_mode = 1u;
-				bMode_rev = 2u;
+				g_mode_rev = 2u;
 			}
 		}
 		
+#ifdef DEBUG	/* デバッグコーナー */
 		if(ChatCancelSW((input & KEY_b_SP)!=0u, &bDebugMode_flag) == TRUE)	/* スペースでデバッグON/OFF */
 		{
 			if(bDebugMode == FALSE)	bDebugMode = TRUE;
 			else					bDebugMode = FALSE;
 		}
+#endif
+		/* モード切替による設定値の変更 */
+		GetCRT(&stCRT, g_mode);
+		view_offset_x	= stCRT.view_offset_x;
+		view_offset_y	= stCRT.view_offset_y;
+		hide_offset_x	= stCRT.hide_offset_x;
+		hide_offset_y	= stCRT.hide_offset_y;
+		BG_offset_x		= stCRT.BG_offset_x;
+		BG_offset_y		= stCRT.BG_offset_y;
+		BG_under		= stCRT.BG_under;
 		
-//		if(stTask.b496ms == TRUE)
-		{
-			/* モード切替による設定値の変更 */
-			switch(g_mode)
-			{
-				case 0:		/* Screen 0(TPS) */
-				{
-					view_offset_x = X_OFFSET;
-					view_offset_y = Y_MIN_DRAW;
-					hide_offset_x = X_OFFSET;
-					hide_offset_y = Y_OFFSET;
-					BG_offset_y = 0;
-					BG_under = BG_0_UNDER;
-					break;
-				}
-				case 1:		/* Screen 0(FPS) */
-				{
-					view_offset_x = X_OFFSET;
-					view_offset_y = Y_OFFSET;
-					hide_offset_x = X_OFFSET;
-					hide_offset_y = Y_MIN_DRAW;
-					BG_offset_y = 32;
-					BG_under = BG_1_UNDER;
-					break;
-				}
-				case 2:		/* Screen 0(FPS) */
-				{
-					view_offset_x = X_OFFSET;
-					view_offset_y = Y_MIN_DRAW;
-					hide_offset_x = X_OFFSET;
-					hide_offset_y = Y_OFFSET;
-					BG_offset_y = 32;
-					BG_under = BG_1_UNDER;
-					break;
-				}
-				default:
-				{
-					view_offset_x = X_OFFSET;
-					view_offset_y = Y_OFFSET;
-					hide_offset_x = X_OFFSET;
-					hide_offset_y = Y_MIN_DRAW;
-					BG_offset_y = 32;
-					BG_under = BG_1_UNDER;
-					break;
-				}
-			}
-		}
+#ifdef DEBUG	/* デバッグコーナー */
 		/* テスト用入力 */
 		if(bDebugMode == TRUE)
 		{
@@ -348,9 +308,10 @@ SS main(void)
 			if((input & KEY_b_RLDN)!=0u)	r_height -= 1;	/* 下 */
 			r_height = Mmax(Mmin(r_height, 31), -32);
 		}
-		
+#endif
 		/* 自車の情報を取得 */
-		GetMyCarInfo(&stMyCar, input);
+		UpdateMyCarInfo(input);		/* 自車の情報を更新 */
+		GetMyCar(&stMyCar);			/* 自車の情報を取得 */
 		rpm			= stMyCar.uEngineRPM;
 		Vs			= stMyCar.VehicleSpeed;
 		
@@ -376,9 +337,9 @@ SS main(void)
 			uRoadAnimeCount = 0;
 			bRoad_Anime_flag = FALSE;
 			
-			unRoadAnimeTime = time_old;	/* 前回値を更新 */
+			GetStartTime(&unRoadAnimeTime);	/* 開始時刻を取得 */
 		}
-		else if( (time_old - unRoadAnimeTime) < (362 / speed) )	/* 更新周期未満 */
+		else if( (time_st - unRoadAnimeTime) < (362 / speed) )	/* 更新周期未満 */
 		{
 			/* センターラインの長さと間隔は５ｍ */
 			/* 60fps=17ms/f */
@@ -393,19 +354,13 @@ SS main(void)
 		}
 		else
 		{
-			unRoadAnimeTime = time_old;	/* 前回値を更新 */
+			GetStartTime(&unRoadAnimeTime);	/* 開始時刻を取得 */
 
 			uRoadAnimeCount = 0xFFF;	/* 逆走アニメーション防止 */
 
 			uRoadAnime = 0;
 			bRoad_Anime_flag = TRUE;
-/*
-			uRoadAnime++;
-			if(uRoadAnime >= 4u)
-			{
-				uRoadAnime = 0;
-			}
-*/			
+
 			uRoadAnimeBase++;
 			if(uRoadAnimeBase >= 4)
 			{	
@@ -422,9 +377,13 @@ SS main(void)
 				road_height = Mmax(Mmin(road_height, 31), -32);
 				//road_height = r_height;	/* デバッグ入力 */
 				road_angle = (SS)stRoadData[uCounter].bAngle - 0x80;		/* 道の角度	(0x80センター) */
-				road_angle = Mmax(Mmin(road_angle, 12), -12);
+				//road_angle = Mmax(Mmin(road_angle, 12), -12);
 				//road_angle = 0;	/* デバッグ入力 */
 				road_object = stRoadData[uCounter].bObject;					/* 出現ポイントのオブジェクトの種類 */
+				if(road_object != 0u)
+				{
+					SetAlive_EnemyCAR();	/* ライバル車を出現させる */
+				}
 				
 				if(road_height == road_height_old)
 				{
@@ -437,32 +396,49 @@ SS main(void)
 				{
 					/* 保持 */
 				}
+				
 				uRoadCycleCount = 0;
 				
+				if(bRoadCycleCountLamp == TRUE)
+				{
+					bRoadCycleCountLamp = FALSE;
+				}
+				else
+				{
+					bRoadCycleCountLamp = TRUE;
+				}
+
 				uCounter++;			/* カウンタ更新 */
 				if(uCounter >= 896)uCounter = 0;
 			}
 			else
 			{
-				if(uRoadCycleCount < (uRas_size - 16))
+				uRoadCycleCount += 1;
+				if(uRoadCycleCount > (uRas_size - 16))
 				{
-					uRoadCycleCount+=4;
+					bRoadCycleCountRst = TRUE;
+				}
+				
+				if(bRoadCycleCountLamp == TRUE)
+				{
+					uRoadCycleCountLamp += 1;
 				}
 				else
 				{
-					bRoadCycleCountRst = TRUE;
-					/* 保持 */
+					uRoadCycleCountLamp -= 1;
 				}
 			}
 		}
+		SetRoadCycleCount(uRoadCycleCount);
 		
 		if(bRoad_Anime_flag == TRUE)
 		{
+			road_distance = uRoadCycleCountLamp;
+
 			// 高低差から傾きを出す(-45～+45) rad = APL_Atan2( road_slope_old - road_slope,  );
 			if(road_height != road_height_old)
 			{
 				road_slope_old = road_slope;	/* 前回値更新 */
-				road_distance = 0;
 				road_slope = road_height * -1;
 
 				/* 角度からtanθ*/
@@ -504,7 +480,12 @@ SS main(void)
 		
 		/* コーナーの表現 */
 #if 1
-		if(bDebugMode == FALSE)
+#ifdef DEBUG	/* デバッグコーナー */
+		if(bDebugMode == TRUE)
+		{
+		}
+		else
+#endif
 		{
 		}
 #else
@@ -538,7 +519,7 @@ SS main(void)
 			/* 前回値保持 */
 		}
 
-
+		/* ラスター処理 */
 #if 1
 //		if(stTask.b8ms == TRUE)
 		{
@@ -577,7 +558,14 @@ SS main(void)
 			uRas_mid = Mmin((uRas_st + road_distance), uRas_ed - 16);	/* 水平線の位置が変化しないポイント *//* ハイウェイスターなら 64 = ROAD_SIZE*2/3 */
 			uPal_tmp[0] = uRas_st;				/* 割り込み位置の設定 */
 			
-			road_curve = road_angle * (uRas_size>>1);
+			stRasInfo.st = uRas_st;
+			stRasInfo.mid = uRas_mid;
+			stRasInfo.ed = uRas_ed;
+			stRasInfo.size = uRas_size;
+			stRasInfo.horizon = Horizon;
+			SetRasterInfo(stRasInfo);
+			
+			road_curve = road_angle * uRas_size;
 			
 			for(y=uRas_st; y < uRas_ed; y++)
 			{
@@ -597,22 +585,26 @@ SS main(void)
 				{
 					ras_cal_x = 0;	/* 最初 */
 				}
+#if 0
+				else if( y < uRas_mid )				/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
+				{
+					ras_cal_x = ((num * vx) >> 4) + (road_angle * (uRas_mid - uRas_st) / num);
+				}
+#endif
 				else
 				{
-					SS curve_rate;
-//					curve_rate = (32 * ((SS)stRoadData[uCounter + uRoadCycleCount + rev].bAngle - 0x80)) / num;
-					curve_rate = road_curve / num;
-					if(curve_rate < -256)	curve_rate = -256;
-					if(curve_rate >  256)	curve_rate = 256;
-					
-					ras_cal_x = ((num * vx) >> 4) + curve_rate;	/* 第一項(自車の位置)＋第二項(曲がり具合) */	/* 固定小数点化はHUYEさんのアドバイス箇所 */
+					ras_cal_x = ((num * vx) >> 4) + (road_curve / num);
 				}
+#ifdef DEBUG	/* デバッグコーナー */
 				if(bDebugMode == TRUE)	/* デバッグモード */
 				{
-					Draw_Pset(view_offset_x + (WIDTH >> 1) + ras_cal_x, y + view_offset_y, 0xC2);	/* デバッグ用グラフ*/
+					Draw_Pset(	view_offset_x + (WIDTH >> 1) - ras_cal_x,
+								view_offset_y + Horizon + num,
+								0xC2);	/* デバッグ用グラフ*/
 				}
-				if(ras_cal_x <   0)ras_cal_x += 512;
-				if(ras_cal_x > 512)ras_cal_x -= 512;
+#endif
+//				if(ras_cal_x <   0)ras_cal_x += 512;
+//				if(ras_cal_x > 512)ras_cal_x -= 512;
 				uRas_tmp[y] = (US)ras_cal_x;
 
 				/* Y座標 */
@@ -621,9 +613,10 @@ SS main(void)
 					ras_cal_y = 0;
 					ras_pat = uBG_pat[3][0];
 					road_offset_y = 0;
-					road_offset_val = 4;
+					road_offset_val = 0;
 					uRoadAnime_old = uRoadAnime;
 					uRoadAnimeBase_old = uRoadAnimeBase;
+
 					col = 0xBB;
 				}
 #if 1
@@ -631,9 +624,6 @@ SS main(void)
 				{
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
 					ras_cal_y = BG_under;
-
-					/* ロードパターン*/
-					road_offset_val = 4;
 
 					col = 0xC2;
 				}
@@ -650,18 +640,12 @@ SS main(void)
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
 					ras_cal_y = Horizon_offset + Road_strch + ((SS)uDebugNum - 0x80);
 
-					/* ロードパターン*/
-					road_offset_val = 1;
-
 					col = 0xB7;
 				}
 				else				/* 平坦 */
 				{
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
 					ras_cal_y = Horizon_offset;
-
-					/* ロードパターン*/
-					road_offset_val = 1;
 
 					col = 0xFF;
 				}
@@ -684,22 +668,26 @@ SS main(void)
 				}
 #endif
 				/* ロードパターン*/
+				road_offset_y = (num * road_offset_val) / (road_offset_val + 96);
+				uRas_tmp_sub[y] = road_offset_y;
+
 				uRoadAnimeCount++;
 				if(uRoadAnimeCount >= road_offset_y)
 				{
 					uRoadAnimeCount = 0;
-
-					road_offset_y += Mmin(road_offset_val, 2);
 					uRoadAnime++;
+					road_offset_val++;
 				}
 				if(uRoadAnime >= 4u){uRoadAnime = 0;}
 
+#ifdef DEBUG	/* デバッグコーナー */
 				if(bDebugMode == TRUE)	/* デバッグモード */
 				{
 					Draw_Line(uRas_st + view_offset_x, (Horizon+ view_offset_y)+1, uRas_ed + view_offset_x, (Horizon+ view_offset_y)+1, 0x35, 0xFFFF);
 					Draw_Pset(y + view_offset_x, (Horizon + RASTER_MIN + view_offset_y) - ras_cal_y, col);	/* デバッグ用グラフ*/
 					uRas_debug[y] = ras_cal_y;
 				}
+#endif
 				ras_result = ras_cal_y + ras_pat;
 				if(ras_result <   0)ras_result = 0;
 				if(ras_result > 511)ras_result = 0;
@@ -711,6 +699,7 @@ SS main(void)
 			SetRasterPal(uPal_tmp, sizeof(US)*RASTER_MAX);
 		}
 #endif
+		/* テキスト画面の処理 */
 		if(stTask.b496ms == TRUE)
 		{
 			UI unPassTime, unTimer;
@@ -744,43 +733,27 @@ SS main(void)
 			/* 描画 */
 			PutTextInfo(stTextInfo);
 		}
-#ifdef DEBUG	/* デバッグコーナー */
-
-#if	1
+		
 		if( Mabs(vx) > 25 )	/* コース外 */
 		{
-			SI	adpcm_sns;
-			
-			adpcm_sns = m_stat(9/*Mmin(Mmax(25, vx), 31)*/);	/* ADPCM ch1(9) ch2-8(25-31) */
-//			Message_Num(&adpcm_sns,	 0, 13, 2, MONI_Type_SI, "%d");
-			
-			stMyCar.uEngineRPM = (stMyCar.uEngineRPM>>1) + (stMyCar.uEngineRPM>>2)  + (stMyCar.uEngineRPM>>3);
-			
-			if( (time_old - unExplosion_time) >  (60000 / rpm) )	/* 回転数のエンジン音 */
-			{
-				unExplosion_time = time_old;
-				bExplosion = TRUE;
-			}
-			else
-			{
-				bExplosion = FALSE;
-			}
+			/* コースアウト時の処理 */
+			stMyCar.uEngineRPM = (stMyCar.uEngineRPM>>1) + (stMyCar.uEngineRPM>>2)  + (stMyCar.uEngineRPM>>3);	/* 減速処理 */
+			MyCar_CourseOut(rpm);	/* コースアウト時のエフェクト */
+		}
+		
+		/* グラフィック画面の処理 */
+		MyCar_Interior(view_offset_x, view_offset_y);	/* 自車のインテリア処理 */
 
-			/* 回転数のエンジン音 */
-			if( bExplosion == TRUE )
-			{
-				m_pcmplay(11,3,4);
-			}
-		}
-		else
-		{
-		}
-#endif
+		/* 余った時間で処理 */
+		BG_main(&bFlip);	/* バックグランド処理 */
+		
+		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
+
+#ifdef DEBUG	/* デバッグコーナー */
 //		BG_TextPut("OverKata", 4, 10);
 //		BG_TextPut("OverKata", 128, 128);
 //		BG_TextPut("OVER KATA", 128, 128);
-#endif
-#ifdef DEBUG
+
 		if(bDebugMode == TRUE)
 		{
 			if(stTask.b496ms == TRUE)
@@ -790,6 +763,7 @@ SS main(void)
 				
 				Message_Num(&unTime_cal,	 	 0,  8, 2, MONI_Type_UI, "%3d");
 				Message_Num(&unTime_cal_PH,		 6,  8, 2, MONI_Type_UI, "%3d");
+//				Message_Num(&BGprocces_ct,		12,  8, 2, MONI_Type_US, "%3d");
 				
 //				Message_Num(&speed,				 0,  9, 2, MONI_Type_SS, "%3d");
 //				Message_Num(&vx, 				 6,  9, 2, MONI_Type_SS, "%2d");
@@ -815,149 +789,11 @@ SS main(void)
 			}
 		}
 #endif
-		/* 描画のクリア処理 */
-#if 1
-		switch(bFlipState)
-		{
-			case Clear_G:
-			{
-				G_CLR_AREA(hide_offset_x, WIDTH, hide_offset_y, HEIGHT, 1);	/* Screen1 消去 */
-				bFlipState = Enemy1_G;
-				bFlip = FALSE;
-				break;
-			}
-			case Enemy1_G:
-			case Enemy2_G:
-			case Enemy3_G:
-			case Enemy4_G:
-			{
-				US	j;
-
-				if(speed <= 8)								/* 抜かれる */
-				{
-					uCountNum = Mdec(uCountNum, 1);
-				}
-				else if( (speed > 8) && (speed < 16) )		/* 保持*/
-				{
-				}
-				else
-				{
-					uCountNum++;							/* 抜かす */
-				}
-				if(uCountNum >= 64)uCountNum = 0;
-				if(uCountNum <= 0)uCountNum = 0;
-
-				/* ライバル車 */
-				j = Mmax(Mmin(((64-uCountNum)>>4), 3), 0);	/* 等間隔倍率になっているので改善要 */
-				/* xもyも、倍率変化時に座標がセンター調整のため違和感あり */
-				x = hide_offset_x + (WIDTH>>1);
-				y = hide_offset_y + Horizon + uCountNum;
-
-				Put_EnemyCAR(x, y, j, bMode_rev);
-
-				
-				bFlipState = Object1_G;
-				bFlip = FALSE;
-				break;
-			}
-			case Object1_G:	/* 右側 */
-			{
-				US	j;
-
-				if(road_object != 0)
-				{
-				}
-				/* ヤシの木 */
-				j = Mmax((4 - (uRoadCycleCount >> 3)), 0);	/* 等間隔倍率になっているので改善要 */
-				y = hide_offset_y + Horizon + (uRoadCycleCount<<1);
-				x = hide_offset_x + (WIDTH>>1) + (uRoadCycleCount<<1);
-				
-				Put_CouseObject(x, y, j, bMode_rev, 0);
-
-				if(bDebugMode == TRUE)	/* デバッグモード */
-				{
-					Draw_Pset(x, y, 0xC2);	/* デバッグ用座標位置 */
-				}
-
-				bFlipState = Object2_G;
-				bFlip = FALSE;
-				break;
-			}
-			case Object2_G:	/* 左側 */
-			case Object3_G:
-			case Object4_G:
-			case Object5_G:
-			case Object6_G:
-			{
-				US	j;
-
-				if(road_object != 0)
-				{
-				}
-				/* ヤシの木 */
-				j = Mmax((4 - (uRoadCycleCount >> 3)), 0);	/* 等間隔倍率になっているので改善要 */
-				y = hide_offset_y + Horizon + (uRoadCycleCount<<1);
-				x = hide_offset_x + (WIDTH>>1) - (uRoadCycleCount<<1);
-				
-				Put_CouseObject(x, y, j, bMode_rev, 1);
-
-				if(bDebugMode == TRUE)	/* デバッグモード */
-				{
-					Draw_Pset(x, y, 0xC2);	/* デバッグ用座標位置 */
-				}
-
-				bFlipState = Flip_G;
-				bFlip = FALSE;
-				break;
-			}
-			case Flip_G:
-			{
-				bFlipState = Clear_G;
-				bFlip = TRUE;
-				break;
-			}
-			default:
-			{
-				break;
-			}
-		}
-#else
-		/* 必ずテキスト表示処理の後に行うこと */
-		/* クリアにかかる時間は1/55fpsとのこと@Tea_is_Appleさんより */
-		if((*CRTC_480 & 0x02u) != 0u)	/* クリア実行中 */
-		{
-			bFlip = FALSE;
-		}
-		else
-		{
-			bFlip = TRUE;
-			*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
-			*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
-		}
-#endif
-		/* 描画処理 */
-		
-		/* 画面を揺らす */
-		if((speed == 0) && (rpm == 0)){	/* 停車 */
-			Vibration = 0;
-		}
-		else{			/* 走行中 */
-			if((uFreeRunCount % 5) == 0)Vibration = 1;	/* 画面の振動 */
-			else Vibration = 0;
-		}
-
-		/* 画面の位置 */
-		HOME(0b01, view_offset_x, view_offset_y + Vibration );	/* Screen 0(TPS/FPS) */
-		HOME(0b10, view_offset_x, view_offset_y );				/* Screen 1 */
-
-		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
-#if 1
 		/* 処理時間計測 */
 		GetNowTime(&time_now);
-		time = time_now - time_old;
-		unTime_cal = time;	/* LSB:1 UNIT:ms */
+		unTime_cal = time_now - time_st;	/* LSB:1 UNIT:ms */
 		unTime_cal_PH = Mmax(unTime_cal, unTime_cal_PH);
-#endif
+
 		/* 同期待ち */
 		vwait(1);
 	}
@@ -965,17 +801,17 @@ SS main(void)
 	
 	App_exit();	/* 終了処理 */
 
-#if 1
-	printf("uPal_tmp[0]の中身 = %d(vy=%d)\n", uRas_debug[0], vy );
+#ifdef DEBUG	/* デバッグコーナー */
+	printf("uRas_tmp[0]の中身 = %d(uRas_st=%d)\n", uRas_tmp[0], uRas_st );
 	for(y=uRas_st; y < uRas_ed; y++)
 	{
-		printf("[%3d]=(%5d),", y, uRas_debug[y] );
+		printf("[%3d]=(%5d),", y, uRas_tmp[y] );
 		//printf("[%3d]=(%5d),", y, uRas_debug[y] );
 		if((y%5) == 0)printf("\n");
 	}
 	printf("\n");
 #endif
-	
+	printf("処理時間:Real=%3d[ms] PH=%3d[ms]\n", unTime_cal, unTime_cal_PH);
 }
 
 void App_Init(void)
@@ -1030,10 +866,10 @@ void App_Init(void)
 //	APICG_DataLoad("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
 	G_MyCar();		/* 自車の表示 */
 	APICG_DataLoad("data/cg/Over_C.pic"	, 0,					0,	1);	/* ライバル車 */
-	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
+//	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
 	APICG_DataLoad("data/cg/Over_E.pic"	, 140,					0,	1);	/* ヤシの木 */
 	G_Background();	/* 背景の表示 */
-	
+
 	/* スプライト／ＢＧ表示 */
 	PCG_INIT();							/* スプライト／ＢＧの初期化 */
 	PCG_SP_dataload("data/sp/BG.SP");	/* スプライトのデータ読み込み */
@@ -1087,4 +923,90 @@ void App_exit(void)
 	/*スーパーバイザーモード終了*/
 	SUPER(nSuperchk);
 }
+
+SS BG_main(UC* bFlip)
+{
+	SS	ret = 0;
+	UI	time_now;
+	UI	time_st;
+	US	BGprocces_ct = 0;
+	UC	bNum;
+
+	static UC	bFlipState = Clear_G;
+
+	GetStartTime(&time_st);	/* 開始時刻を取得 */
+
+	do
+	{
+		GetNowTime(&time_now);	/* 現在時刻を取得 */
+		
+		if((time_now - time_st) >= 14)	/* 14ms以内なら余った時間で処理する */
+		{
+			break;
+		}
+		
+		/* 背景の処理 */
+		/* 描画のクリア処理 */
+		switch(bFlipState)
+		{
+			/* 描画のクリア処理 */
+			case Clear_G:
+			{
+				G_CLR_ALL_OFFSC(g_mode);
+				bFlipState = Enemy1_G;
+				*bFlip = FALSE;
+				break;
+			}
+			/* ライバル車 */
+			case Enemy1_G:
+			case Enemy2_G:
+			case Enemy3_G:
+			case Enemy4_G:
+			{
+				bNum = bFlipState - Enemy1_G;
+				EnemyCAR_main(bNum, g_mode, g_mode_rev);
+				bFlipState++;
+				*bFlip = FALSE;
+				break;
+			}
+			/* ヤシの木(E:右側 / O:左側) */
+			case Object1_G:
+			case Object2_G:
+			case Object3_G:
+			case Object4_G:
+			case Object5_G:
+			case Object6_G:
+			{
+				bNum = bFlipState - Object1_G;
+				Course_Obj_main(bNum, g_mode, g_mode_rev);
+				bFlipState++;
+				*bFlip = FALSE;
+				break;
+			}
+			case Flip_G:
+			{
+				bFlipState = Clear_G;
+				*bFlip = TRUE;
+				break;
+			}
+			default:
+			{
+				bFlipState = Clear_G;
+				*bFlip = FALSE;
+				break;
+			}
+		}
+		
+		BGprocces_ct++;
+		
+		if(*bFlip == TRUE)	/* 切替判定時は即ループ終了 */
+		{
+			break;
+		}
+	}
+	while(1);
+	
+	return	ret;
+}
+
 #endif	/* OVERKATA_C */

@@ -9,16 +9,54 @@
 #define	CONV_PAL	(0xB4)
 #define	TRANS_PAL	(0x00)
 
+/* グローバル構造体 */
+ST_CRT	stCRT[CRT_MAX] = {0};
+
 /* 関数のプロトタイプ宣言 */
+SS	GetCRTCAR(ST_CRT *, SS);
+SS	SetCRT(ST_CRT, SS);
 void G_INIT(void);
 void G_MyCar(void);
 void G_Background(void);
 void G_Palette(void);
-SS G_Stretch_Pict(US , US, US, US, UC, US, US, US, US, UC);
-SS G_BitBlt(US, US, US, US, UC, US, US, US, US, UC, UC);
-SS G_CLR_AREA(US, US, US, US, UC);
+SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
+SS G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
+SS G_CLR_AREA(SS, US, SS, US, UC);
+SS G_CLR_ALL_OFFSC(UC);
 
 /* 関数 */
+SS	GetCRT(ST_CRT *stDat, SS Num)
+{
+	SS	ret = 0;
+	
+	if(Num < CRT_MAX)
+	{
+		*stDat = stCRT[Num];
+	}
+	else
+	{
+		ret = -1;
+	}
+	
+	return ret;
+}
+
+SS	SetCRT(ST_CRT stDat, SS Num)
+{
+	SS	ret = 0;
+	
+	if(Num < CRT_MAX)
+	{
+		stCRT[Num] = stDat;
+	}
+	else
+	{
+		ret = -1;
+	}
+	
+	return ret;
+}
+
 void G_INIT(void)
 {
 	UI	nPalette;
@@ -117,6 +155,31 @@ void G_INIT(void)
 	{
 		GPALET( nPalette, SetRGB(0, 0, 0));	/* Black */
 	}
+
+	/* CRTの設定 */
+	stCRT[0].view_offset_x	= X_OFFSET;
+	stCRT[0].view_offset_y	= Y_MIN_DRAW;
+	stCRT[0].hide_offset_x	= X_OFFSET;
+	stCRT[0].hide_offset_y	= Y_OFFSET;
+	stCRT[0].BG_offset_x	= 0;
+	stCRT[0].BG_offset_y	= 0;
+	stCRT[0].BG_under		= BG_0_UNDER;
+	
+	stCRT[1].view_offset_x	= X_OFFSET;
+	stCRT[1].view_offset_y	= Y_OFFSET;
+	stCRT[1].hide_offset_x	= X_OFFSET;
+	stCRT[1].hide_offset_y	= Y_MIN_DRAW;
+	stCRT[1].BG_offset_x	= 0;
+	stCRT[1].BG_offset_y	= 32;
+	stCRT[1].BG_under		= BG_1_UNDER;
+
+	stCRT[2].view_offset_x	= X_OFFSET;
+	stCRT[2].view_offset_y	= Y_MIN_DRAW;
+	stCRT[2].hide_offset_x	= X_OFFSET;
+	stCRT[2].hide_offset_y	= Y_OFFSET;
+	stCRT[2].BG_offset_x	= 0;
+	stCRT[2].BG_offset_y	= 32;
+	stCRT[2].BG_under		= BG_1_UNDER;
 }
 
 void G_MyCar(void)
@@ -302,6 +365,7 @@ void G_Background(void)
 						1);
 	}
 
+#if 0
 	/* 画像変換(背景) */
 	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + BG_1_H; y++)
 	{
@@ -332,6 +396,7 @@ void G_Background(void)
 			Draw_Pset(x, y, color);
 		}
 	}
+#endif
 
 #else
 	SS e;
@@ -382,14 +447,14 @@ void G_Palette(void)
 
 }
 
-SS G_Stretch_Pict(	US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
-					US src_x, US src_w, US src_y, US src_h, UC ubSrcScrn)
+SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
+					SS src_x, US src_w, SS src_y, US src_h, UC ubSrcScrn)
 {
 	US	*pDstGR,	*pSrcGR;
 	UI	DstGR_H,	SrcGR_H;
-	US	dst_ex,	dst_ey;
-	US	src_ex,	src_ey;
-	US	x, y;
+	SS	dst_ex,	dst_ey;
+	SS	src_ex,	src_ey;
+	SS	x, y;
 	US	rate_x, rate_y;
 
 	dst_ex	= dst_x + dst_w;
@@ -421,9 +486,9 @@ SS G_Stretch_Pict(	US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 	for(y = dst_y; y < dst_ey; y++)
 	{
 		/* アドレス算出 */
-		pDstGR = (UC *)(DstGR_H + ((y << 10) + (dst_x << 1)));
+		pDstGR = (US *)(DstGR_H + ((y << 10) + (dst_x << 1)));
 
-		pSrcGR = (UC *)(SrcGR_H + ((((src_y + (y - dst_y)) * rate_y) << 10) + (src_x << 1)));
+		pSrcGR = (US *)(SrcGR_H + ((((src_y + (y - dst_y)) * rate_y) << 10) + (src_x << 1)));
 	
 		for(x = dst_x; x < dst_ex; x++)
 		{
@@ -441,21 +506,57 @@ SS G_Stretch_Pict(	US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 /* 画像のコピー */
 /* 同じサイズの画像を任意の位置に描画する */
 /* 表示先はx,y座標を画像の中心とした位置 */
-SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
-			US src_x, US src_w, US src_y, US src_h, UC ubSrcScrn,
-			UC ubMode)
+SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
+			SS src_x, US src_w, SS src_y, US src_h, UC ubSrcScrn,
+			UC ubMode, UC ubV, UC ubH)
 {
 	US	*pDstGR,	*pSrcGR;
 	UI	DstGR_H,	SrcGR_H;
-	US	dst_ex,	dst_ey;
-	US	src_ex,	src_ey;
-	US	x, y;
-	US	x_min, y_min;
-	US	x_max, y_max;
+	SS	dst_ex,	dst_ey;
+	SS	src_ex,	src_ey;
+	SS	x, y;
+	SS	x_min, y_min;
+	SS	x_max, y_max;
 	US	rate_x, rate_y;
 
-	dst_x	= dst_x - (dst_w>>1);
-	dst_y	= dst_y - (dst_h>>1);
+	switch(ubV)
+	{
+		case POS_TOP:
+		{
+			break;
+		}
+		case POS_CENTER:
+		default:
+		{
+			dst_y	= dst_y - (dst_h>>1);
+			break;
+		}
+		case POS_BOTTOM:
+		{
+			dst_y	= dst_y - dst_h;
+			break;
+		}
+	}
+
+	switch(ubH)
+	{
+		case POS_LEFT:
+		{
+			break;
+		}
+		case POS_MID:
+		default:
+		{
+			dst_x	= dst_x - (dst_w>>1);
+			break;
+		}
+		case POS_RIGHT:
+		{
+			dst_x	= dst_x - dst_w;
+			break;
+		}
+	}
+	
 	dst_ex	= dst_x + dst_w;
 	dst_ey	= dst_y + dst_h;
 	src_ex	= src_x + src_w;
@@ -561,9 +662,9 @@ SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 	for(y = dst_y; y < dst_ey; y++)
 	{
 		/* アドレス算出 */
-		pDstGR = (UC *)(DstGR_H + ((y << 10) + (dst_x << 1)));
+		pDstGR = (US *)(DstGR_H + ((y << 10) + (dst_x << 1)));
 
-		pSrcGR = (UC *)(SrcGR_H + (((src_y + (y - dst_y)) << 10) + (src_x << 1)));
+		pSrcGR = (US *)(SrcGR_H + (((src_y + (y - dst_y)) << 10) + (src_x << 1)));
 	
 		for(x = dst_x; x < dst_ex; x++)
 		{
@@ -578,14 +679,29 @@ SS G_BitBlt(US dst_x, US dst_w, US dst_y, US dst_h, UC ubDstScrn,
 }
 
 /* 画面のクリア */
-SS G_CLR_AREA(US x, US w, US y, US h, UC Screen)
+SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 {
 	SS	ret = 0;
-	SS	i;
+	SS	i=0;
 	UL	ulGR_H;
 	UL	ulPoint;
 	UI	unSize;
+#if 0
+	US	data[512] = {0};
+	SI	nMode;
+	UC *DMA_DCR;
+	UC *DMA_GCR;
 	
+	struct _chain stSrcImage;
+	struct _chain stDstImage[256];
+
+	if(DMAMODE() != 0u)return -1;
+#endif
+#if 0
+	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
+	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
+#endif
+
 	switch(Screen)
 	{
 		case 0:
@@ -602,13 +718,72 @@ SS G_CLR_AREA(US x, US w, US y, US h, UC Screen)
 	}
 	
 	unSize = (w << 1);
-	ulPoint = (x << 1) + (y * 0x400u);
-	
+	ulPoint = (y << 10u) + (x << 1);
+#if 0
+	nMode = 0b10000100;
+	/*		  ||||||++------	(bit1,0)	DAC(addr2)	00:none	01:inc	10:dec	*/
+	/*		  ||||++--------	(bit3,2)	MAC(addr1)	00:none	01:inc	10:dec	*/
+	/*		  |+++----------	(bit6,5,4)	(Reserved)	0				*/
+	/*		  +-------------	(bit7)		転送方向	0:addr1->addr2	1:addr2->addr1	*/
+
+	stSrcImage.addr = &data[0];
+	stSrcImage.len  = 512;
 	for(i=0; i<h; i++)
 	{
-		memset((ulGR_H + ulPoint + (i * 0x400u)), 0, unSize);
+		stDstImage[i].addr =  (void *)(ulGR_H + ulPoint + (i << 10u));
+		stDstImage[i].len  =  unSize;
 	}
+	
+	DMA_DCR = (UC *)0xE84084u;
+	*DMA_DCR = Mbset(*DMA_DCR, ((UC)0b11000000), ((UC)0b10000000));	/* XRM(bit7,6) 10: */
+	DMA_GCR = (UC *)0xE840FFu;
+	*DMA_GCR = Mbset(*DMA_GCR, ((UC)0b0011), ((UC)0b0011));/* BR(bit1,0) 11:6.25% */
+	
+	DMAMOV_A(&stDstImage[0],	/* addr1 */
+			&data[0],			/* addr2 */
+			nMode,				/* mode */
+//		Mmax((SI)h/16, 1));
+			(SI)h);				/* len */
+#endif
+
+#if 0
+	for(i=0; i<h; i++)
+	{
+//		DMAMOVE(&data[0],									/* addr1 */
+//				(void *)(ulGR_H + ulPoint + (i * 0x400u)),	/* addr2 */
+//				nMode,										/* mode */
+//				(SI)unSize);								/* len */
+	}
+#endif
+
+#if 1
+	for(i=0; i<h; i++)
+	{
+		memset((void *)(ulGR_H + ulPoint + (i << 10u)), 0x00u, unSize);
+	}
+#endif
+
+#if 0
+	/* 必ずテキスト表示処理の後に行うこと */
+	/* クリアにかかる時間は1/55fpsとのこと@Tea_is_Appleさんより */
+	if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
+	{
+		*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
+		*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
+	}
+#endif
 	return	ret;
+}
+
+SS G_CLR_ALL_OFFSC(UC bMode)
+{
+	/* 描画可能枠再設定 */
+	WINDOW( stCRT[bMode].hide_offset_x, 
+			stCRT[bMode].hide_offset_y,
+			stCRT[bMode].hide_offset_x + WIDTH,
+			stCRT[bMode].hide_offset_y + 152);	
+	/* 消去 */
+	G_CLR_AREA(stCRT[bMode].hide_offset_x, WIDTH, stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
 }
 
 #endif	/* GRAPHIC_C */

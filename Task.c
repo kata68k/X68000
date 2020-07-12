@@ -4,9 +4,9 @@
 #include "inc/usr_macro.h"
 #include "Task.h"
 
-SS	GetTaskInfo(ST_TASK *, UI);
+SS	GetTaskInfo(ST_TASK *);
 
-SS	GetTaskInfo(ST_TASK *st_Task, UI time)
+SS	GetTaskInfo(ST_TASK *st_Task)
 {
 	static SC	bFirstTime		= TRUE;
 	static UI	un8ms_time		= 0;
@@ -14,7 +14,7 @@ SS	GetTaskInfo(ST_TASK *st_Task, UI time)
 	static UI	un32ms_time		= 0;
 	static UI	un96ms_time		= 0;
 	static UI	un496ms_time	= 0;
-
+	UI	time;
 	SS	ret = 0;
 	UC	b8ms_time;
 	UC	b16ms_time;
@@ -22,6 +22,8 @@ SS	GetTaskInfo(ST_TASK *st_Task, UI time)
 	UC	b96ms_time;
 	UC	b496ms_time;
 
+	GetStartTime(&time);	/* ŠJn‚ğæ“¾ */
+	
 	if( (time - un8ms_time) > 8)	/* 8msüŠú */
 	{
 		un8ms_time = time;

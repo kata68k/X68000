@@ -3,6 +3,8 @@
 
 #include "usr_style.h"
 
+#define	DEBUG	/* デバッグ有効定義 */
+
 #define FALSE	(0)
 #define TRUE	(!FALSE)
 
@@ -93,23 +95,27 @@ typedef struct
 	UC	bRepeatCount;	/* 繰り返し回数 */
 }	ST_ROADDATA;
 
-/* 車の構造体 */
+/* 画面情報の構造体 */
 typedef struct
 {
-	UC	ubCarType;			/* 車の種類 */
-	US	uEngineRPM;			/* エンジン回転数 */
-	SS	VehicleSpeed;		/* 車速 */
-	SS	Steering;			/* ステア */
-	UC	ubShiftPos;			/* ギア段 */
-	SC	bThrottle;			/* スロットル開度 */
-	UC	ubBrakeLights;		/* ブレーキライト */
-	UC	ubHeadLights;		/* ヘッドライト */
-	UC	ubWiper;			/* ワイパー */
-	SC	bTire;				/* タイヤの状態 */
-	UC	ubOBD;				/* 故障の状態 */
-}	ST_CARDATA;
+	SS	view_offset_x;		/* 表示画面のX座標オフセット */
+	SS	view_offset_y;		/* 表示画面のY座標オフセット */
+	SS	hide_offset_x;		/* 非表示画面のX座標オフセット */
+	SS	hide_offset_y;		/* 非表示画面のY座標オフセット */
+	SS	BG_offset_x;		/* BG画面のX座標オフセット */
+	SS	BG_offset_y;		/* BG画面のY座標オフセット */
+	SS	BG_under;			/* BG画面の最終 */
+}	ST_CRT;
 
-
+/* ラスター情報の構造体 */
+typedef struct
+{
+	US	st;			/* 開始位置 */
+	US	mid;		/* 中間位置 */
+	US	ed;			/* 終了位置 */
+	US	size;		/* 開始と終了の差分 */
+	US	horizon;	/* 水平線 */
+}	ST_RAS_INFO;
 
 /* データテーブル */
 

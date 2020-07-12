@@ -3,4 +3,7 @@
 
 #include "inc/usr_define.h"
 
+/* \‘¢‘Ì’è‹` */
+/* externéŒ¾ */
+
 #endif	/* xxx_H */

@@ -11,18 +11,26 @@
 
 /* 変数 */
 static volatile UI NowTime;
+static volatile UI StartTime;
 static volatile US ras_count;
 static volatile US Hsync_count;
 static volatile US Vsync_count;
 
 static US ras_val[256];
 static US ras_pal[256];
+ST_RAS_INFO	stRasInfo = {0};
 
 /* 関数のプロトタイプ宣言 */
 SS Init_MFP(void);
 void interrupt Timer_D_Func(void);
 SS GetNowTime(UI *);	/* 現在の時間を取得する */
 SS SetNowTime(UI);		/* 現在の時間を設定する */
+SS GetStartTime(UI *);	/* 開始の時間を取得する */
+SS SetStartTime(UI);	/* 開始の時間を設定する */
+SS GetRasterPos(US *, US *, US);	/* ラスター処理結果を取得 */
+SS GetRasterInfo(ST_RAS_INFO *);
+SS SetRasterInfo(ST_RAS_INFO);
+
 void interrupt Hsync_Func(void);
 void interrupt Raster_Func(void);
 
@@ -35,6 +43,7 @@ SS vwait(SS);
 SS Init_MFP(void)	/* 現在の時間を取得する */
 {
 	NowTime = 0;
+	StartTime = 0;
 	ras_pal[0] = 0;
 	ras_count = RASTER_MAX;
 	Hsync_count = 0;
@@ -60,6 +69,64 @@ SS SetNowTime(UI time)	/* 現在の時間を設定する */
 {
 	NowTime = time;
 	return 0;
+}
+
+SS GetStartTime(UI *time)	/* 開始の時間を取得する */
+{
+	*time = StartTime;
+	return 0;
+}
+
+SS SetStartTime(UI time)	/* 開始の時間を設定する */
+{
+	StartTime = time;
+	return 0;
+}
+
+SS GetRasterPos(US *x, US *y, US uNum)
+{
+	SS	ret = 0;
+
+	if(uNum < 256)
+	{
+		if(x !=  NULL)
+		{
+			*x = ras_val[uNum];
+		}
+		else
+		{
+			/* nop */
+		}
+		
+		if(y !=  NULL)
+		{
+			*y = ras_pal[uNum];
+		}
+		else
+		{
+			/* nop */
+		}
+	}
+	
+	return ret;
+}
+
+SS GetRasterInfo(ST_RAS_INFO *stDat)
+{
+	SS	ret = 0;
+	
+	*stDat = stRasInfo;
+	
+	return ret;
+}
+
+SS SetRasterInfo(ST_RAS_INFO stDat)
+{
+	SS	ret = 0;
+	
+	stRasInfo = stDat;
+	
+	return ret;
 }
 
 /* 割り込み関数は修飾子にinterruptを入れること */	/* くにちこ（Kunihiko Ohnaka）さんのアドバイス */

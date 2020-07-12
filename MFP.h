@@ -23,6 +23,11 @@ extern void interrupt Vsync_Func(void);
 extern SS vwait(SS);
 extern SS GetNowTime(UI *);		/* 現在の時間を取得する */
 extern SS SetNowTime(UI);		/* 現在の時間を設定する */
+extern SS GetStartTime(UI *);	/* 開始の時間を取得する */
+extern SS SetStartTime(UI);		/* 開始の時間を設定する */
+extern SS GetRasterPos(US *, US *, US);
+extern SS GetRasterInfo(ST_RAS_INFO *);
+extern SS SetRasterInfo(ST_RAS_INFO);
 
 extern SS SetRasterVal(void *, size_t);	/* ラスター専用のバッファにコピーする */
 extern SS SetRasterPal(void *, size_t);	/* ラスター専用(PAL)のバッファにコピーする */

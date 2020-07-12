@@ -15,6 +15,6 @@ typedef struct
 	UC	b496ms;	/* 496ms Task */
 }	ST_TASK;
 
-extern	SS	GetTaskInfo(ST_TASK *, UI);
+extern	SS	GetTaskInfo(ST_TASK *);
 
 #endif	/* TASK_H */

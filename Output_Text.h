@@ -3,8 +3,6 @@
 
 #include "inc/usr_define.h"
 
-#define	DEBUG
-
 enum{
 	MONI_Type_UI=0,
 	MONI_Type_SI,
