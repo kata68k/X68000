@@ -200,7 +200,7 @@ SS main(void)
 	InitCourseObj();
 	
 	/* 音楽 */
-	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
+//	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
 //	zmd_play("data\\music\\PT034MK.ZMD");	/* BGM */
 //	zmd_play("data\\music\\PT002MK.ZMD");	/* BGM */
 //	zmd_play("data\\music\\kyaraban.zmd");	/* BGM */
@@ -208,7 +208,15 @@ SS main(void)
 //	zmd_play("data\\music\\STSL_PUP.zmd");	/* BGM */
 //	zmd_play("data\\music\\1943_0020.zmd");	/* BGM */
 //	zmd_play("data\\music\\FZ_BIG.zmd");	/* BGM */
+//	zmd_play("data\\music\\STAR1.zmd");	/* BGM */
 	
+//	m_free(6);
+//	m_vset(6, v);
+//	m_alloc(6,1000);
+//	m_assign(6, 6);
+//	m_trk(6, "@63 o4 q8 v12 @u110@k0L8r4e-d-c4>b-<d-& d-d-d-cd-e-r4 r4g-g-g-4g-g- a-g-rd-4&(d-,e-)r4");
+//	m_trk(6, "@63 o4 q8 v12 @u110@k0L8r4e-d-c4>b-<d-&");
+
 	GetNowTime(&unStart_time);		/* Time Count用 */
 	
 #if 0
@@ -413,11 +421,12 @@ SS main(void)
 			}
 			else
 			{
-				uRoadCycleCount += 1;
+				uRoadCycleCount += ((8 + uRoadCycleCount) / 8);
 				if(uRoadCycleCount > (uRas_size - 16))
 				{
 					bRoadCycleCountRst = TRUE;
 				}
+				SetRoadCycleCount(uRoadCycleCount);
 				
 				if(bRoadCycleCountLamp == TRUE)
 				{
@@ -429,7 +438,6 @@ SS main(void)
 				}
 			}
 		}
-		SetRoadCycleCount(uRoadCycleCount);
 		
 		if(bRoad_Anime_flag == TRUE)
 		{
@@ -749,7 +757,8 @@ SS main(void)
 		
 		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
 
-#ifdef DEBUG	/* デバッグコーナー */
+//#ifdef DEBUG	/* デバッグコーナー */
+#if 0
 //		BG_TextPut("OverKata", 4, 10);
 //		BG_TextPut("OverKata", 128, 128);
 //		BG_TextPut("OVER KATA", 128, 128);
@@ -936,6 +945,10 @@ SS BG_main(UC* bFlip)
 
 	GetStartTime(&time_st);	/* 開始時刻を取得 */
 
+	/* 描画順をソートする */
+	Sort_EnemyCAR();		/* ライバル車 */
+	Sort_Course_Obj();		/* コースオブジェクト */
+	
 	do
 	{
 		GetNowTime(&time_now);	/* 現在時刻を取得 */
@@ -953,7 +966,8 @@ SS BG_main(UC* bFlip)
 			case Clear_G:
 			{
 				G_CLR_ALL_OFFSC(g_mode);
-				bFlipState = Enemy1_G;
+//				bFlipState = Enemy1_G;
+				bFlipState = Object1_G;
 				*bFlip = FALSE;
 				break;
 			}

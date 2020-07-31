@@ -27,5 +27,6 @@ extern	SS	SetEnemyCAR(ST_ENEMYCARDATA, SS);
 extern	SS	EnemyCAR_main(UC, UC, UC);
 extern	SS	SetAlive_EnemyCAR(void);
 extern	SS	Put_EnemyCAR(US, US, US, UC);
+extern	SS	Sort_EnemyCAR(void);
 
 #endif	/* ENEMYCAR_H */

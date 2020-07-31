@@ -8,6 +8,7 @@
 
 /* 構造体定義 */
 ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
+ST_ENEMYCARDATA	*pstEnemyCar[ENEMYCAR_MAX];
 
 /* 関数のプロトタイプ宣言 */
 SS	InitEnemyCAR(void);
@@ -16,6 +17,7 @@ SS	SetEnemyCAR(ST_ENEMYCARDATA, SS);
 SS	EnemyCAR_main(UC, UC, UC);
 SS	SetAlive_EnemyCAR(void);
 SS	Put_EnemyCAR(US, US, US, UC);
+SS	Sort_EnemyCAR(void);
 
 /* 関数 */
 SS	InitEnemyCAR(void)
@@ -33,6 +35,8 @@ SS	InitEnemyCAR(void)
 		stEnemyCar[i].ubBrakeLights = 0;
 		stEnemyCar[i].ubOBD = 0;
 		stEnemyCar[i].ubAlive = FALSE;
+		
+		pstEnemyCar[i] = &stEnemyCar[i];
 	}
 	
 	return ret;
@@ -43,7 +47,7 @@ SS	GetEnemyCAR(ST_ENEMYCARDATA *stDat, SS Num)
 	SS	ret = 0;
 	if(Num < ENEMYCAR_MAX)
 	{
-		*stDat = stEnemyCar[Num];
+		stDat = pstEnemyCar[Num];
 	}
 	else
 	{
@@ -58,7 +62,7 @@ SS	SetEnemyCAR(ST_ENEMYCARDATA stDat, SS Num)
 	
 	if(Num < ENEMYCAR_MAX)
 	{
-		stEnemyCar[Num] = stDat;
+		*pstEnemyCar[Num] = stDat;
 	}
 	else
 	{
@@ -73,7 +77,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 	
 	if(bNum < ENEMYCAR_MAX)
 	{
-		if(stEnemyCar[bNum].ubAlive == TRUE)
+		if(pstEnemyCar[bNum]->ubAlive == TRUE)
 		{
 			SS	x, y, z;
 			US	ras_x, ras_y;
@@ -84,24 +88,24 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			ras_x = 0;
 			ras_y = 0;
 			
-			x = stEnemyCar[bNum].x;
-			y = stEnemyCar[bNum].y;
-			z = stEnemyCar[bNum].z;
+			x = pstEnemyCar[bNum]->x;
+			y = pstEnemyCar[bNum]->y;
+			z = pstEnemyCar[bNum]->z;
 
 			GetCRT(&stCRT, bMode);
 			GetMyCar(&stMyCar);
 
-			//y += ((stMyCar.VehicleSpeed - stEnemyCar[bNum].VehicleSpeed) / 10);
+			//y += ((stMyCar.VehicleSpeed - pstEnemyCar[bNum]->VehicleSpeed) / 10);
 			y += RASTER_NEXT;
 
 			GetRasterInfo(&stRasInfo);
 			GetRasterPos(&ras_x, &ras_y, (US)(stRasInfo.st + y));
 			x = ras_x;
-			z = ((4 * 6) / (6 + y));
+			z = ((4 * 8) / (8 + y));
 			
-			stEnemyCar[bNum].x = x;
-			stEnemyCar[bNum].y = y;
-			stEnemyCar[bNum].z = z;
+			pstEnemyCar[bNum]->x = x;
+			pstEnemyCar[bNum]->y = y;
+			pstEnemyCar[bNum]->z = z;
 			
 			if((stRasInfo.st + y) < (stRasInfo.ed - 16))
 			{
@@ -119,7 +123,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			}
 			else
 			{
-				stEnemyCar[bNum].ubAlive = FALSE;
+				pstEnemyCar[bNum]->ubAlive = FALSE;
 			}
 		}
 		else
@@ -142,16 +146,16 @@ SS	SetAlive_EnemyCAR(void)
 
 	for(i=0; i<ENEMYCAR_MAX; i++)
 	{
-		if(stEnemyCar[i].ubAlive == FALSE)
+		if(pstEnemyCar[i]->ubAlive == FALSE)
 		{
-			stEnemyCar[i].ubCarType = 0;
-			stEnemyCar[i].VehicleSpeed = 120;
-			stEnemyCar[i].x = 0;
-			stEnemyCar[i].y = 0;
-			stEnemyCar[i].z = 4;
-			stEnemyCar[i].ubBrakeLights = 0;
-			stEnemyCar[i].ubOBD = 0;
-			stEnemyCar[i].ubAlive = TRUE;
+			pstEnemyCar[i]->ubCarType = 0;
+			pstEnemyCar[i]->VehicleSpeed = 120;
+			pstEnemyCar[i]->x = 0;
+			pstEnemyCar[i]->y = 0;
+			pstEnemyCar[i]->z = 4;
+			pstEnemyCar[i]->ubBrakeLights = 0;
+			pstEnemyCar[i]->ubOBD = 0;
+			pstEnemyCar[i]->ubAlive = TRUE;
 			break;
 		}
 	}
@@ -180,6 +184,38 @@ SS	Put_EnemyCAR(US x, US y, US Size, UC ubMode)
 				ubMode, POS_MID, POS_BOTTOM);
 	
 	return	ret;
+}
+
+SS	Sort_EnemyCAR(void)
+{
+	SS	ret = 0;
+	SS	i;
+	SS	count = 0;
+	ST_ENEMYCARDATA	*pstEnemyCar_Tmp;
+	
+	while(1)
+	{
+		for(i=0; i<ENEMYCAR_MAX-1; i++)
+		{
+			if(pstEnemyCar[i]->y > pstEnemyCar[i+1]->y)
+			{
+				pstEnemyCar_Tmp = pstEnemyCar[i+1];
+				pstEnemyCar[i+1] = pstEnemyCar[i];
+				pstEnemyCar[i] = pstEnemyCar_Tmp;
+				count = 0;
+			}
+			else
+			{
+				count++;
+			}
+		}
+		if(count >= (ENEMYCAR_MAX - 1))
+		{
+			break;
+		}
+	}
+	
+	return ret;
 }
 
 #endif	/* ENEMYCAR_C */

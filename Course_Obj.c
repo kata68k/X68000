@@ -11,7 +11,8 @@
 US	g_uRoadCycleCount = 0;
 
 /* 構造体定義 */
-ST_COURSE_OBJ	stCourse_Obj[6] = {0};
+ST_COURSE_OBJ	stCourse_Obj[COURSE_OBJ_MAX] = {0};
+ST_COURSE_OBJ	*pstCourse_ObjList[COURSE_OBJ_MAX];
 
 /* 関数のプロトタイプ宣言 */
 SS	InitCourseObj(void);
@@ -19,6 +20,7 @@ SS	Course_Obj_main(UC, UC, UC);
 SS	Put_CouseObject(SS, SS, US, UC, UC);
 SS	GetRoadCycleCount(US *);
 SS	SetRoadCycleCount(US);
+SS	Sort_Course_Obj(void);
 
 /* 関数 */
 SS	InitCourseObj(void)
@@ -33,6 +35,8 @@ SS	InitCourseObj(void)
 		stCourse_Obj[i].y = 0;
 		stCourse_Obj[i].z = 0;
 		stCourse_Obj[i].ubAlive = TRUE;
+		
+		pstCourse_ObjList[i] = &stCourse_Obj[i];
 	}
 	
 	return ret;
@@ -42,7 +46,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 {
 	SS	ret = 0;
 
-	if(stCourse_Obj[bNum].ubAlive == TRUE)
+	if(pstCourse_ObjList[bNum]->ubAlive == TRUE)
 	{
 		SS	x, y, z;
 		SS	dy;
@@ -61,9 +65,9 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 			bEven = FALSE;
 		}
 
-		x = stCourse_Obj[bNum].x;
-		y = stCourse_Obj[bNum].y;
-		z = stCourse_Obj[bNum].z;
+		x = pstCourse_ObjList[bNum]->x;
+		y = pstCourse_ObjList[bNum]->y;
+		z = pstCourse_ObjList[bNum]->z;
 		
 		GetRoadCycleCount(&uCount);
 		if(uCount >= z)
@@ -81,9 +85,9 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		GetCRT(&stCRT, bMode);
 		GetRasterInfo(&stRasInfo);
 
-//		stCourse_Obj[bNum].x = x;
-		stCourse_Obj[bNum].y = y;
-		stCourse_Obj[bNum].z = z;
+//		pstCourse_ObjList[bNum]->x = x;
+		pstCourse_ObjList[bNum]->y = y;
+		pstCourse_ObjList[bNum]->z = z;
 
 		if(dy < 0)
 		{
@@ -93,7 +97,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		{
 			GetRasterPos(&ras_x, &ras_y, (US)(stRasInfo.st + dy));
 
-			z = ((4 * 6) / (6 + dy));
+			z = ((4 * 8) / (8 + dy));
 			if(bEven == TRUE)
 			{
 				x = ras_x + (2 * dy);
@@ -117,16 +121,16 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		}
 		else
 		{
-			stCourse_Obj[bNum].ubAlive = FALSE;
+			pstCourse_ObjList[bNum]->ubAlive = FALSE;
 		}
 	}
 	else
 	{
-//		stCourse_Obj[bNum].ubType = 0;
-//		stCourse_Obj[bNum].x = 0;
-//		stCourse_Obj[bNum].y = 0;
-//		stCourse_Obj[bNum].z = 0;
-		stCourse_Obj[bNum].ubAlive = TRUE;
+//		pstCourse_ObjList[bNum]->ubType = 0;
+//		pstCourse_ObjList[bNum]->x = 0;
+//		pstCourse_ObjList[bNum]->y = 0;
+//		pstCourse_ObjList[bNum]->z = 0;
+		pstCourse_ObjList[bNum]->ubAlive = TRUE;
 	}
 	
 	return ret;
@@ -188,6 +192,38 @@ SS	SetRoadCycleCount(US uCount)
 	SS	ret = 0;
 	
 	g_uRoadCycleCount = uCount;
+	
+	return ret;
+}
+
+SS	Sort_Course_Obj(void)
+{
+	SS	ret = 0;
+	SS	i;
+	SS	count = 0;
+	ST_COURSE_OBJ	*pstCourse_Obj_Tmp;
+	
+	while(1)
+	{
+		for(i=0; i<COURSE_OBJ_MAX-1; i++)
+		{
+			if(pstCourse_ObjList[i]->y > pstCourse_ObjList[i+1]->y)
+			{
+				pstCourse_Obj_Tmp = pstCourse_ObjList[i+1];
+				pstCourse_ObjList[i+1] = pstCourse_ObjList[i];
+				pstCourse_ObjList[i] = pstCourse_Obj_Tmp;
+				count = 0;
+			}
+			else
+			{
+				count++;
+			}
+		}
+		if(count >= (COURSE_OBJ_MAX - 1))
+		{
+			break;
+		}
+	}
 	
 	return ret;
 }

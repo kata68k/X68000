@@ -13,7 +13,7 @@ void BG_TEXT_SET(SC *);
 /* 関数 */
 void PCG_INIT(void)
 {
-	UI j;
+	UI i, j;
 	
 	/* スプライトの初期化 */
 	SP_INIT();			/* スプライトの初期化 */
@@ -23,11 +23,18 @@ void PCG_INIT(void)
 //	BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＦＦ */
 	
 	/*スプライトレジスタ初期化*/
-	for(j = 0x80000000; j < 0x80000000 + 128; j++ )
+	for( j = 0x80000000; j < 0x80000000 + 128; j++ )
 	{
 		SP_REGST(j,-1,0,0,0,0);
 	}
-
+#if 0
+	for( i = 0; i < 256; i++ )
+	{
+		SP_CGCLR(i);			/* スプライトクリア */
+		SP_DEFCG( i, 1,  );
+	}
+#endif
+	
 	//	BGCTRLGT(1);				/* BGコントロールレジスタ読み込み */
 	BGSCRLST(0,0,0);				/* BGスクロールレジスタ設定 */
 	BGSCRLST(1,0,0);				/* BGスクロールレジスタ設定 */
