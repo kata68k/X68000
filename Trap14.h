@@ -3,6 +3,6 @@
 
 #include "inc/usr_define.h"
 
-extern void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
+extern void init_trap14 (void);
 
 #endif	/* TRAP14_H */

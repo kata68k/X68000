@@ -37,6 +37,7 @@ SS	moni_MAX = 0;
 SS	speed = 0;
 UC	g_mode = 0;
 UC	g_mode_rev = 1;
+US	g_uDebugNum = 0; 
 
 /* グローバル構造体 */
 ST_ROADDATA	stRoadData[1024] = {0};
@@ -47,37 +48,39 @@ ST_TEXTINFO	stTextInfo = {0};
 SS main(void);
 void App_Init(void);
 void App_exit(void);
-SS BG_main(UC*);
+SS	BG_main(UC*);
+SS	GetDebugNum(US *);
+SS	SetDebugNum(US);
+
+void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
 
 /* 関数 */
 SS main(void)
 {
-	FLOAT	rad;
+	SS	ret = 0;
+//	FLOAT	rad;
 
 	UI	unStart_time;
 	UI	unTime_cal = 0;
 	UI	unTime_cal_PH = 0;
 	UI	unRoadAnimeTime;
 	
-	US	x,y;
+	US	uRas_y;
 	US	uRas_tmp[256] = {0};
 	US	uRas_tmp_sub[256] = {0};
 	US	uRas_debug[256] = {0};
 	US	uPal_tmp[256] = {0};
 	US	uFreeRunCount=0;
 	US	uRas_st, uRas_mid, uRas_ed, uRas_size;
-	US	uDebugNum;
 	US	uRoadAnime, uRoadAnime_old, uRoadAnimeBase, uRoadAnimeBase_old;
 	US	uRoadAnimeCount;
 	US	uRoadCycleCount;
 	US	uRoadCycleCountLamp;
 	US	uCounter;
-	US	BGprocces_ct = 0;
 	
-	SS	i;
 	SS	loop;
 	SS	RD[1024] = {0};
-	SS	Horizon, Horizon_tmp, Horizon_ras, Horizon_offset;
+	SS	Horizon, Horizon_tmp, Horizon_offset;
 	SS	vx, vy;
 	SS	r_height;
 	SS	road_offset_x, road_offset_y, road_offset_val;
@@ -95,14 +98,13 @@ SS main(void)
 	SS	cal_tan = 0;
 	SS	cal_cos = 0;
 	
-	UC	bRoad_flag = FALSE;
-	UC	bUpDown_flag = FALSE;
+//	UC	bRoad_flag = FALSE;
+//	UC	bUpDown_flag = FALSE;
 	UC	bMode_flag = FALSE;
-	UC	bKeyUP_flag = FALSE;
-	UC	bKeyDOWN_flag = FALSE;
+//	UC	bKeyUP_flag = FALSE;
+//	UC	bKeyDOWN_flag = FALSE;
 	UC	bDebugMode;
 	UC	bDebugMode_flag;
-	UC	bShiftPosFlag;
 	UC	bRoad_Anime_flag;
 	UC	bRoadCycleCountRst = FALSE;
 	UC	bRoadCycleCountLamp = TRUE;
@@ -156,7 +158,10 @@ SS main(void)
 	Vs = 0;
 	speed = 0;
 	loop = 1;
-	vx = vy =0;
+	vx = vy = 0;
+	uRas_st = 0;
+	uRas_mid = 0;
+	uRas_ed = 0;
 	uFreeRunCount = 0;
 	uRoadAnimeBase = 0;
 	uRoadAnimeBase_old = 0;
@@ -167,7 +172,7 @@ SS main(void)
 	uRoadCycleCountLamp = 0;
 	bRoad_Anime_flag = FALSE;
 	bDebugMode = TRUE;
-	uDebugNum = 0x80;
+	g_uDebugNum = 0x80;
 	uCounter = 0;
 	stTextInfo.uScoreMax = 10000;
 	
@@ -200,7 +205,7 @@ SS main(void)
 	InitCourseObj();
 	
 	/* 音楽 */
-//	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
+	m_stop(0,0,0,0,0,0,0,0,0,0);	/* 音楽停止 */
 //	zmd_play("data\\music\\PT034MK.ZMD");	/* BGM */
 //	zmd_play("data\\music\\PT002MK.ZMD");	/* BGM */
 //	zmd_play("data\\music\\kyaraban.zmd");	/* BGM */
@@ -282,7 +287,7 @@ SS main(void)
 		if(bDebugMode == TRUE)
 		{
 			/* キーボードから数字を入力 */
-			DirectInputKeyNum(&uDebugNum, 3);
+			DirectInputKeyNum(&g_uDebugNum, 3);
 			/* キー操作 */
 #if 1
 			/* 角度変更 */
@@ -384,6 +389,7 @@ SS main(void)
 				road_height = (SS)(0x80 - stRoadData[uCounter].bHeight);	/* 道の標高	(0x80センター) */
 				road_height = Mmax(Mmin(road_height, 31), -32);
 				//road_height = r_height;	/* デバッグ入力 */
+				road_angle_old = road_angle;
 				road_angle = (SS)stRoadData[uCounter].bAngle - 0x80;		/* 道の角度	(0x80センター) */
 				//road_angle = Mmax(Mmin(road_angle, 12), -12);
 				//road_angle = 0;	/* デバッグ入力 */
@@ -575,7 +581,7 @@ SS main(void)
 			
 			road_curve = road_angle * uRas_size;
 			
-			for(y=uRas_st; y < uRas_ed; y++)
+			for(uRas_y=uRas_st; uRas_y < uRas_ed; uRas_y+=RASTER_NEXT)
 			{
 				SS	num, rev;
 				SS	ras_cal_x, ras_cal_y, ras_pat, ras_result;
@@ -585,8 +591,8 @@ SS main(void)
 					 				  96, 192, 288,   0, 
 					 				   0,  96, 192, 288} ;
 				
-				num = y - uRas_st;			/* 0 -> uRas_size */
-				rev = uRas_ed - y;			/* uRas_size -> 0 */
+				num = uRas_y - uRas_st;			/* 0 -> uRas_size */
+				rev = uRas_ed - uRas_y;			/* uRas_size -> 0 */
 				
 				/* X座標 */
 				if(num == 0u)
@@ -594,14 +600,14 @@ SS main(void)
 					ras_cal_x = 0;	/* 最初 */
 				}
 #if 0
-				else if( y < uRas_mid )				/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
+				else if( uRas_y < uRas_mid )				/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
 				{
 					ras_cal_x = ((num * vx) >> 4) + (road_angle * (uRas_mid - uRas_st) / num);
 				}
 #endif
 				else
 				{
-					ras_cal_x = ((num * vx) >> 4) + (road_curve / num);
+					ras_cal_x = Mmax( Mmin( (((num * vx) >> 4) + (road_curve / num)), 256), -256);
 				}
 #ifdef DEBUG	/* デバッグコーナー */
 				if(bDebugMode == TRUE)	/* デバッグモード */
@@ -611,9 +617,14 @@ SS main(void)
 								0xC2);	/* デバッグ用グラフ*/
 				}
 #endif
-//				if(ras_cal_x <   0)ras_cal_x += 512;
-//				if(ras_cal_x > 512)ras_cal_x -= 512;
-				uRas_tmp[y] = (US)ras_cal_x;
+				if(ras_cal_x < 0)	/* 負 */
+				{
+					ras_cal_x = 1024 + ras_cal_x;
+				}
+				else
+				{
+				}
+				uRas_tmp[uRas_y] = (US)ras_cal_x;
 
 				/* Y座標 */
 				if(num == 0u)	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
@@ -628,25 +639,25 @@ SS main(void)
 					col = 0xBB;
 				}
 #if 1
-				else if( y >= (uRas_ed - 16))		/* 下側のはみ出し部分を補完 */
+				else if( uRas_y >= (uRas_ed - 16))		/* 下側のはみ出し部分を補完 */
 				{
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
 					ras_cal_y = BG_under;
 
 					col = 0xC2;
 				}
-				else if( y < uRas_mid )				/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
+				else if( uRas_y < uRas_mid )				/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
 				{
 					SS	Road_strch;
 					SS	offset_size;
 
-					offset_size = uRas_mid - y;	/* uRas_size -> 0 */
+					offset_size = uRas_mid - uRas_y;	/* uRas_size -> 0 */
 					
 					Road_strch = (offset_size * cal_tan) >> 8;	/* 高さ＝底辺×tanθ */
 //					Road_strch = (offset_size * APL_Cos(num)) >> 8;
 //					Road_strch = (offset_size * APL_Sin(num)) >> 8;
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
-					ras_cal_y = Horizon_offset + Road_strch + ((SS)uDebugNum - 0x80);
+					ras_cal_y = Horizon_offset + Road_strch + ((SS)g_uDebugNum - 0x80);
 
 					col = 0xB7;
 				}
@@ -663,21 +674,21 @@ SS main(void)
 					SS	Road_strch;
 					SS	offset_size;
 
-					offset_size = uRas_ed - y;	/* uRas_size -> 0 */
-//					offset_size = uRas_mid - y;	/* uRas_size -> 0 */
+					offset_size = uRas_ed - uRas_y;	/* uRas_size -> 0 */
+//					offset_size = uRas_mid - uRas_y;	/* uRas_size -> 0 */
 					
 //					Road_strch = (offset_size * cal_tan) >> 8;	/* 高さ＝底辺×tanθ */
 //					Road_strch = (offset_size * APL_Cos(num<<1)) >> 8;
 					Road_strch = (offset_size * APL_Sin(num<<1)) >> 8;
 					ras_pat = uBG_pat[uRoadAnimeBase][uRoadAnime];
-					ras_cal_y = Horizon_offset + Road_strch + ((SS)uDebugNum - 0x80);
+					ras_cal_y = Horizon_offset + Road_strch + ((SS)g_uDebugNum - 0x80);
 
 					col = 0xB7;
 				}
 #endif
 				/* ロードパターン*/
 				road_offset_y = (num * road_offset_val) / (road_offset_val + 96);
-				uRas_tmp_sub[y] = road_offset_y;
+				uRas_tmp_sub[uRas_y] = road_offset_y;
 
 				uRoadAnimeCount++;
 				if(uRoadAnimeCount >= road_offset_y)
@@ -692,15 +703,15 @@ SS main(void)
 				if(bDebugMode == TRUE)	/* デバッグモード */
 				{
 					Draw_Line(uRas_st + view_offset_x, (Horizon+ view_offset_y)+1, uRas_ed + view_offset_x, (Horizon+ view_offset_y)+1, 0x35, 0xFFFF);
-					Draw_Pset(y + view_offset_x, (Horizon + RASTER_MIN + view_offset_y) - ras_cal_y, col);	/* デバッグ用グラフ*/
-					uRas_debug[y] = ras_cal_y;
+					Draw_Pset(uRas_y + view_offset_x, (Horizon + RASTER_MIN + view_offset_y) - ras_cal_y, col);	/* デバッグ用グラフ*/
+					uRas_debug[uRas_y] = ras_cal_y;
 				}
 #endif
 				ras_result = ras_cal_y + ras_pat;
 				if(ras_result <   0)ras_result = 0;
 				if(ras_result > 511)ras_result = 0;
 				
-				uPal_tmp[y] = (US)ras_result;
+				uPal_tmp[uRas_y] = (US)ras_result;
 				
 			}
 			SetRasterVal(uRas_tmp, sizeof(US)*RASTER_MAX);
@@ -757,8 +768,7 @@ SS main(void)
 		
 		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
 
-//#ifdef DEBUG	/* デバッグコーナー */
-#if 0
+#ifdef DEBUG	/* デバッグコーナー */
 //		BG_TextPut("OverKata", 4, 10);
 //		BG_TextPut("OverKata", 128, 128);
 //		BG_TextPut("OVER KATA", 128, 128);
@@ -768,33 +778,31 @@ SS main(void)
 			if(stTask.b496ms == TRUE)
 			{
 				/* モニタ */
-				Message_Num(&uCounter,	 		12,  6, 2, MONI_Type_US, "%4d");
-				
 				Message_Num(&unTime_cal,	 	 0,  8, 2, MONI_Type_UI, "%3d");
 				Message_Num(&unTime_cal_PH,		 6,  8, 2, MONI_Type_UI, "%3d");
-//				Message_Num(&BGprocces_ct,		12,  8, 2, MONI_Type_US, "%3d");
+				Message_Num(&uCounter,			12,  8, 2, MONI_Type_US, "%4d");
 				
 //				Message_Num(&speed,				 0,  9, 2, MONI_Type_SS, "%3d");
 //				Message_Num(&vx, 				 6,  9, 2, MONI_Type_SS, "%2d");
 //				Message_Num(&vy, 				12,  9, 2, MONI_Type_SS, "%2d");
 //				Message_Num(&r_height, 			20,  9, 2, MONI_Type_SS, "%3d");
 				
-				Message_Num(&uRas_st,			 0, 10, 2, MONI_Type_US, "%3d");
-				Message_Num(&uRas_mid,			 7, 10, 2, MONI_Type_US, "%3d");
-				Message_Num(&uRas_ed,			13, 10, 2, MONI_Type_US, "%3d");
-				Message_Num(&uRas_size,			20, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&uRas_st,			 0, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&uRas_mid,			 7, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&uRas_ed,			13, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&uRas_size,			20, 10, 2, MONI_Type_US, "%3d");
 				
 //				Message_Num(&uPal_tmp[uRas_st],	 0, 11, 2, MONI_Type_US, "%3d");
 //				Message_Num(&uRas_tmp[uRas_st],	 6, 11, 2, MONI_Type_US, "%3d");
-				Message_Num(&cal_tan,			12, 11, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&cal_tan,			12, 11, 2, MONI_Type_SS, "%3d");
 //				Message_Num(&rad,				12, 11, 2, MONI_Type_FL, "%f");
 				
-				Message_Num(&road_height,		 0, 12, 2, MONI_Type_SS, "%3d");
-				Message_Num(&road_slope,	 	 6, 12, 2, MONI_Type_SS, "%3d");
-				Message_Num(&road_distance,		12, 12, 2, MONI_Type_SS, "%3d");
-				Message_Num(&road_angle,		20, 12, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&road_height,		 0, 12, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&road_slope,	 	 6, 12, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&road_distance,		12, 12, 2, MONI_Type_SS, "%3d");
+//				Message_Num(&road_angle,		20, 12, 2, MONI_Type_SS, "%3d");
 				
-				Message_Num(&uDebugNum,		 	 0, 13, 2, MONI_Type_US, "%3d");
+				Message_Num(&g_uDebugNum,		 	 0, 13, 2, MONI_Type_US, "%3d");
 			}
 		}
 #endif
@@ -812,15 +820,17 @@ SS main(void)
 
 #ifdef DEBUG	/* デバッグコーナー */
 	printf("uRas_tmp[0]の中身 = %d(uRas_st=%d)\n", uRas_tmp[0], uRas_st );
-	for(y=uRas_st; y < uRas_ed; y++)
+	for(uRas_y=uRas_st; uRas_y < uRas_ed; uRas_y++)
 	{
-		printf("[%3d]=(%5d),", y, uRas_tmp[y] );
-		//printf("[%3d]=(%5d),", y, uRas_debug[y] );
-		if((y%5) == 0)printf("\n");
+		printf("[%3d]=(%5d),", uRas_y, uRas_tmp[uRas_y] );
+		//printf("[%3d]=(%5d),", uRas_y, uRas_debug[uRas_y] );
+		if((uRas_y%5) == 0)printf("\n");
 	}
 	printf("\n");
 #endif
 	printf("処理時間:Real=%3d[ms] PH=%3d[ms]\n", unTime_cal, unTime_cal_PH);
+	
+	return ret;
 }
 
 void App_Init(void)
@@ -940,10 +950,13 @@ SS BG_main(UC* bFlip)
 	UI	time_st;
 	US	BGprocces_ct = 0;
 	UC	bNum;
+	UC	bFlipStateOld;
 
 	static UC	bFlipState = Clear_G;
-
+	
 	GetStartTime(&time_st);	/* 開始時刻を取得 */
+
+	bFlipStateOld = bFlipState;
 
 	/* 描画順をソートする */
 	Sort_EnemyCAR();		/* ライバル車 */
@@ -966,8 +979,8 @@ SS BG_main(UC* bFlip)
 			case Clear_G:
 			{
 				G_CLR_ALL_OFFSC(g_mode);
-//				bFlipState = Enemy1_G;
-				bFlipState = Object1_G;
+				bFlipState = Enemy1_G;
+//				bFlipState = Object1_G;
 				*bFlip = FALSE;
 				break;
 			}
@@ -1017,10 +1030,29 @@ SS BG_main(UC* bFlip)
 		{
 			break;
 		}
+		
+		if(bFlipStateOld == bFlipState)	/* ステートが一周したらループ終了 */
+		{
+			break;
+		}
 	}
 	while(1);
 	
 	return	ret;
+}
+
+SS	GetDebugNum(US *uNum)
+{
+	SS	ret = 0;
+	*uNum = g_uDebugNum;
+	return ret;
+}
+
+SS	SetDebugNum(US uNum)
+{
+	SS	ret = 0;
+	g_uDebugNum = uNum;
+	return ret;
 }
 
 #endif	/* OVERKATA_C */

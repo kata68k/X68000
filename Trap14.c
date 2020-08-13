@@ -3,6 +3,7 @@
 
 /* system include */
 #include <stdio.h>
+#include <stdlib.h>
 #include <interrupt.h>
 
 #include "inc/usr_macro.h"
@@ -38,7 +39,7 @@ static void (*trap_14)();	/* 元の trap 14 ベクタを保存*/
 
 extern int _main;			/* スタートアップのダミー */
 
-static void trap14(void)
+static void interrupt trap14(void)
 {
 	PRAMREG (code, d7);	/* パラメータレジスタ d7 */
 	PRAMREG (add, a6);	/* パラメータレジスタ a6 */
@@ -89,6 +90,7 @@ static void trap14(void)
 static void my_abort (void)
 {
 	char buf[64];
+//	void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
 	
 	INTVCS(0x2E,trap_14);
 	

@@ -242,12 +242,14 @@ void interrupt Vsync_Func(void)
 
 SS vwait(SS count)				/* –ñcount^60•b‘Ò‚Â	*/
 {
+	SS ret = 0;
 	volatile UC *mfp = (UC *)0xe88001;
 	
 	while(count--){
 		while(!((*mfp) & 0b00010000));	/* ‚’¼•\¦ŠúŠÔ‘Ò‚¿	*/
 		while((*mfp) & 0b00010000);	/* ‚’¼‹AüŠúŠÔ‘Ò‚¿	*/
 	}
+	return ret;
 }
 
 #endif	/* MFP_H */

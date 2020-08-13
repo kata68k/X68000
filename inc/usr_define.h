@@ -119,5 +119,6 @@ typedef struct
 
 /* データテーブル */
 
+extern void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
 
 #endif	/* USR_DEFINE_H */

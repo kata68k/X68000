@@ -4,7 +4,9 @@
 #include "inc/usr_define.h"
 
 enum{
-	MONI_Type_UI=0,
+	MONI_Type_UL=0,
+	MONI_Type_SL,
+	MONI_Type_UI,
 	MONI_Type_SI,
 	MONI_Type_US,
 	MONI_Type_SS,

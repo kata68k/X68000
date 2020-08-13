@@ -2,9 +2,11 @@
 #define	GRAPHIC_C
 
 #include <iocslib.h>
+#include <string.h>
 
 #include "inc/usr_macro.h"
 #include "Graphic.h"
+#include "Draw.h"
 
 #define	CONV_PAL	(0xB4)
 #define	TRANS_PAL	(0x00)
@@ -13,7 +15,7 @@
 ST_CRT	stCRT[CRT_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
-SS	GetCRTCAR(ST_CRT *, SS);
+SS	GetCRT(ST_CRT *, SS);
 SS	SetCRT(ST_CRT, SS);
 void G_INIT(void);
 void G_MyCar(void);
@@ -185,7 +187,7 @@ void G_INIT(void)
 void G_MyCar(void)
 {
 	SS x,y;
-	SS x_offset, y_offset;
+//	SS x_offset, y_offset;
 
 	APAGE(0);		/* グラフィックの書き込み */
 
@@ -224,6 +226,8 @@ void G_MyCar(void)
 			Draw_Pset(x, y, color);
 		}
 	}
+	Draw_Fill(X_OFFSET + 90, 			180 + 1,	X_OFFSET + 90 + 31, 			180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
+	Draw_Fill(X_OFFSET + 90, Y_OFFSET + 180 + 1,	X_OFFSET + 90 + 31, Y_OFFSET +	180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
 #if 0	/* TPS */
 	x_offset = X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1));
 	y_offset = V_SYNC_MAX - RASTER_MIN - MY_CAR_0_H - 16;
@@ -450,6 +454,7 @@ void G_Palette(void)
 SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 					SS src_x, US src_w, SS src_y, US src_h, UC ubSrcScrn)
 {
+	SS	ret = 0;
 	US	*pDstGR,	*pSrcGR;
 	UI	DstGR_H,	SrcGR_H;
 	SS	dst_ex,	dst_ey;
@@ -501,6 +506,7 @@ SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 #else
 
 #endif
+	return	ret;
 }
 
 /* 画像のコピー */
@@ -510,6 +516,7 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 			SS src_x, US src_w, SS src_y, US src_h, UC ubSrcScrn,
 			UC ubMode, UC ubV, UC ubH)
 {
+	SS	ret = 0;
 	US	*pDstGR,	*pSrcGR;
 	UI	DstGR_H,	SrcGR_H;
 	SS	dst_ex,	dst_ey;
@@ -517,7 +524,7 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 	SS	x, y;
 	SS	x_min, y_min;
 	SS	x_max, y_max;
-	US	rate_x, rate_y;
+//	US	rate_x, rate_y;
 
 	switch(ubV)
 	{
@@ -676,6 +683,7 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 			pSrcGR++;
 		}
 	}
+	return	ret;
 }
 
 /* 画面のクリア */
@@ -777,6 +785,8 @@ SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 
 SS G_CLR_ALL_OFFSC(UC bMode)
 {
+	SS	ret = 0;
+	
 	/* 描画可能枠再設定 */
 	WINDOW( stCRT[bMode].hide_offset_x, 
 			stCRT[bMode].hide_offset_y,
@@ -784,6 +794,8 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 			stCRT[bMode].hide_offset_y + 152);	
 	/* 消去 */
 	G_CLR_AREA(stCRT[bMode].hide_offset_x, WIDTH, stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
+
+	return	ret;
 }
 
 #endif	/* GRAPHIC_C */

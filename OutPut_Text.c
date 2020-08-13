@@ -1,6 +1,9 @@
 #ifndef	OUTPUT_TEXT_C
 #define	OUTPUT_TEXT_C
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <iocslib.h>
 
 #include "inc/usr_macro.h"
@@ -27,6 +30,20 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode, UC *sFormat)
 	memset(str, 0, sizeof(str));
 
 	switch(mode){
+	case MONI_Type_UL:
+		{
+			UL *num;
+			num = (UL *)pNum;
+			sprintf(str, sFormat, *num);
+		}
+		break;
+	case MONI_Type_SL:
+		{
+			SL *num;
+			num = (SL *)pNum;
+			sprintf(str, sFormat, *num);
+		}
+		break;
 	case MONI_Type_UI:
 		{
 			UI *num;
@@ -104,7 +121,7 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 {
 	US *BG_HEAD 		= (US *)0xEB8000;
 	US *BG_TEXT_HEAD = (US *)0xEB8800;
-	US *BG_NUM_HEAD  = (US *)0xEB8600;
+//	US *BG_NUM_HEAD  = (US *)0xEB8600;
 	UC *T0_HEAD = (UC *)0xE00000;
 	UC *T1_HEAD = (UC *)0xE20000;
 	UC *T2_HEAD = (UC *)0xE40000;
@@ -115,13 +132,16 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 	UC	*pDst2;
 	UC	*pDst3;
 	SS ret = 0;
+#if 1
+#else
 	US	BitMask[4][4] = { 
 			0x1000, 0x2000, 0x4000, 0x8000,
 			0x0100, 0x0200, 0x0400, 0x0800,
 			0x0010, 0x0020, 0x0040, 0x0080,
 			0x0001, 0x0002, 0x0004, 0x0008
 	};
-
+#endif
+	
 	while(*sString != 0)
 	{
 		switch(*sString)
@@ -462,7 +482,9 @@ SS BG_Number(UI unNum, US x, US y)
 {
 	SS ret = 0;
 	UC ucDigit[10];
+#if 0
 	UI unDigit, unDigitCal;
+#endif	
 	static UC ucOverFlow = FALSE;
 	
 	if(unNum >= 10000000)
@@ -501,7 +523,7 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 	UC	*pSrc1 = (UC *)0xE27400;
 	UC	*pSrc2 = (UC *)0xE47400;
 	UC	*pSrc3 = (UC *)0xE67400;
-	UC	*T3_END = (UC *)0xE7FFFF;
+//	UC	*T3_END = (UC *)0xE7FFFF;
 	UC	*pDst0;
 	UC	*pDst1;
 	UC	*pDst2;
@@ -513,7 +535,7 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 	UC	data;
 	UC	ucDigit[10] = {0};
 	UC	*pString;
-	SS	i, j, k, size;
+	SS	i, k, size;
 	SS	ret = 0;
 	
 	if( (x < 0) || (y < 0) || (x > 1023) || (y > 1023) ) return -1;

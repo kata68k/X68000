@@ -1,19 +1,26 @@
 #ifndef	PCG_C
 #define	PCG_C
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <iocslib.h>
 
 #include "inc/usr_macro.h"
 #include "PCG.h"
+#include "APL_Math.h"
+#include "FileManager.h"
+#include "Output_Text.h"
 
 /* 関数のプロトタイプ宣言 */
 void PCG_INIT(void);
+void PCG_Rotation(US *, US *, UC, UC, US, US);
 void BG_TEXT_SET(SC *);
 
 /* 関数 */
 void PCG_INIT(void)
 {
-	UI i, j;
+	UI	j;
 	
 	/* スプライトの初期化 */
 	SP_INIT();			/* スプライトの初期化 */
@@ -28,7 +35,7 @@ void PCG_INIT(void)
 		SP_REGST(j,-1,0,0,0,0);
 	}
 #if 0
-	for( i = 0; i < 256; i++ )
+	for(UI i = 0; i < 256; i++ )
 	{
 		SP_CGCLR(i);			/* スプライトクリア */
 		SP_DEFCG( i, 1,  );
@@ -43,6 +50,225 @@ void PCG_INIT(void)
 	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
 }
 
+void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
+{
+	SS	x, y, vx, vy;
+	SS	width, height;
+	UL	uPCG;
+	UL	uPCG_ARY[8];
+	UL	*pDstWork, *pSrcWork;
+	UC	*pBuf, *pDstBuf, *pSrcBuf;
+#if 0
+	/* malloc */
+#else
+	UC	cDst[2304]={0}, cSrc[2304]={0};
+#endif
+	UL	uADDR;
+	UL	uPointer_ADR, uPointer_ADR_X, uPointer_ADR_Y, uPointer_ADR_subX, uPointer_ADR_subY;
+	UC	Mem_size;
+	UC	bShift;
+	
+	width = 16 * (SS)bX_num;
+	height = 16 * (SS)bY_num;
+	Mem_size = width * height * sizeof(UC);
+	
+	if((ratio > 0) && (ratio <= 16))
+	{
+		bShift = ratio;	/* def:2048(=8) */
+	}
+	else
+	{
+		bShift = 8;
+	}
+	
+	/* 作業エリア確保 */
+#if 0
+	pSrcBuf = (UC*)malloc( (size_t)Mem_size );
+	if(pSrcBuf == NULL)
+	{
+		return;
+	}
+#else
+	pSrcBuf = &cSrc[0];
+#endif
+	pBuf = pSrcBuf;
+	memset(pSrcBuf, 0xFF, (size_t)Mem_size);
+
+	/* PCG -> CG */
+	uPointer_ADR = (UL)pSrc;
+	uPointer_ADR_Y = 0ul;
+	
+	for(y = 0; y < bY_num; y++)	/* 一行分 */
+	{
+		uPointer_ADR_subY = 0ul;
+		
+		for(vy = 0; vy < 16; vy++)	/* 16bit分(8dot+8dot) */
+		{
+			uPointer_ADR_X = 0ul;
+			
+			for(x = 0; x < bX_num; x++)	/* 一列分 */
+			{
+				uPointer_ADR_subX = 0ul;
+				
+				for(vx = 0; vx < 2; vx++)	/* 16bit分 */
+				{
+					uADDR = uPointer_ADR + uPointer_ADR_Y + uPointer_ADR_subY + uPointer_ADR_X + uPointer_ADR_subX;	/* 原点 */
+					pSrcWork = (UL *)uADDR;	/* 0と2/1と3 */
+
+					uPCG = (UL)*pSrcWork;
+					
+					*pBuf = (UC)((uPCG >> 28ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG >> 24ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG >> 20ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG >> 16ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG >> 12ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG >>  8ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG >>  4ul) & 0x0Fu);
+					pBuf++;
+					*pBuf = (UC)((uPCG        ) & 0x0Fu);
+					pBuf++;
+					
+					uPointer_ADR_subX += 0x40ul;
+				}
+				uPointer_ADR_X += 0x80ul;
+			}
+			uPointer_ADR_subY += 0x04ul;
+		}
+		uPointer_ADR_Y += 0x800ul;
+	}
+
+	/* 画像処理 */
+#if 0
+	pDstBuf = (UC *)malloc( (size_t)Mem_size );
+	if(pDstBuf == NULL)
+	{
+		/* メモリの解放 */
+		free(pSrcBuf);
+		return;
+	}
+#else
+	pDstBuf = &cDst[0];
+#endif
+	pBuf = pDstBuf;
+	memset(pBuf, 0, (size_t)Mem_size);
+	
+	if(rad != 0)
+	{
+		SS	dx, dy;
+		SS	width_h, height_h;
+		SS	cos, sin;
+		UC	*pDstGR, *pSrcGR;
+		
+		cos = APL_Cos(rad);
+		sin = APL_Sin(rad);
+		width_h = width >> 1;
+		height_h = height >> 1;
+
+		pSrcGR = pSrcBuf;
+		pDstGR = pBuf;
+		
+		for(y = 0; y < height; y++)
+		{
+			dy = y - height_h;
+			
+			for(x = 0; x < width; x++)
+			{
+				dx = x - width_h;
+				
+				vx = (((dx * cos) - (dy * sin)) >> bShift) + width_h;
+				vy = (((dx * sin) + (dy * cos)) >> bShift) + height_h;
+				
+				if( (vx >= 0) && (vy >= 0) && (vx < width) && (vy < height) )
+				{
+					pSrcGR = pSrcBuf + ((vy * width) + vx);
+					*pDstGR = *pSrcGR;
+				}
+				pDstGR++;
+			}
+		}
+	}
+	else
+	{
+		SI	memchk;
+		memcpy( pDstBuf, pSrcBuf, (size_t)Mem_size );	/* 只のコピー */
+		memchk = memcmp( pDstBuf, pSrcBuf, (size_t)Mem_size );	/* 比較 */
+	}
+#if 0
+	/* メモリの解放 */
+	free(pSrcBuf);
+#endif
+	/* CG -> PCG */
+	pBuf = pDstBuf;
+
+	uPointer_ADR = (UL)pDst;
+	uPointer_ADR_Y = 0ul;
+
+	for(y = 0; y < bY_num; y++)	/* 一行分 */
+	{
+		uPointer_ADR_subY = 0ul;
+		
+		for(vy = 0; vy < 16; vy++)	/* 16bit分(8dot+8dot) */
+		{
+			uPointer_ADR_X = 0ul;
+			
+			for(x = 0; x < bX_num; x++)	/* 一列分 */
+			{
+				uPointer_ADR_subX = 0ul;
+				
+				for(vx = 0; vx < 2; vx++)	/* 16bit分 */
+				{
+					uADDR = uPointer_ADR + uPointer_ADR_Y + uPointer_ADR_subY + uPointer_ADR_X + uPointer_ADR_subX;	/* 原点 */
+				
+					uPCG_ARY[7] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[6] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[5] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[4] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[3] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[2] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[1] = (UL)*pBuf;
+					pBuf++;
+					uPCG_ARY[0] = (UL)*pBuf;
+					pBuf++;
+					
+					uPCG = 	((uPCG_ARY[7] << 28ul) & 0xF0000000ul) |
+							((uPCG_ARY[6] << 24ul) & 0x0F000000ul) |
+							((uPCG_ARY[5] << 20ul) & 0x00F00000ul) |
+							((uPCG_ARY[4] << 16ul) & 0x000F0000ul) |
+							((uPCG_ARY[3] << 12ul) & 0x0000F000ul) |
+							((uPCG_ARY[2] <<  8ul) & 0x00000F00ul) |
+							((uPCG_ARY[1] <<  4ul) & 0x000000F0ul) |
+							((uPCG_ARY[0]        ) & 0x0000000Ful);
+
+					pDstWork = (UL *) uADDR;
+					*pDstWork = uPCG;
+
+					uPointer_ADR_subX += 0x40ul;
+				}
+				uPointer_ADR_X += 0x80ul;
+			}
+			uPointer_ADR_subY += 0x04ul;
+		}
+		uPointer_ADR_Y += 0x800ul;
+	}
+	
+#if 0
+	/* メモリの解放 */
+	free(pDstBuf);
+#endif
+}
+
 void BG_TEXT_SET(SC *fname)
 {
 	US	usV_pat;
@@ -52,7 +278,7 @@ void BG_TEXT_SET(SC *fname)
 	US	map_data[64][64];
 
 	/* マップデータ読み込み */
-	File_Load_CSV( fname, map_data, &i, &j);
+	File_Load_CSV( fname, (US *)&map_data[0][0], &i, &j);
 	
 	for(y=0; y<16; y++)
 	{

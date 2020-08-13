@@ -3,6 +3,7 @@
 
 #include "inc/usr_macro.h"
 #include "Task.h"
+#include "MFP.h"
 
 SS	GetTaskInfo(ST_TASK *);
 

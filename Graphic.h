@@ -31,7 +31,7 @@ enum
 	Flip_G
 };
 
-extern	SS	GetCRTCAR(ST_CRT *, SS);
+extern	SS	GetCRT(ST_CRT *, SS);
 extern	SS	SetCRT(ST_CRT, SS);
 extern	void	G_INIT(void);
 extern	void	G_MyCar(void);
