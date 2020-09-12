@@ -6,7 +6,8 @@ CFLAGS	= -O -fomit-frame-pointer -fstrength-reduce -Wall
 AS		= has
 LD		= hlk
 INC		= 
-LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
+#LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
+LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMSC3LIB.L
 LZH		= OverKata001
 
 #vpath	%.c	./;
@@ -25,7 +26,9 @@ clean:
 execonly:
 	$(RM) *.ind *.bak *.s *.o \
 
-OverKata.x:	OverKata.o APL_Math.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o FileManager.o Graphic.o Input.o MFP.o MyCar.o OutPut_Text.o PCG.o Task.o Text.o Trap14.o
+OverKata.x:	OverKata.o APL_Math.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
+			FileManager.o Graphic.o Input.o MFP.o Music.o MyCar.o OutPut_Text.o \
+			PCG.o Raster.o Task.o Text.o Trap14.o
 	$(LD) $^ -o $@ -l $(LIBS)
 #	echo $^ > OverKata.d
 #	$(LD) -i OverKata.d -o $@ -l $(LIBS)
@@ -50,11 +53,15 @@ Input.o:	Input.c
 	$(CC) $(CFLAGS) -c $<
 MFP.o:	MFP.c
 	$(CC) $(CFLAGS) -c $<
+Music.o:	Music.c
+	$(CC) $(CFLAGS) -c $<
 MyCar.o:	MyCar.c
 	$(CC) $(CFLAGS) -c $<
 OutPut_Text.o:	OutPut_Text.c
 	$(CC) $(CFLAGS) -c $<
 PCG.o:	PCG.c
+	$(CC) $(CFLAGS) -c $<
+Raster.o:	Raster.c
 	$(CC) $(CFLAGS) -c $<
 Task.o:	Task.c
 	$(CC) $(CFLAGS) -c $<

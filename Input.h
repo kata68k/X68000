@@ -30,7 +30,7 @@
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
-extern US	get_key( UC );
+extern US	get_key(US *, UC, UC );
 extern US	DirectInputKeyNum(US *, US );
 extern UC	ChatCancelSW(UC , UC *);
 

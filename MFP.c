@@ -18,18 +18,16 @@ static volatile US Vsync_count;
 
 static US ras_val[256];
 static US ras_pal[256];
-ST_RAS_INFO	stRasInfo = {0};
 
 /* 関数のプロトタイプ宣言 */
-SS Init_MFP(void);
+SS MFP_INIT(void);
+SS MFP_EXIT(void);
 void interrupt Timer_D_Func(void);
 SS GetNowTime(UI *);	/* 現在の時間を取得する */
 SS SetNowTime(UI);		/* 現在の時間を設定する */
 SS GetStartTime(UI *);	/* 開始の時間を取得する */
 SS SetStartTime(UI);	/* 開始の時間を設定する */
 SS GetRasterPos(US *, US *, US);	/* ラスター処理結果を取得 */
-SS GetRasterInfo(ST_RAS_INFO *);
-SS SetRasterInfo(ST_RAS_INFO);
 
 void interrupt Hsync_Func(void);
 void interrupt Raster_Func(void);
@@ -40,7 +38,7 @@ void interrupt Vsync_Func(void);
 SS vwait(SS);
 
 /* 関数 */
-SS Init_MFP(void)	/* 現在の時間を取得する */
+SS MFP_INIT(void)
 {
 	NowTime = 0;
 	StartTime = 0;
@@ -49,6 +47,23 @@ SS Init_MFP(void)	/* 現在の時間を取得する */
 	Hsync_count = 0;
 	Vsync_count = 0;
 	
+	MFP_EXIT();
+	
+	TIMERDST(Timer_D_Func, 7, 20);	/* Timer-Dセット */	/* 50us(7) x 20cnt = 1ms */
+	VDISPST(Vsync_Func, 0, 1);		/* V-Sync割り込み 帰線 */
+	
+	SetNowTime(0);					/* 時間の初期化 */
+
+	return 0;
+}
+
+SS MFP_EXIT(void)
+{
+	CRTCRAS((void *)0, 0);		/* stop */
+	HSYNCST((void *)0);			/* stop */
+	VDISPST((void *)0, 0, 0);	/* stop */
+	TIMERDST((void *)0, 0, 1);	/* stop */
+
 	return 0;
 }
 
@@ -111,23 +126,7 @@ SS GetRasterPos(US *x, US *y, US uNum)
 	return ret;
 }
 
-SS GetRasterInfo(ST_RAS_INFO *stDat)
-{
-	SS	ret = 0;
-	
-	*stDat = stRasInfo;
-	
-	return ret;
-}
 
-SS SetRasterInfo(ST_RAS_INFO stDat)
-{
-	SS	ret = 0;
-	
-	stRasInfo = stDat;
-	
-	return ret;
-}
 
 /* 割り込み関数は修飾子にinterruptを入れること */	/* くにちこ（Kunihiko Ohnaka）さんのアドバイス */
 void interrupt Hsync_Func(void)
@@ -188,10 +187,12 @@ void interrupt Vsync_Func(void)
 	volatile US *BG1scroll_x  = (US *)0xEB0804;
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
 
+//	VDISPST((void *)0, 0, 0);	/* stop */
+	CRTCRAS((void *)0, 0);		/* stop */
+
 	*BG1scroll_x	= 256;				/* BG1のX座標の設定 *//* 空のコントロール */
 	*BG1scroll_y	= ras_pal[1];		/* BG1のY座標の設定 *//* 空のコントロール */
 
-	//	VDISPST((void *)0, 0, 0);	/* stop */
 #if 0
 	if((Vsync_count % 10) < 5)
 	{

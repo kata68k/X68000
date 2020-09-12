@@ -2,14 +2,21 @@
 #define	GRAPHIC_C
 
 #include <iocslib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "inc/usr_macro.h"
 #include "Graphic.h"
 #include "Draw.h"
+#include "FileManager.h"
 
 #define	CONV_PAL	(0xB4)
 #define	TRANS_PAL	(0x00)
+#define	CG_MAX	(16)
+
+/* グローバル変数 */
+static SC	cg_list[CG_MAX][256]	=	{0};
+static UI	cg_list_max	=	0u;
 
 /* グローバル構造体 */
 ST_CRT	stCRT[CRT_MAX] = {0};
@@ -18,13 +25,15 @@ ST_CRT	stCRT[CRT_MAX] = {0};
 SS	GetCRT(ST_CRT *, SS);
 SS	SetCRT(ST_CRT, SS);
 void G_INIT(void);
+void G_HOME(void);
 void G_MyCar(void);
 void G_Background(void);
 void G_Palette(void);
 SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
-SS G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
-SS G_CLR_AREA(SS, US, SS, US, UC);
-SS G_CLR_ALL_OFFSC(UC);
+SS	G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
+SS	G_CLR_AREA(SS, US, SS, US, UC);
+SS	G_CLR_ALL_OFFSC(UC);
+SS	G_Load(UC, US, US, US);
 
 /* 関数 */
 SS	GetCRT(ST_CRT *stDat, SS Num)
@@ -62,20 +71,47 @@ SS	SetCRT(ST_CRT stDat, SS Num)
 void G_INIT(void)
 {
 	UI	nPalette;
+	US	i;
 	volatile US *VIDEO_REG1 = (US *)0xE82400;
 	volatile US *VIDEO_REG2 = (US *)0xE82500;
 	volatile US *VIDEO_REG3 = (US *)0xE82600;
 	volatile US *V_Sync_end = (US *)0xE8000E;
 
+	/* グラフィックリスト */
+	Load_CG_List("data\\cg\\g_list.txt", cg_list, &cg_list_max);
+	for(i = 0; i < cg_list_max; i++)
+	{
+		printf("CG File %2d = %s\n", i, cg_list[i] );
+	}
+
+	/* CRTの設定 */
+	stCRT[0].view_offset_x	= X_OFFSET;
+	stCRT[0].view_offset_y	= Y_MIN_DRAW;
+	stCRT[0].hide_offset_x	= X_OFFSET;
+	stCRT[0].hide_offset_y	= Y_OFFSET;
+	stCRT[0].BG_offset_x	= 0;
+	stCRT[0].BG_offset_y	= 0;
+	stCRT[0].BG_under		= BG_0_UNDER;
+	
+	stCRT[1].view_offset_x	= X_OFFSET;
+	stCRT[1].view_offset_y	= Y_OFFSET;
+	stCRT[1].hide_offset_x	= X_OFFSET;
+	stCRT[1].hide_offset_y	= Y_MIN_DRAW;
+	stCRT[1].BG_offset_x	= 0;
+	stCRT[1].BG_offset_y	= 32;
+	stCRT[1].BG_under		= BG_1_UNDER;
+
+	stCRT[2].view_offset_x	= X_OFFSET;
+	stCRT[2].view_offset_y	= Y_MIN_DRAW;
+	stCRT[2].hide_offset_x	= X_OFFSET;
+	stCRT[2].hide_offset_y	= Y_OFFSET;
+	stCRT[2].BG_offset_x	= 0;
+	stCRT[2].BG_offset_y	= 32;
+	stCRT[2].BG_under		= BG_1_UNDER;
+
 	CRTMOD(11);				/* 偶数：標準解像度、奇数：標準 */
 	G_CLR_ON();				/* グラフィックのクリア */
 	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
-	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
-	HOME(0, X_OFFSET, Y_OFFSET);
-	HOME(1, X_OFFSET, Y_OFFSET);
-//	HOME(2, X_OFFSET, 416);
-//	HOME(3, X_OFFSET, 416);
-	WIPE();
 //											   210
 	*VIDEO_REG1 = Mbset(*VIDEO_REG1,   0x07, 0b001);	/* 512x512 256color 2men */
 //											   |||
@@ -157,37 +193,27 @@ void G_INIT(void)
 	{
 		GPALET( nPalette, SetRGB(0, 0, 0));	/* Black */
 	}
+}
 
-	/* CRTの設定 */
-	stCRT[0].view_offset_x	= X_OFFSET;
-	stCRT[0].view_offset_y	= Y_MIN_DRAW;
-	stCRT[0].hide_offset_x	= X_OFFSET;
-	stCRT[0].hide_offset_y	= Y_OFFSET;
-	stCRT[0].BG_offset_x	= 0;
-	stCRT[0].BG_offset_y	= 0;
-	stCRT[0].BG_under		= BG_0_UNDER;
-	
-	stCRT[1].view_offset_x	= X_OFFSET;
-	stCRT[1].view_offset_y	= Y_OFFSET;
-	stCRT[1].hide_offset_x	= X_OFFSET;
-	stCRT[1].hide_offset_y	= Y_MIN_DRAW;
-	stCRT[1].BG_offset_x	= 0;
-	stCRT[1].BG_offset_y	= 32;
-	stCRT[1].BG_under		= BG_1_UNDER;
-
-	stCRT[2].view_offset_x	= X_OFFSET;
-	stCRT[2].view_offset_y	= Y_MIN_DRAW;
-	stCRT[2].hide_offset_x	= X_OFFSET;
-	stCRT[2].hide_offset_y	= Y_OFFSET;
-	stCRT[2].BG_offset_x	= 0;
-	stCRT[2].BG_offset_y	= 32;
-	stCRT[2].BG_under		= BG_1_UNDER;
+void G_HOME(void)
+{
+	G_CLR_ON();				/* グラフィックのクリア */
+	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
+	HOME(0, X_OFFSET, Y_OFFSET);
+	HOME(1, X_OFFSET, Y_OFFSET);
+//	HOME(2, X_OFFSET, 416);
+//	HOME(3, X_OFFSET, 416);
+	WIPE();
 }
 
 void G_MyCar(void)
 {
 	SS x,y;
 //	SS x_offset, y_offset;
+
+	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET, 	Y_OFFSET,	0);	/* FPS */
+	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET,				0,	0);	/* FPS */
+//	APICG_DataLoad("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
 
 	APAGE(0);		/* グラフィックの書き込み */
 
@@ -272,6 +298,10 @@ void G_Background(void)
 #if 1	/* 画像がしっかり作られてたらいらない処理 */
 	SS x,y;
 	US height_sum = 0u;
+
+	APICG_DataLoad("data/cg/Over_C.pic"	, 0,					0,	1);	/* ライバル車 */
+//	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
+	APICG_DataLoad("data/cg/Over_E.pic"	, 140,					0,	1);	/* ヤシの木 */
 
 	APAGE(1);		/* グラフィックの書き込み */
 
@@ -797,5 +827,15 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 
 	return	ret;
 }
+
+SS G_Load(UC bCGNum, US uX, US uY, US uArea)
+{
+	SS	ret = 0;
+
+	APICG_DataLoad( cg_list[bCGNum], uX, uY, uArea);
+
+	return	ret;
+}
+
 
 #endif	/* GRAPHIC_C */

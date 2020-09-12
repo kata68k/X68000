@@ -1,0 +1,10 @@
+0=Over_A.pic
+1=Over_B.pic
+2=Over_C.pic
+3=Over_D.pic
+4=Over_E.pic
+5=GAROU_SP.pic
+6=EVO256_gen.pic
+7=enemy.pic
+8=OverKata_T.pic
+

@@ -21,5 +21,6 @@ extern	SS	Put_CouseObject(SS, SS, US, UC, UC);
 extern	SS	GetRoadCycleCount(US *);
 extern	SS	SetRoadCycleCount(US);
 extern	SS	Sort_Course_Obj(void);
+extern	SS	Load_Course_Data(UC);
 
 #endif	/* OBJECT_H */

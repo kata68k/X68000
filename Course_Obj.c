@@ -21,6 +21,7 @@ SS	Put_CouseObject(SS, SS, US, UC, UC);
 SS	GetRoadCycleCount(US *);
 SS	SetRoadCycleCount(US);
 SS	Sort_Course_Obj(void);
+SS	Load_Course_Data(UC);
 
 /* 関数 */
 SS	InitCourseObj(void)
@@ -225,6 +226,21 @@ SS	Sort_Course_Obj(void)
 		}
 	}
 	
+	return ret;
+}
+
+SS	Load_Course_Data(UC bCourseNum)
+{
+	SS	ret = 0;
+	SC	str[256];
+	US	x, y;
+	ST_ROADDATA *p_stRoadData;
+	
+	/* コースデータ読み込み */
+	p_stRoadData = (ST_ROADDATA *)GetRoadDataAddr();
+	sprintf(str, "data/map/course%02d.csv", bCourseNum);
+	File_Load_Course_CSV(str, p_stRoadData, &x, &y);
+
 	return ret;
 }
 

@@ -3,7 +3,10 @@
 
 #include "inc/usr_macro.h"
 #include "EnemyCAR.h"
+
+#include "Draw.h"
 #include "Graphic.h"
+#include "MFP.h"
 #include "MyCar.h"
 
 /* \‘¢‘Ì’è‹` */
@@ -107,7 +110,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			pstEnemyCar[bNum]->y = y;
 			pstEnemyCar[bNum]->z = z;
 			
-			if((stRasInfo.st + y) < (stRasInfo.ed - 16))
+			if((stRasInfo.st + y) < (stRasInfo.ed - 32))
 			{
 				Put_EnemyCAR(	stCRT.hide_offset_x + (WIDTH>>1) - x,
 								stCRT.hide_offset_y + stRasInfo.horizon + y,

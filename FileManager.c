@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <io.h>
 #include <time.h>
 #include <doslib.h>
 #include <iocslib.h>
@@ -23,6 +25,9 @@ SS File_Load_CSV(SC *, US *, US *, US *);
 SS PCG_SP_dataload(SC *);
 SS PCG_PAL_dataload(SC *);
 SS APICG_DataLoad(SC *, US, US, US);
+SS Load_Music_List(SC *, SC (*)[256], UI *);
+SS Load_SE_List(SC *, SC (*)[256], UI *);
+SS Load_CG_List(SC *, SC (*)[256], UI *);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
@@ -44,6 +49,13 @@ SS File_Load(SC *fname, void *ptr, size_t size, size_t n)
 	}
 	else
 	{
+		/* データ個数を指定しない場合 */
+		if(n == 0)
+		{
+			/* ファイルサイズを取得 */
+			n = filelength(fileno(fp));
+		}
+		
 		/* ファイル読み込み */
 		ret = fread (ptr, size, n, fp);
 
@@ -64,7 +76,7 @@ SS File_Load_CSV(SC *fname, US *ptr, US *Col, US *Row)
 	FILE *fp;
 	SS ret = 0;
 	US x, y, flag, cnv_flag;
-	char buf[1000], *s, *p, *end;
+	char buf[1000], *p, *end;
 	
 	x = 0;
 	y = 0;
@@ -140,7 +152,7 @@ SS File_Load_Course_CSV(SC *fname, ST_ROADDATA *st_ptr, US *Col, US *Row)
 	FILE *fp;
 	SS ret = 0;
 	US x, y, flag, cnv_flag;
-	char buf[1000], *s, *p, *end;
+	char buf[1000], *p, *end;
 	
 	x = 0;
 	y = 0;
@@ -284,7 +296,7 @@ SS PCG_PAL_dataload(SC *fname)
 {
 	FILE *fp;
 	SS ret = 0;
-	UI i,j;
+	UI i;
 
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
 
@@ -353,5 +365,108 @@ SS APICG_DataLoad(SC *fname, US pos_x, US pos_y, US uArea)
 	}
 	return ret;
 }
+
+SS Load_Music_List(SC *fname, SC (*music_list)[256], UI *list_max)
+{
+	FILE *fp;
+	SS ret = 0;
+	SC buf[1000], *p;
+	SC z_name[256];
+	UI i=0, num=0;
+	
+	fp = fopen(fname, "r");
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		i = 0;
+		
+		while(fgets(buf, sizeof(buf), fp) != NULL)
+		{
+	        p = buf;
+			sscanf(p,"%d = %s", &num, z_name);
+			if(i == num)
+			{
+				sprintf(music_list[i], "data\\music\\%s", z_name);
+			}
+			i++;
+		}
+		fclose(fp);
+	}
+	*list_max = i;
+	
+	return ret;
+}
+
+SS Load_SE_List(SC *fname, SC (*music_list)[256], UI *list_max)
+{
+	FILE *fp;
+	SS ret = 0;
+	SC buf[1000], *p;
+	SC z_name[256];
+	UI i=0, num=0;
+	
+	fp = fopen(fname, "r");
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		i = 0;
+		
+		while(fgets(buf, sizeof(buf), fp) != NULL)
+		{
+	        p = buf;
+			sscanf(p,"%d = %s", &num, z_name);
+			if(i == num)
+			{
+				sprintf(music_list[i], "data\\se\\%s", z_name);
+			}
+			i++;
+		}
+		fclose(fp);
+	}
+	*list_max = i;
+	
+	return ret;
+}
+
+SS Load_CG_List(SC *fname, SC (*cg_list)[256], UI *list_max)
+{
+	FILE *fp;
+	SS ret = 0;
+	SC buf[1000], *p;
+	SC z_name[256];
+	UI i=0, num=0;
+	
+	fp = fopen(fname, "r");
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		i = 0;
+		
+		while(fgets(buf, sizeof(buf), fp) != NULL)
+		{
+	        p = buf;
+			sscanf(p,"%d = %s", &num, z_name);
+			if(i == num)
+			{
+				sprintf(cg_list[i], "data\\cg\\%s", z_name);
+			}
+			i++;
+		}
+		fclose(fp);
+	}
+	*list_max = i;
+	
+	return ret;
+}
+
 #endif	/* FILEMANAGER_C */
 

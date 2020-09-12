@@ -23,11 +23,13 @@ typedef struct
 
 /* externêÈåæ */
 
+extern	SS	MyCar_G_Load(void);
 extern	SS	GetMyCar(ST_CARDATA *stDat);
 extern	SS	SetMyCar(ST_CARDATA stDat);
 extern	SS	UpdateMyCarInfo(SS);
-extern	SS	MyCar_Interior(SS, SS);
-extern	SS	MyCar_CourseOut(SS);
+extern	SS	MyCar_Interior(UC);
+extern	SS	MyCar_CourseOut(void);
+extern	SS	GetMyCarSpeed(SS *);
 
 /* ÉÅÉÇ */
 

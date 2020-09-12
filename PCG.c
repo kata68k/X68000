@@ -14,7 +14,8 @@
 
 /* 関数のプロトタイプ宣言 */
 void PCG_INIT(void);
-void PCG_Rotation(US *, US *, UC, UC, US, US);
+void PCG_VIEW(UC);
+void PCG_Rotation(US *, US *, UC, UC, SS, SS, UC *, UC, US, US);
 void BG_TEXT_SET(SC *);
 
 /* 関数 */
@@ -24,10 +25,6 @@ void PCG_INIT(void)
 	
 	/* スプライトの初期化 */
 	SP_INIT();			/* スプライトの初期化 */
-	SP_ON();			/* スプライト表示をＯＮ */
-	BGCTRLST(0, 1, 1);	/* ＢＧ０表示ＯＮ */
-	BGCTRLST(1, 1, 1);	/* ＢＧ１表示ＯＮ */
-//	BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＦＦ */
 	
 	/*スプライトレジスタ初期化*/
 	for( j = 0x80000000; j < 0x80000000 + 128; j++ )
@@ -48,9 +45,29 @@ void PCG_INIT(void)
 	BGTEXTCL(0,SetBGcode(0,0,0,0));	/* BGテキストクリア */
 	BGTEXTCL(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
 	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
+
+	PCG_SP_dataload("data/sp/BG.SP");	/* スプライトのデータ読み込み */
+	PCG_PAL_dataload("data/sp/BG.PAL");	/* スプライトのパレットデータ読み込み */
+	BG_TEXT_SET("data/map/map.csv");	/* マップデータによるＢＧの配置 */
 }
 
-void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
+void PCG_VIEW(UC bSW)
+{
+	if(bSW == TRUE)
+	{
+		SP_ON();			/* スプライト表示をＯＮ */
+		BGCTRLST(0, 1, 1);	/* ＢＧ０表示ＯＮ */
+		BGCTRLST(1, 1, 1);	/* ＢＧ１表示ＯＮ */
+	}
+	else
+	{
+		SP_OFF();			/* スプライト表示をＯＦＦ */
+		BGCTRLST(0, 1, 0);	/* ＢＧ０表示ＯＦＦ */
+		BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＦＦ */
+	}
+}
+
+void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, UC *sp_num, UC palNum, US ratio, US rad)
 {
 	SS	x, y, vx, vy;
 	SS	width, height;
@@ -58,19 +75,19 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
 	UL	uPCG_ARY[8];
 	UL	*pDstWork, *pSrcWork;
 	UC	*pBuf, *pDstBuf, *pSrcBuf;
-#if 0
-	/* malloc */
-#else
-	UC	cDst[2304]={0}, cSrc[2304]={0};
-#endif
 	UL	uADDR;
 	UL	uPointer_ADR, uPointer_ADR_X, uPointer_ADR_Y, uPointer_ADR_subX, uPointer_ADR_subY;
-	UC	Mem_size;
+	US	uMem_size;
 	UC	bShift;
+	UL	code = 0;
+	UC	V=0, H=0;
+	UC	spNum;	
+	SC	bEx_num=0;
 	
-	width = 16 * (SS)bX_num;
+	/* src size */
+	width =  16 * (SS)bX_num;
 	height = 16 * (SS)bY_num;
-	Mem_size = width * height * sizeof(UC);
+	uMem_size = width * height * sizeof(UC);
 	
 	if((ratio > 0) && (ratio <= 16))
 	{
@@ -80,19 +97,16 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
 	{
 		bShift = 8;
 	}
+//	Message_Num(&bShift,   0, 9, 2, MONI_Type_UC, "%2d");
+//	Message_Num(&bEx_num, 11, 9, 2, MONI_Type_SC, "%2d");
 	
 	/* 作業エリア確保 */
-#if 0
-	pSrcBuf = (UC*)malloc( (size_t)Mem_size );
+	pSrcBuf = (UC*)malloc( (size_t)uMem_size );
 	if(pSrcBuf == NULL)
 	{
 		return;
 	}
-#else
-	pSrcBuf = &cSrc[0];
-#endif
 	pBuf = pSrcBuf;
-	memset(pSrcBuf, 0xFF, (size_t)Mem_size);
 
 	/* PCG -> CG */
 	uPointer_ADR = (UL)pSrc;
@@ -145,20 +159,26 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
 
 	/* 画像処理 */
 #if 0
-	pDstBuf = (UC *)malloc( (size_t)Mem_size );
+	/* 更に領域を拡張する機能を実装しようとしたが断念 */
+	width =  16 * Mmax(((SS)bX_num + bEx_num), 1);
+	height = 16 * Mmax(((SS)bY_num + bEx_num), 1);
+	uMem_size = width * height * sizeof(UC);
+#endif
+	pDstBuf = (UC *)malloc( (size_t)uMem_size );
 	if(pDstBuf == NULL)
 	{
 		/* メモリの解放 */
 		free(pSrcBuf);
 		return;
 	}
-#else
-	pDstBuf = &cDst[0];
-#endif
 	pBuf = pDstBuf;
-	memset(pBuf, 0, (size_t)Mem_size);
+	memset(pBuf, 0, (size_t)uMem_size);
 	
-	if(rad != 0)
+	if((rad == 0) && (bShift == 8))
+	{
+		memcpy( pDstBuf, pSrcBuf, (size_t)uMem_size );	/* 只のコピー */
+	}
+	else
 	{
 		SS	dx, dy;
 		SS	width_h, height_h;
@@ -193,16 +213,9 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
 			}
 		}
 	}
-	else
-	{
-		SI	memchk;
-		memcpy( pDstBuf, pSrcBuf, (size_t)Mem_size );	/* 只のコピー */
-		memchk = memcmp( pDstBuf, pSrcBuf, (size_t)Mem_size );	/* 比較 */
-	}
-#if 0
 	/* メモリの解放 */
 	free(pSrcBuf);
-#endif
+
 	/* CG -> PCG */
 	pBuf = pDstBuf;
 
@@ -263,10 +276,29 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, US ratio, US rad)
 		uPointer_ADR_Y += 0x800ul;
 	}
 	
-#if 0
 	/* メモリの解放 */
 	free(pDstBuf);
-#endif
+
+	/* PCG -> SP */
+	uPointer_ADR = (UL)pDst;
+	uPointer_ADR_Y = 0ul;
+	spNum = *sp_num;
+	
+	for(y = 0; y < bY_num; y++)	/* 一行分 */
+	{
+		uPointer_ADR_X = 0ul;
+
+		for(x = 0; x < bX_num; x++)	/* 一列分 */
+		{
+			UC	patNum;
+			patNum = (UC)( (UL) ( (uPointer_ADR - 0xEB8000ul) + uPointer_ADR_Y + uPointer_ADR_X ) / 0x80ul); /*0x43*/;
+			code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
+			SP_REGST( spNum++, -1, pos_x + (x * 16), pos_y + (y * 16), code, 3);
+			*sp_num = spNum;
+			uPointer_ADR_X += 0x80ul;
+		}
+		uPointer_ADR_Y += 0x800ul;
+	}
 }
 
 void BG_TEXT_SET(SC *fname)

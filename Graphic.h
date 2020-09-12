@@ -34,6 +34,7 @@ enum
 extern	SS	GetCRT(ST_CRT *, SS);
 extern	SS	SetCRT(ST_CRT, SS);
 extern	void	G_INIT(void);
+extern	void	G_HOME(void);
 extern	void	G_MyCar(void);
 extern	void	G_Background(void);
 extern	void	G_Palette(void);
@@ -41,5 +42,7 @@ extern	SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
 extern	SS	G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
 extern	SS	G_CLR_AREA(SS, US, SS, US, UC);
 extern	SS	G_CLR_ALL_OFFSC(UC);
+extern	SS	G_Load(UC, US, US, US);
+
 
 #endif	/* GRAPHIC_H */

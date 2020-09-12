@@ -5,15 +5,16 @@
 
 #include "inc/usr_macro.h"
 #include "Input.h"
+#include "Music.h"
 
 
 /* 関数のプロトタイプ宣言 */
-US	get_key( UC );
+US	get_key(US *, UC, UC );
 US	DirectInputKeyNum(US *, US );
 UC	ChatCancelSW(UC , UC *);
 
 /* 関数 */
-US get_key( UC mode )
+US get_key( US *key, UC bPlayer, UC mode )
 {
 	UI kd_k1,kd_k2_1,kd_k2_2,kd_b,kd_b2,kd_b3,kd_b4,kd_b5,kd_b6,kd_b7;
 	static SS repeat_flag_a = KEY_TRUE;
@@ -31,23 +32,23 @@ US get_key( UC mode )
 	kd_k2_2	= BITSNS( 9 );
 	kd_b	= BITSNS(10 );
 	
-	if( (kd_b3  & 0x02 ) != 0 ) ret |= KEY_b_Q;		/* Ｑ */
-	if( (kd_b4  & 0x02 ) != 0 ) ret |= KEY_b_ESC;	/* ＥＳＣ */
-	if( (kd_b7  & 0x01 ) != 0 ) ret |= KEY_b_M;		/* Ｍ */
-	if( (kd_b7  & 0x20 ) != 0 ) ret |= KEY_b_SP;	/* スペースキー */
-	if( (kd_k1  & 0x01 ) != 0 ) ret |= KEY_b_RLUP;	/* ロールアップ */
-	if( (kd_k1  & 0x02 ) != 0 ) ret |= KEY_b_RLDN;	/* ロールダウン */
+	if( (kd_b3  & 0x02 ) != 0 ) *key |= KEY_b_Q;		/* Ｑ */
+	if( (kd_b4  & 0x02 ) != 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
+	if( (kd_b7  & 0x01 ) != 0 ) *key |= KEY_b_M;		/* Ｍ */
+	if( (kd_b7  & 0x20 ) != 0 ) *key |= KEY_b_SP;	/* スペースキー */
+	if( (kd_k1  & 0x01 ) != 0 ) *key |= KEY_b_RLUP;	/* ロールアップ */
+	if( (kd_k1  & 0x02 ) != 0 ) *key |= KEY_b_RLDN;	/* ロールダウン */
 
-	if( !( JOYGET( 0 ) & UP    ) || ( kd_k1 & 0x10 ) || ( kd_k2_1 & 0x10 ) || ( kd_b3 & 0x04 ) ) ret |= KEY_UPPER;	/* 上 ↑ 8 w */
-	if( !( JOYGET( 0 ) & DOWN  ) || ( kd_k1 & 0x40 ) || ( kd_k2_2 & 0x10 ) || ( kd_b5 & 0x80 ) ) ret |= KEY_LOWER;	/* 下 ↓ 2 s */
-	if( !( JOYGET( 0 ) & LEFT  ) || ( kd_k1 & 0x08 ) || ( kd_k2_1 & 0x80 ) || ( kd_b5 & 0x40 ) ) ret |= KEY_LEFT;	/* 左 ← 4 a */
-	if( !( JOYGET( 0 ) & RIGHT ) || ( kd_k1 & 0x20 ) || ( kd_k2_2 & 0x02 ) || ( kd_b6 & 0x01 ) ) ret |= KEY_RIGHT;	/* 右 → 6 d */
+	if( !( JOYGET( bPlayer ) & UP    ) || ( kd_k1 & 0x10 ) || ( kd_k2_1 & 0x10 ) || ( kd_b3 & 0x04 ) ) *key |= KEY_UPPER;	/* 上 ↑ 8 w */
+	if( !( JOYGET( bPlayer ) & DOWN  ) || ( kd_k1 & 0x40 ) || ( kd_k2_2 & 0x10 ) || ( kd_b5 & 0x80 ) ) *key |= KEY_LOWER;	/* 下 ↓ 2 s */
+	if( !( JOYGET( bPlayer ) & LEFT  ) || ( kd_k1 & 0x08 ) || ( kd_k2_1 & 0x80 ) || ( kd_b5 & 0x40 ) ) *key |= KEY_LEFT;	/* 左 ← 4 a */
+	if( !( JOYGET( bPlayer ) & RIGHT ) || ( kd_k1 & 0x20 ) || ( kd_k2_2 & 0x02 ) || ( kd_b6 & 0x01 ) ) *key |= KEY_RIGHT;	/* 右 → 6 d */
 	
-	if( !( JOYGET( 0 ) & JOYA  ) || ( kd_b  & 0x20 ) || ( kd_b2   & 0x04 ) )	/* Ａボタン or XF1 or z */
+	if( !( JOYGET( bPlayer ) & JOYA  ) || ( kd_b  & 0x20 ) || ( kd_b2   & 0x04 ) )	/* Ａボタン or XF1 or z */
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
-			ret |= KEY_A;
+			*key |= KEY_A;
 			repeat_flag_a = KEY_FALSE;
 		}
 	}
@@ -56,11 +57,11 @@ US get_key( UC mode )
 		repeat_flag_a = KEY_TRUE;
 	}
 	
-	if( !( JOYGET( 0 ) & JOYB  ) || ( kd_b  & 0x40 ) || ( kd_b2   & 0x08 ) )	/* Ｂボタン or XF2 or x  */
+	if( !( JOYGET( bPlayer ) & JOYB  ) || ( kd_b  & 0x40 ) || ( kd_b2   & 0x08 ) )	/* Ｂボタン or XF2 or x  */
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
-			ret |= KEY_B;
+			*key |= KEY_B;
 			repeat_flag_b = KEY_FALSE;
 		}
 	}
@@ -103,16 +104,16 @@ US	DirectInputKeyNum(US *uVal, US uDigit)
 			switch(uCount)	/* SE */
 			{
 			case 1:
-				m_pcmplay(1,3,4);
+				ADPCM_Play(1);
 				break;
 			case 2:
-				m_pcmplay(2,3,4);
+				ADPCM_Play(2);
 				break;
 			case 3:
-				m_pcmplay(3,3,4);
+				ADPCM_Play(3);
 				break;
 			default:
-				m_pcmplay(1,3,4);
+				ADPCM_Play(1);
 				break;
 			}
 		}
@@ -141,16 +142,16 @@ US	DirectInputKeyNum(US *uVal, US uDigit)
 			switch(uCount)	/* SE */
 			{
 			case 1:
-				m_pcmplay(1,3,4);
+				ADPCM_Play(1);
 				break;
 			case 2:
-				m_pcmplay(2,3,4);
+				ADPCM_Play(2);
 				break;
 			case 3:
-				m_pcmplay(3,3,4);
+				ADPCM_Play(3);
 				break;
 			default:
-				m_pcmplay(1,3,4);
+				ADPCM_Play(1);
 				break;
 			}
 		}
@@ -205,6 +206,44 @@ UC	ChatCancelSW(UC bJudge, UC *bFlag)
 	}
 	return ret;
 }
+
+#if 0
+#ifdef DEBUG	/* デバッグコーナー */
+		/* テスト用入力 */
+		if(bDebugMode == TRUE)
+		{
+			/* キーボードから数字を入力 */
+			DirectInputKeyNum(&g_uDebugNum, 3);
+			/* キー操作 */
+#if 1
+			/* 角度変更 */
+			//if(ChatCancelSW((input & KEY_UPPER)!=0u, &bKeyUP_flag) == TRUE)	vy += 1;	/* 上 */
+			//if(ChatCancelSW((input & KEY_LOWER)!=0u, &bKeyDOWN_flag) == TRUE)	vy -= 1;	/* 下 */
+			if((input & KEY_UPPER)!=0u)	vy += 1;	/* 上 */
+			if((input & KEY_LOWER)!=0u)	vy -= 1;	/* 下 */
+#else
+			/* ランプ操作 */
+			if(bUpDown_flag == 0){
+				vy += 1;
+				if(vy > 45)
+				{
+					vy = 0;
+					bUpDown_flag = 1;
+				}
+			}
+			else{
+				vy -= 1;
+				if(vy < -45)
+				{
+					vy = 0;
+					bUpDown_flag = 0;
+				}
+			}
+#endif
+			vy = Mmax(Mmin(vy, 45), -45);
+		}
+#endif
+#endif
 
 #endif	/* INPUT_C */
 

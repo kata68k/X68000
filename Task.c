@@ -5,10 +5,16 @@
 #include "Task.h"
 #include "MFP.h"
 
-SS	GetTaskInfo(ST_TASK *);
+ST_TASK	g_stTask = {0}; 
 
-SS	GetTaskInfo(ST_TASK *st_Task)
+SS	TaskManage(void);
+SS	GetTaskInfo(ST_TASK *);
+SS	SetTaskInfo(UC);
+
+SS	TaskManage(void)
 {
+	SS ret=0;
+	
 	static SC	bFirstTime		= TRUE;
 	static UI	un8ms_time		= 0;
 	static UI	un16ms_time		= 0;
@@ -16,7 +22,6 @@ SS	GetTaskInfo(ST_TASK *st_Task)
 	static UI	un96ms_time		= 0;
 	static UI	un496ms_time	= 0;
 	UI	time;
-	SS	ret = 0;
 	UC	b8ms_time;
 	UC	b16ms_time;
 	UC	b32ms_time;
@@ -35,9 +40,9 @@ SS	GetTaskInfo(ST_TASK *st_Task)
 		b8ms_time = FALSE;
 	}
 	
-	if( (time - un16ms_time) > 16)	/* 16msŽüŠú */
+	if( ((time+2) - un16ms_time) > 16)	/* 16msŽüŠú */
 	{
-		un16ms_time = time;
+		un16ms_time = (time+2);
 		b16ms_time = TRUE;
 	}
 	else
@@ -45,9 +50,9 @@ SS	GetTaskInfo(ST_TASK *st_Task)
 		b16ms_time = FALSE;
 	}
 
-	if( (time - un32ms_time) > 32)	/* 32msŽüŠú */
+	if( ((time+4) - un32ms_time) > 32)	/* 32msŽüŠú */
 	{
-		un32ms_time = time;
+		un32ms_time = (time+4);
 		b32ms_time = TRUE;
 	}
 	else
@@ -55,9 +60,9 @@ SS	GetTaskInfo(ST_TASK *st_Task)
 		b32ms_time = FALSE;
 	}
 
-	if( (time - un96ms_time) > 96)	/* 96msŽüŠú */
+	if( ((time+6) - un96ms_time) > 96)	/* 96msŽüŠú */
 	{
-		un96ms_time = time;
+		un96ms_time = (time+6);
 		b96ms_time = TRUE;
 	}
 	else
@@ -65,9 +70,9 @@ SS	GetTaskInfo(ST_TASK *st_Task)
 		b96ms_time = FALSE;
 	}
 	
-	if( (time - un496ms_time) > 496)	/* 496msŽüŠú */
+	if( ((time+8)- un496ms_time) > 496)	/* 496msŽüŠú */
 	{
-		un496ms_time = time;
+		un496ms_time = (time+8);
 		b496ms_time = TRUE;
 	}
 	else
@@ -78,21 +83,44 @@ SS	GetTaskInfo(ST_TASK *st_Task)
 	if(bFirstTime == TRUE)
 	{
 		bFirstTime = FALSE;
-		st_Task->b8ms	=	TRUE;
-		st_Task->b16ms	=	TRUE;
-		st_Task->b32ms	=	TRUE;
-		st_Task->b96ms	=	TRUE;
-		st_Task->b496ms	=	TRUE;
+		g_stTask.b8ms	=	TRUE;
+		g_stTask.b16ms	=	TRUE;
+		g_stTask.b32ms	=	TRUE;
+		g_stTask.b96ms	=	TRUE;
+		g_stTask.b496ms	=	TRUE;
 	}
 	else
 	{
-		st_Task->b8ms	=	b8ms_time;
-		st_Task->b16ms	=	b16ms_time;
-		st_Task->b32ms	=	b32ms_time;
-		st_Task->b96ms	=	b96ms_time;
-		st_Task->b496ms	=	b496ms_time;
+		g_stTask.b8ms	=	b8ms_time;
+		g_stTask.b16ms	=	b16ms_time;
+		g_stTask.b32ms	=	b32ms_time;
+		g_stTask.b96ms	=	b96ms_time;
+		g_stTask.b496ms	=	b496ms_time;
 	}
+
+	return ret;
+}
+
+SS	GetTaskInfo(ST_TASK *pst_Task)
+{
+	SS ret=0;
+
+	pst_Task->b8ms		=	g_stTask.b8ms;
+	pst_Task->b16ms		=	g_stTask.b16ms;
+	pst_Task->b32ms		=	g_stTask.b32ms;
+	pst_Task->b96ms		=	g_stTask.b96ms;
+	pst_Task->b496ms	=	g_stTask.b496ms;
+	pst_Task->bScene	=	g_stTask.bScene;
 	
+	return ret;
+}
+
+SS	SetTaskInfo(UC bScene)
+{
+	SS ret=0;
+
+	g_stTask.bScene = bScene;
+
 	return ret;
 }
 
