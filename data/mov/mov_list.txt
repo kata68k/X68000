@@ -1,0 +1,3 @@
+0=ASU_S.MCS
+1=UFUFU.MCS
+2=UsaBye.MCS

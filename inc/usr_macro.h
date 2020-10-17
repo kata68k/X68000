@@ -63,6 +63,18 @@
 #define Mbset(x,y,z) (((x) & ~(y)) | (z))
 
 /*
+        Mbclr - bitクリア -
+*/
+/**
+ * 指定された引数のビットをクリア.
+ * @param [in] x        元の値
+ * @param [in] y        0にしたい領域
+ * @retval ビットセットされた値
+ * @attention 引数は複数回評価される.
+ */
+#define Mbclr(x,y) ((x) & ~(y))
+
+/*
         Mdec - デクリメント（０クリップ） -
 */
 /**

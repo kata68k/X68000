@@ -1,8 +1,8 @@
 #	makefile for OverKata.x
 
 CC		= gcc
-CFLAGS	= -O -fomit-frame-pointer -fstrength-reduce -Wall
-#CFLAGS	= -g -O0 -Wall
+#CFLAGS	= -O -fomit-frame-pointer -fstrength-reduce -Wall
+CFLAGS	= -g -O0 -Wall
 AS		= has
 LD		= hlk
 INC		= 
@@ -26,14 +26,16 @@ clean:
 execonly:
 	$(RM) *.ind *.bak *.s *.o \
 
-OverKata.x:	OverKata.o APL_Math.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
-			FileManager.o Graphic.o Input.o MFP.o Music.o MyCar.o OutPut_Text.o \
+OverKata.x:	OverKata.o APL_MACS.o APL_Math.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
+			FileManager.o Graphic.o Input.o MFP.o Moon.o Music.o MyCar.o OutPut_Text.o \
 			PCG.o Raster.o Task.o Text.o Trap14.o
 	$(LD) $^ -o $@ -l $(LIBS)
 #	echo $^ > OverKata.d
 #	$(LD) -i OverKata.d -o $@ -l $(LIBS)
 
 OverKata.o:	OverKata.c
+	$(CC) $(CFLAGS) -c $<
+APL_MACS.o:	APL_MACS.c
 	$(CC) $(CFLAGS) -c $<
 APL_Math.o:	APL_Math.c
 	$(CC) $(CFLAGS) -c $<
@@ -72,6 +74,8 @@ Trap14.o:	Trap14.c
 OverKata.o:	inc/usr_define.h
 Graphic.o:	inc/usr_define.h
 MFP.o:		inc/usr_define.h
+
+Moon.o:	Moon.s
 
 dist:
 	LHA a -t $(LZH)

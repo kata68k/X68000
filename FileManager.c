@@ -28,6 +28,9 @@ SS APICG_DataLoad(SC *, US, US, US);
 SS Load_Music_List(SC *, SC (*)[256], UI *);
 SS Load_SE_List(SC *, SC (*)[256], UI *);
 SS Load_CG_List(SC *, SC (*)[256], UI *);
+SS Load_MACS_List(SC *, SC (*)[256], UI *);
+SS File_To_Mem(SC *, SC *, SI);
+SS GetFileLength(SC *, SI *);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
@@ -464,6 +467,89 @@ SS Load_CG_List(SC *fname, SC (*cg_list)[256], UI *list_max)
 		fclose(fp);
 	}
 	*list_max = i;
+	
+	return ret;
+}
+
+SS Load_MACS_List(SC *fname, SC (*macs_list)[256], UI *list_max)
+{
+	FILE *fp;
+	SS ret = 0;
+	SC buf[1000], *p;
+	SC z_name[256];
+	UI i=0, num=0;
+	
+	fp = fopen(fname, "r");
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		i = 0;
+		
+		while(fgets(buf, sizeof(buf), fp) != NULL)
+		{
+	        p = buf;
+			sscanf(p,"%d = %s", &num, z_name);
+			if(i == num)
+			{
+				sprintf(macs_list[i], "data\\mov\\%s", z_name);
+			}
+			i++;
+		}
+		fclose(fp);
+	}
+	*list_max = i;
+	
+	return ret;
+}
+
+SS File_To_Mem(SC *fname, SC *mem, SI Size)
+{
+	FILE *fp;
+	SS ret = 0;
+
+	fp = fopen( fname , "rb" ) ;
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		if(Size <= 0)
+		{
+			GetFileLength(fname, &Size);
+		}
+		
+		fread( mem
+			,  1	/* 1byte */
+			,  Size	/* file size */
+			,  fp
+			) ;
+
+		fclose( fp ) ;
+	}
+	
+	return ret;
+}
+
+SS	GetFileLength(SC *pFname, SI *pSize)
+{
+	FILE *fp;
+	SS ret = 0;
+
+	fp = fopen( pFname , "rb" ) ;
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		*pSize = filelength( fileno( fp ) );
+
+		fclose( fp ) ;
+	}
 	
 	return ret;
 }

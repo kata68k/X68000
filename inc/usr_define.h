@@ -31,6 +31,7 @@
 #define HEIGHT		(256)
 #define X_MIN_DRAW	(0)
 #define X_MAX_DRAW	(511)
+#define X_MAX_DRAW_OF	(32)
 #define Y_MIN_DRAW	(0)
 #define Y_MAX_DRAW	(511)
 #define Y_HORIZON_0	(128)
@@ -57,23 +58,8 @@
 
 /* スプライトＰＣＧパターン最大数 */
 #define	PCG_MAX	(256)
-
 #define	BG_WIDTH	(8)
 #define	BG_HEIGHT	(8)
-
-/* 画像サイズ */
-#define MY_CAR_0_W	(65)
-#define MY_CAR_0_H	(52)
-#define MY_CAR_1_W	(256)
-#define MY_CAR_1_H	(224)
-#define ENEMY_CAR_0_W	(67)
-#define ENEMY_CAR_0_H	(45)
-#define ENEMY_CAR_1_W	(140)
-#define ENEMY_CAR_1_H	(105)
-#define PINETREE_0_W	(31)
-#define PINETREE_0_H	(56)
-#define PINETREE_1_W	(62)
-#define PINETREE_1_H	(112)
 #define BG_0_W	(280)
 #define BG_0_H	(63)
 #define BG_1_W	(280)
@@ -106,16 +92,6 @@ typedef struct
 	SS	BG_offset_y;		/* BG画面のY座標オフセット */
 	SS	BG_under;			/* BG画面の最終 */
 }	ST_CRT;
-
-/* ラスター情報の構造体 */
-typedef struct
-{
-	US	st;			/* 開始位置 */
-	US	mid;		/* 中間位置 */
-	US	ed;			/* 終了位置 */
-	US	size;		/* 開始と終了の差分 */
-	US	horizon;	/* 水平線 */
-}	ST_RAS_INFO;
 
 /* データテーブル */
 

@@ -8,6 +8,7 @@
 #include "Graphic.h"
 #include "MFP.h"
 #include "MyCar.h"
+#include "Raster.h"
 
 /* \‘¢‘Ì’è‹` */
 ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
@@ -83,7 +84,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 		if(pstEnemyCar[bNum]->ubAlive == TRUE)
 		{
 			SS	x, y, z;
-			US	ras_x, ras_y;
+			US	ras_x, ras_y, ras_pat;
 			ST_CARDATA	stMyCar;
 			ST_CRT		stCRT;
 			ST_RAS_INFO	stRasInfo;
@@ -102,7 +103,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			y += RASTER_NEXT;
 
 			GetRasterInfo(&stRasInfo);
-			GetRasterPos(&ras_x, &ras_y, (US)(stRasInfo.st + y));
+			GetRasterIntPos(&ras_x, &ras_y, &ras_pat, (US)(stRasInfo.st + y));
 			x = ras_x;
 			z = ((4 * 8) / (8 + y));
 			

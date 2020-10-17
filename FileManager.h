@@ -14,5 +14,8 @@ extern SS APICG_DataLoad(SC *, US, US, US);
 extern SS Load_Music_List(SC *, SC (*)[256], UI *);
 extern SS Load_SE_List(SC *, SC (*)[256], UI *);
 extern SS Load_CG_List(SC *, SC (*)[256], UI *);
+extern SS Load_MACS_List(SC *, SC (*)[256], UI *);
+extern SS File_To_Mem(SC *, SC *, SI);
+extern SS GetFileLength(SC *, SI *);
 
 #endif	/* FILEMANAGER_H */

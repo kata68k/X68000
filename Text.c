@@ -11,13 +11,14 @@
 #include "OutPut_Text.h"
 
 /* 構造体 */
-ST_TEXTINFO	stTextInfo = {0};
+static ST_TEXTINFO	g_stTextInfo = {0};
 
 /* 関数のプロトタイプ宣言 */
 void T_INIT(void);
 void T_EXIT(void);
-void T_SetBG_to_Text(void);
 void T_Clear(void);
+void T_PALET(void);
+void T_SetBG_to_Text(void);
 void T_TopScore(void);
 void T_Time(void);
 void T_Score(void);
@@ -32,7 +33,24 @@ void T_INIT(void)
 	MS_CUROF();			/* マウスカーソルを消します */
 	SKEY_MOD(0, 0, 0);	/* ソフトウェアキーボードを消します */
 	T_Clear();			/* テキストクリア */
+	
+	g_stTextInfo.uScoreMax = 10000;
+}
 
+void T_EXIT(void)
+{
+	B_CURON();	/* カーソルを表示します */
+	T_Clear();	/* テキストクリア */
+}
+
+void T_Clear(void)
+{
+	_iocs_scroll(8, 0, 0);	/* テキスト画面 */
+	_iocs_txrascpy(256 / 4 * 256, 256 / 4, 0b1111);	/* テキスト画面クリア */
+}
+
+void T_PALET(void)
+{
 	/* テキストパレットの初期化(Pal0はSPと共通) */
 	TPALET2( 0, SetRGB( 0,  0,  0));	/* Black */
 	TPALET2( 1, SetRGB( 1,  0,  0));	/* Black2 */
@@ -42,14 +60,6 @@ void T_INIT(void)
 	TPALET2( 5, SetRGB(30,  8,  0));	/* Orenge */
 	TPALET2( 6, SetRGB(30, 30,  0));	/* Yellow */
 	TPALET2( 7, SetRGB( 0, 31,  0));	/* Green */
-	
-	stTextInfo.uScoreMax = 10000;
-}
-
-void T_EXIT(void)
-{
-	B_CURON();	/* カーソルを表示します */
-	T_Clear();	/* テキストクリア */
 }
 
 void T_SetBG_to_Text(void)
@@ -67,11 +77,6 @@ void T_SetBG_to_Text(void)
 		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
 		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
 	}
-}
-
-void T_Clear(void)
-{
-	_iocs_txrascpy(256 / 4 * 256, 256 / 4, 0b1111);	/* テキスト画面クリア */
 }
 
 void T_TopScore(void)
@@ -161,43 +166,50 @@ void T_Gear(void)
 void T_Main(void)
 {
 	UI time_now;
-	UI unStart_time, unPassTime, unTimer;
+	static UI time_old = 0;
+	UI unStart_time, unTimer;
 	US uTimeCounter;
+	static UI unPassTime = 0;
 
 	ST_CARDATA	stMyCar = {0};
 	GetMyCar(&stMyCar);			/* 自車の情報を取得 */
 
+	/* 現在時間 */
+	GetNowTime(&time_now);
 	/* 開始時間 */
 	GetStartTime(&unStart_time);
 	
+	/* Time Count */
+	if(time_old != 0)
+	{
+		unPassTime += (unStart_time - time_old);
+		unTimer = 120000 - unPassTime;
+		if(120000 < unTimer)
+		{
+			uTimeCounter = 0;
+		}
+		else
+		{
+			uTimeCounter = (US)(unTimer / 1000);
+		}
+		g_stTextInfo.uTimeCounter = uTimeCounter;
+	}
+	time_old = unStart_time;
+	
 	/* Score */
-	stTextInfo.uScore = 0;
+	g_stTextInfo.uScore = unPassTime / 1000;
 
 	/* Top Score */
-	stTextInfo.uScoreMax = Mmax(stTextInfo.uScore, stTextInfo.uScoreMax);
-	
-	/* Time Count */
-	GetNowTime(&time_now);
-	unPassTime = (time_now - unStart_time);
-	unTimer = 120000 - unPassTime;
-	if(120000 < unTimer)
-	{
-		uTimeCounter = 0;
-	}
-	else
-	{
-		uTimeCounter = (US)(unTimer / 1000);
-	}
-	stTextInfo.uTimeCounter = uTimeCounter;
+	g_stTextInfo.uScoreMax = Mmax(g_stTextInfo.uScore, g_stTextInfo.uScoreMax);
 	
 	/* Speed */
-	stTextInfo.uVs = stMyCar.VehicleSpeed;
+	g_stTextInfo.uVs = stMyCar.VehicleSpeed;
 	
 	/* Gear */
-	stTextInfo.uShiftPos = (US)stMyCar.ubShiftPos;
+	g_stTextInfo.uShiftPos = (US)stMyCar.ubShiftPos;
 
 	/* 描画 */
-	PutTextInfo(stTextInfo);
+	PutTextInfo(g_stTextInfo);
 }
 
 #endif	/* TEXT_C */

@@ -1,25 +1,27 @@
 #ifndef	COURSE_OBJ_C
 #define	COURSE_OBJ_C
 
+#include <stdio.h>
+
 #include "inc/usr_macro.h"
 #include "Course_Obj.h"
+#include "Draw.h"
+#include "FileManager.h"
 #include "Graphic.h"
+#include "MFP.h"
 #include "MyCar.h"
-
+#include "Output_Text.h"
+#include "Raster.h"
 
 /* 変数定義 */
-US	g_uRoadCycleCount = 0;
 
 /* 構造体定義 */
-ST_COURSE_OBJ	stCourse_Obj[COURSE_OBJ_MAX] = {0};
-ST_COURSE_OBJ	*pstCourse_ObjList[COURSE_OBJ_MAX];
+static ST_COURSE_OBJ	g_stCourse_Obj[COURSE_OBJ_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 SS	InitCourseObj(void);
 SS	Course_Obj_main(UC, UC, UC);
 SS	Put_CouseObject(SS, SS, US, UC, UC);
-SS	GetRoadCycleCount(US *);
-SS	SetRoadCycleCount(US);
 SS	Sort_Course_Obj(void);
 SS	Load_Course_Data(UC);
 
@@ -31,13 +33,11 @@ SS	InitCourseObj(void)
 	
 	for(i=0; i<COURSE_OBJ_MAX; i++)
 	{
-		stCourse_Obj[i].ubType = 0;
-		stCourse_Obj[i].x = 16*(i/2);
-		stCourse_Obj[i].y = 0;
-		stCourse_Obj[i].z = 0;
-		stCourse_Obj[i].ubAlive = TRUE;
-		
-		pstCourse_ObjList[i] = &stCourse_Obj[i];
+		g_stCourse_Obj[i].ubType = 0;
+		g_stCourse_Obj[i].x = 48*(i/2);
+		g_stCourse_Obj[i].y = 48*(i/2);
+		g_stCourse_Obj[i].z = 0;
+		g_stCourse_Obj[i].ubAlive = TRUE;
 	}
 	
 	return ret;
@@ -46,16 +46,25 @@ SS	InitCourseObj(void)
 SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 {
 	SS	ret = 0;
+	US	uCount;
 
-	if(pstCourse_ObjList[bNum]->ubAlive == TRUE)
+	GetRoadCycleCount(&uCount);
+	uCount &= 0xFFF;
+
+	if(g_stCourse_Obj[bNum].ubAlive == TRUE)
 	{
 		SS	x, y, z;
-		SS	dy;
-		US	ras_x, ras_y;
+		SS	dx, dy, dz;
+		SS	x_ofst = 0;
+		US	ras_x, ras_y, ras_pat, ras_num;
 		UC	bEven;
-		US	uCount;
-		ST_CRT		stCRT;
+		SS	Out_Of_Disp;
+
+		ST_CRT	stCRT;
 		ST_RAS_INFO	stRasInfo;
+
+		GetCRT(&stCRT, bMode);
+		GetRasterInfo(&stRasInfo);
 
 		if((bNum % 2) == 0)
 		{
@@ -66,80 +75,103 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 			bEven = FALSE;
 		}
 
-		x = pstCourse_ObjList[bNum]->x;
-		y = pstCourse_ObjList[bNum]->y;
-		z = pstCourse_ObjList[bNum]->z;
-		
-		GetRoadCycleCount(&uCount);
-		if(uCount >= z)
-		{
-			y += (uCount - z) * 4;
-		}
-		else
-		{
-			y = 0;
-		}
-		z = uCount;
-		
-		dy = y - x;
+		x = g_stCourse_Obj[bNum].x;
+		y = g_stCourse_Obj[bNum].y;
+		z = g_stCourse_Obj[bNum].z;	/* 共通カウンタの前回値 */
 
-		GetCRT(&stCRT, bMode);
-		GetRasterInfo(&stRasInfo);
 
-//		pstCourse_ObjList[bNum]->x = x;
-		pstCourse_ObjList[bNum]->y = y;
-		pstCourse_ObjList[bNum]->z = z;
-
-		if(dy < 0)
+		if(uCount  != z)	/* 道路更新あり */
 		{
-			/* nop */
-		}
-		else if((stRasInfo.st + dy) < stRasInfo.ed)
-		{
-			GetRasterPos(&ras_x, &ras_y, (US)(stRasInfo.st + dy));
-
-			z = ((4 * 8) / (8 + dy));
-			if(bEven == TRUE)
+			if(uCount >= z)
 			{
-				x = ras_x + (2 * dy);
+				y += uCount - z;			/* 変化量 */
 			}
 			else
 			{
-				x = ras_x - (2 * dy);
+				y += (0xFFF - z) + uCount;	/* 変化量 */
 			}
-
-			Put_CouseObject(stCRT.hide_offset_x + (WIDTH>>1) - x,
-							stCRT.hide_offset_y + stRasInfo.horizon + dy,
-							z,
-							bMode_rev,
-							bEven);
-#ifdef DEBUG	/* デバッグコーナー */
-//			if(bDebugMode == TRUE)	/* デバッグモード */
-			{
-				Draw_Pset(x, dy, 0xC2);	/* デバッグ用座標位置 */
-			}
-#endif
+			
 		}
 		else
 		{
-			pstCourse_ObjList[bNum]->ubAlive = FALSE;
+			/* nop */
 		}
+		ras_num = (US)(stRasInfo.st + y);
+		
+		x = 4 * (y + (ras_num - 80));
+
+		GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);
+		if(ras_x >= 256)
+		{
+			x_ofst = (SS)ras_x - 512;
+		}
+
+		g_stCourse_Obj[bNum].x = x;
+		g_stCourse_Obj[bNum].y = y;
+		
+		/* 2次関数的に増やす要素＋遠近法で増やす要素 */
+		x = x - x_ofst;/*+ (ras_num/4)*/ /*+ ((96 * 16) / (Mmax((96-dx),0) + 16))*/
+		
+		if(bEven == TRUE)	/* 左 */
+		{
+//			x = 0 - (dy * 3) - ras_x - 48;
+			dx = 0 - x;
+		}
+		else				/* 右 */
+		{
+			dx = x;
+		}
+		dy = y;
+
+		/* 表示範囲 */
+		dz = (128 - x_ofst) + PINETREE_1_W;
+		
+		Out_Of_Disp = Put_CouseObject(
+			stCRT.hide_offset_x + (WIDTH>>1) + dx,
+			stCRT.hide_offset_y + stRasInfo.horizon,
+			//((32) / (8 + dy)),
+			Mmin( Mmax( 3 - (((x<<8) / (x + dz))>>5) , 0), 3 ),	/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った */
+			bMode_rev,
+			bEven);
+
+		if(Out_Of_Disp < 0)
+		{
+			g_stCourse_Obj[bNum].ubAlive = FALSE;
+		}
+
+#ifdef DEBUG	/* デバッグコーナー */
+		if( bNum == 0 )
+		{
+	//		Message_Num(&g_stCourse_Obj[bNum].x,	 0,  9, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&g_stCourse_Obj[bNum].y, 	 6,  9, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&g_stCourse_Obj[bNum].z, 	12,  9, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&ras_x, 			 0, 10, 2, MONI_Type_US, "%4d");
+	//		Message_Num(&ras_y, 			 6, 10, 2, MONI_Type_US, "%4d");
+	//		Message_Num(&x_ofst, 			 0, 11, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&ras_num,			 6, 11, 2, MONI_Type_US, "%4d");
+	//		Message_Num(&bNum,				12, 11, 2, MONI_Type_UC, "%d");
+	//		if(bDebugMode == TRUE)	/* デバッグモード */
+	//		{
+	//			Draw_Pset(x, dy, 0xC2);	/* デバッグ用座標位置 */
+	//		}
+		}
+#endif
 	}
 	else
 	{
-//		pstCourse_ObjList[bNum]->ubType = 0;
-//		pstCourse_ObjList[bNum]->x = 0;
-//		pstCourse_ObjList[bNum]->y = 0;
-//		pstCourse_ObjList[bNum]->z = 0;
-		pstCourse_ObjList[bNum]->ubAlive = TRUE;
+		g_stCourse_Obj[bNum].ubType = 0;
+		g_stCourse_Obj[bNum].x = 0;
+		g_stCourse_Obj[bNum].y = 0;
+		g_stCourse_Obj[bNum].ubAlive = TRUE;
 	}
+	g_stCourse_Obj[bNum].z = uCount;
 	
 	return ret;
 }
 
 SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
 {
-	SS	ret;
+	SS	ret = 0;
 	SS	i;
 	SS	dx, dy;
 	US	w, h;
@@ -148,53 +180,20 @@ SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
 	w = PINETREE_1_W >> Size;
 	h = PINETREE_1_H >> Size;
 
-	dy = y - (h >> 1);
-	if(ubPos == 0)
-	{
-		dx = x + w;
-	}
-	else
-	{
-		dx = x - w;
-	}
+	dx = x;
+//	dy = y - (h >> 1);
+	dy = y;
 	
 	for(i = 1; i <= Size; i++)
 	{
 		height_sum += (PINETREE_1_H >> (i-1));
 	}
 	
-	if(ubPos == 0)
-	{
-		G_BitBlt(	dx,		w,			dy,	h,	1,
+	ret = G_BitBlt(	dx,		w,			dy,	h,	1,
 					140,	w,	height_sum,	h,	1,
-					ubMode, POS_LEFT, POS_BOTTOM);
-	}
-	else
-	{
-		G_BitBlt(	dx,		w,			dy,	h,	1,
-					140,	w,	height_sum,	h,	1,
-					ubMode, POS_RIGHT, POS_BOTTOM);
-	}
+					ubMode, POS_MID, POS_CENTER);
 	
 	return	ret;
-}
-
-SS	GetRoadCycleCount(US *uCount)
-{
-	SS	ret = 0;
-	
-	*uCount = g_uRoadCycleCount;
-	
-	return ret;
-}
-
-SS	SetRoadCycleCount(US uCount)
-{
-	SS	ret = 0;
-	
-	g_uRoadCycleCount = uCount;
-	
-	return ret;
 }
 
 SS	Sort_Course_Obj(void)
@@ -202,17 +201,17 @@ SS	Sort_Course_Obj(void)
 	SS	ret = 0;
 	SS	i;
 	SS	count = 0;
-	ST_COURSE_OBJ	*pstCourse_Obj_Tmp;
+	ST_COURSE_OBJ	stTmp;
 	
 	while(1)
 	{
 		for(i=0; i<COURSE_OBJ_MAX-1; i++)
 		{
-			if(pstCourse_ObjList[i]->y > pstCourse_ObjList[i+1]->y)
+			if(g_stCourse_Obj[i].y > g_stCourse_Obj[i+1].y)
 			{
-				pstCourse_Obj_Tmp = pstCourse_ObjList[i+1];
-				pstCourse_ObjList[i+1] = pstCourse_ObjList[i];
-				pstCourse_ObjList[i] = pstCourse_Obj_Tmp;
+				stTmp = g_stCourse_Obj[i+1];
+				g_stCourse_Obj[i+1] = g_stCourse_Obj[i];
+				g_stCourse_Obj[i] = stTmp;
 				count = 0;
 			}
 			else

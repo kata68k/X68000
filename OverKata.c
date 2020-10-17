@@ -13,6 +13,7 @@
 
 #include "OverKata.h"
 
+#include "APL_MACS.h"
 #include "APL_Math.h"
 #include "Course_Obj.h"
 #include "DMAC.h"
@@ -57,7 +58,6 @@ void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
 SS main(void)
 {
 	SS	ret = 0;
-//	FLOAT	rad;
 
 	UI	unTime_cal = 0u;
 	UI	unTime_cal_PH = 0u;
@@ -66,7 +66,6 @@ SS main(void)
 	
 	SS	loop = 1;
 	SS	RD[1024] = {0};
-	
 	UC	bMode_flag = FALSE;
 	UC	bDebugMode = TRUE;
 	UC	bDebugMode_flag;
@@ -86,10 +85,14 @@ SS main(void)
 
 	/* デバッグコーナー */
 #if 0
+	puts("デバッグコーナー 開始");
 	/* ↓自由にコードを書いてね */
-	rad = APL_Atan2(1,1);
-	printf("%f\n", rad);
+	{
+		printf("MoonRegst = %d\n", MoonRegst("UFUFU.MCS"));
+		printf("MoonPlay  = %d\n", MoonPlay("UFUFU.MCS"));
+	}
 	/* ↑自由にコードを書いてね */
+	puts("ＥＳＣキーで終了");
 	loop = 1;
 	do
 	{
@@ -97,6 +100,7 @@ SS main(void)
 		if(loop == 0)break;
 	}
 	while( loop );
+	puts("デバッグコーナー 終了");
 	
 	exit(0);
 #endif
@@ -137,7 +141,7 @@ SS main(void)
 		}
 	}
 	
-	do
+	do	/* メインループ処理 */
 	{
 		UI time_st, time_now;
 		SS	input = 0;
@@ -145,7 +149,7 @@ SS main(void)
 		/* 時刻設定 */
 		GetNowTime(&time_st);	/* メイン処理の開始時刻を取得 */
 		SetStartTime(time_st);	/* メイン処理の開始時刻を記憶 */
-		
+
 		/* タスク処理 */
 		TaskManage();			/* タスクを管理する */
 		GetTaskInfo(&stTask);	/* タスクの情報を得る */
@@ -153,23 +157,16 @@ SS main(void)
 		/* 入力処理 */
 		get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
 		
-		if((input & KEY_b_ESC ) != 0u) loop = 0;	/* ＥＳＣポーズ */
-		if(loop == 0)break;
-		
-		if( (ChatCancelSW((input & KEY_b_M)!=0u, &bMode_flag) == TRUE) || (bFlip == TRUE) )	/* Ｍでモード切替 */
+		if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
 		{
-			if(g_mode == 1u)
-			{
-				g_mode = 2u;
-				g_mode_rev = 1u;
-			}
-			else
-			{
-				g_mode = 1u;
-				g_mode_rev = 2u;
-			}
+			loop = 0;	/* ループ終了 */
 		}
-		
+		if(loop == 0)	/* 終了処理 */
+		{
+			/* 動画 */
+			MOV_Play(2);	/* バイバイ */
+			break;
+		}
 #ifdef DEBUG	/* デバッグコーナー */
 		if(ChatCancelSW((input & KEY_b_SP)!=0u, &bDebugMode_flag) == TRUE)	/* スペースでデバッグON/OFF */
 		{
@@ -177,6 +174,8 @@ SS main(void)
 			else					bDebugMode = FALSE;
 		}
 		SetDebugMode(bDebugMode);
+		
+		DirectInputKeyNum(&g_uDebugNum, 3);	/* キーボードから数字を入力 */
 #endif
 
 		switch(stTask.bScene)
@@ -195,10 +194,7 @@ SS main(void)
 				PCG_VIEW(FALSE);	/* スプライト＆ＢＧ非表示 */
 				/* テキスト */
 				T_INIT();			/* テキストＶＲＡＭ初期化 */
-				/* ライバル車の初期化 */
-				InitEnemyCAR();
-				/* コースのオブジェクトの初期化 */
-				InitCourseObj();
+				T_PALET();			/* テキストパレット設定 */
 
 				SetTaskInfo(SCENE_TITLE_S);	/* タイトルシーン(開始処理)へ設定 */
 			}
@@ -236,6 +232,12 @@ SS main(void)
 				/* テキスト表示 */
 				T_Clear();		/* テキストクリア */
 
+				/* テキスト表示 */
+				G_CLR();		/* グラフィッククリア */
+
+				/* MFP */
+				MFP_INIT();	/* 初期化処理 */
+				
 				SetTaskInfo(SCENE_START_S);	/* タイトルシーン(開始処理)へ設定 */
 			}
 			break;
@@ -246,16 +248,41 @@ SS main(void)
 			break;
 			case SCENE_START_S:	/* ゲーム開始シーン(開始処理) */
 			{
-				/* コースデータの読み込み */
-				Load_Course_Data(1);
+				SetTaskInfo(SCENE_START);	/* ゲームスタートタスクへ設定 */
+			}
+			break;
+			case SCENE_START:	/* ゲーム開始シーン */
+			{
+				/* 動画 */
+				MOV_Play(0);	/* スタート */
+
+				SetTaskInfo(SCENE_START_E);	/* ゲームスタートタスクへ設定 */
+			}
+			break;
+			case SCENE_START_E:	/* ゲーム開始シーン(終了処理) */
+			{
+				/* コースデータの初期化 */
+				Road_Init(1);
+				
+				/* ラスター情報の初期化 */
+				Raster_Init();
+				
+				/* スプライト＆ＢＧ表示 */
+				PCG_INIT();		/* スプライト／ＢＧの初期化 */
+				PCG_VIEW(TRUE);	
 
 				/* 自車の画像読み込み*/
 				MyCar_G_Load();
 				
-				/* スプライト＆ＢＧ表示 */
-				PCG_VIEW(TRUE);				
+				/* ライバル車の初期化 */
+				InitEnemyCAR();
+
+				/* コースのオブジェクトの初期化 */
+				InitCourseObj();
 
 				/* テキスト表示 */
+				T_Clear();		/* テキストクリア */
+				T_PALET();		/* テキストパレット設定 */
 				T_TopScore();	/* TOP */
 				T_Time();		/* TIME */
 				T_Score();		/* SCORE */
@@ -263,20 +290,6 @@ SS main(void)
 				T_Gear();		/* GEAR */
 				T_SetBG_to_Text();	/* テキスト用作業用データ展開 */
 
-				/* MFP */
-				MFP_INIT();		/* MFP関連の初期化 */
-
-				SetTaskInfo(SCENE_START);	/* ゲームスタートタスクへ設定 */
-			}
-			break;
-			case SCENE_START:	/* ゲーム開始シーン */
-			{
-
-				SetTaskInfo(SCENE_START_E);	/* ゲームスタートタスクへ設定 */
-			}
-			break;
-			case SCENE_START_E:	/* ゲーム開始シーン(終了処理) */
-			{
 				SetTaskInfo(SCENE_GAME_S);	/* ゲーム(開始処理)タスクへ設定 */
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
@@ -288,36 +301,33 @@ SS main(void)
 			{
 				if((input & KEY_b_Q) != 0u)	/* Ｑ */
 				{
+					/* 動画 */
+					MOV_Play(1);	/* うふふ */
+
 					SetTaskInfo(SCENE_GAME_E);	/* ゲームシーン(終了処理)へ設定 */
 				}
 				
 				/* 自車の情報を取得 */
 				UpdateMyCarInfo(input);		/* 自車の情報を更新 */
 				
-				/* ロードパターン */
-				Road_Pat();
-
 				/* ラスター処理 */
 				Raster_Main(g_mode);
+				
+				if(stTask.b96ms == TRUE)
+				{
+					/* コースアウト時の処理 */
+					MyCar_CourseOut();	/* コースアウト時のエフェクト */
+
+					/* グラフィック画面の処理 */
+					MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
+				}
 				
 				/* テキスト画面の処理 */
 				if(stTask.b496ms == TRUE)
 				{
 					T_Main();
 				}
-				
-				/* コースアウト時の処理 */
-				if(stTask.b96ms == TRUE)
-				{
-					MyCar_CourseOut();	/* コースアウト時のエフェクト */
-				}
 
-				/* グラフィック画面の処理 */
-				if(stTask.b96ms == TRUE)
-				{
-					MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
-				}
-				
 				/* 余った時間で処理 */
 				BG_main(&bFlip);	/* バックグランド処理 */
 				
@@ -361,6 +371,20 @@ SS main(void)
 				
 			}
 			break;
+		}
+
+		if( (ChatCancelSW((input & KEY_b_M)!=0u, &bMode_flag) == TRUE) || (bFlip == TRUE) )	/* Ｍでモード切替 */
+		{
+			if(g_mode == 1u)
+			{
+				g_mode = 2u;
+				g_mode_rev = 1u;
+			}
+			else
+			{
+				g_mode = 1u;
+				g_mode_rev = 2u;
+			}
 		}
 
 #ifdef DEBUG	/* デバッグコーナー */
@@ -416,6 +440,28 @@ SS main(void)
 	
 	App_exit();	/* 終了処理 */
 
+#ifdef DEBUG	/* デバッグコーナー */
+	{
+		UI i=0, j=0;
+		ST_RAS_INFO	stRasInfo;
+		GetRasterInfo(&stRasInfo);
+		
+		printf("stRasInfo st,mid,ed,size=(%4d,%4d,%4d,%4d)\n", stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size);
+		
+		for(i=stRasInfo.st; i < stRasInfo.ed; i+=RASTER_NEXT)
+		{
+			US x, y;
+			SS pat;
+			
+			GetRasterIntPos( &x, &y, &pat, i );
+			
+			printf("[%3d]=(%4d,%4d,%4d), ", i, x, y, pat);
+			if((j%4) == 0)printf("\n");
+			j++;
+		}
+		printf("\n");
+	}
+#endif
 	printf("処理時間:Real=%3d[ms] PH=%3d[ms]\n", unTime_cal, unTime_cal_PH);
 	
 	return ret;
@@ -423,6 +469,9 @@ SS main(void)
 
 static void App_Init(void)
 {
+	/* タイマーD初期化 */
+	TimerD_INIT();
+	
 	/* 音楽の初期化 */
 	Init_Music();
 
@@ -439,11 +488,14 @@ static void App_Init(void)
 	
 	g_nCrtmod = CRTMOD(-1);	/* 現在のモードを返す */
 	
+	/* 動画 */
+	MOV_INIT();	/* 初期化処理 */
+	
 	/* グラフィック表示 */
 	G_INIT();	/*画面の初期設定*/
 
 	/* スプライト／ＢＧ表示 */
-	PCG_INIT();							/* スプライト／ＢＧの初期化 */
+	PCG_INIT();	/* スプライト／ＢＧの初期化 */
 
 	/* テキスト */
 	T_INIT();	/* テキストＶＲＡＭ初期化 */
@@ -451,10 +503,9 @@ static void App_Init(void)
 
 static void App_exit(void)
 {
-	CRTCRAS((void *)0, 0);		/* stop */
-	HSYNCST((void *)0);			/* stop */
-	VDISPST((void *)0, 0, 0);	/* stop */
-	TIMERDST((void *)0, 0, 1);	/* stop */
+	/* MFP */
+	MFP_EXIT();		/* MFP関連の解除 */
+	TimerD_EXIT();	/* Timer-Dの解除 */
 	
 	/* グラフィック表示 */
 	G_CLR_ON();
@@ -469,6 +520,9 @@ static void App_exit(void)
 	
 	/* 音楽停止 */
 	Exit_Music();
+
+	/* タイマーD終了 */
+	TimerD_EXIT();
 	
 	_dos_kflushio(0xFF);	/* キーバッファをクリア */
 

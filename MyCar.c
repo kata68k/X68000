@@ -22,7 +22,7 @@
 SS	g_speed = 0;
 
 /* 構造体定義 */
-ST_CARDATA	stMyCar = {0};
+ST_CARDATA	g_stMyCar = {0};
 
 /* 関数のプロトタイプ宣言 */
 SS	MyCar_G_Load(void);
@@ -49,14 +49,14 @@ SS	MyCar_G_Load(void)
 SS	GetMyCar(ST_CARDATA *stDat)
 {
 	SS	ret = 0;
-	*stDat = stMyCar;
+	*stDat = g_stMyCar;
 	return ret;
 }
 
 SS	SetMyCar(ST_CARDATA stDat)
 {
 	SS	ret = 0;
-	stMyCar = stDat;
+	g_stMyCar = stDat;
 	return ret;
 }
 
@@ -73,15 +73,15 @@ SS	UpdateMyCarInfo(SS input)
 	UC	bUpDown = 0;
 	
 	/* ステアリング操作 */
-	if((input & KEY_RIGHT) != 0u)	stMyCar.Steering += 1;	/* 右 */
-	if((input & KEY_LEFT) != 0u)	stMyCar.Steering -= 1;	/* 左 */
-	stMyCar.Steering = Mmax(Mmin(stMyCar.Steering, 31), -31);
+	if((input & KEY_RIGHT) != 0u)	g_stMyCar.Steering += 1;	/* 右 */
+	if((input & KEY_LEFT) != 0u)	g_stMyCar.Steering -= 1;	/* 左 */
+	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 31), -31);
 #if	0
 	if( ((uFreeRunCount % 4) == 0)
 		&& (g_speed != 0u) )
 	{
-		stMyCar.Steering = stMyCar.Steering + ((SS)(road_angle * g_speed) >> 6);	/* バランス調整要 */
-		vx = stMyCar.Steering;
+		g_stMyCar.Steering = g_stMyCar.Steering + ((SS)(road_angle * g_speed) >> 6);	/* バランス調整要 */
+		vx = g_stMyCar.Steering;
 	}
 	else{
 		/* 前回値保持 */
@@ -96,157 +96,157 @@ SS	UpdateMyCarInfo(SS input)
 	else{
 		if(ChatCancelSW((input & KEY_UPPER)!=0u, &bShiftPosFlag[0]) == TRUE)
 		{
-			if(stMyCar.ubShiftPos != 5)
+			if(g_stMyCar.ubShiftPos != 5)
 			{
 				bUpDown = 1;
 				ADPCM_Play(7);	/* SE:シフトアップ */
 			}
-			stMyCar.ubShiftPos = Mmin(stMyCar.ubShiftPos+1, 5);	/* 上 */
+			g_stMyCar.ubShiftPos = Mmin(g_stMyCar.ubShiftPos+1, 5);	/* 上 */
 		}
 		
 		if(ChatCancelSW((input & KEY_LOWER)!=0u, &bShiftPosFlag[1]) == TRUE)
 		{
-			if(stMyCar.ubShiftPos != 0)
+			if(g_stMyCar.ubShiftPos != 0)
 			{
 				bUpDown = 2;
 				ADPCM_Play(7);	/* SE:シフトダウン */
 			}
-			stMyCar.ubShiftPos = Mmax(stMyCar.ubShiftPos-1, 0);	/* 下 */
+			g_stMyCar.ubShiftPos = Mmax(g_stMyCar.ubShiftPos-1, 0);	/* 下 */
 		}
 	}
 #if 0
-	stMyCar.ubShiftPos = 2;	/* テスト用変速固定 */
+	g_stMyCar.ubShiftPos = 2;	/* テスト用変速固定 */
 #endif	
-	stMyCar.ubShiftPos = Mmax(Mmin(stMyCar.ubShiftPos, 5), 0);
+	g_stMyCar.ubShiftPos = Mmax(Mmin(g_stMyCar.ubShiftPos, 5), 0);
 	
 	if(bUpDown != 0u) 
 	{
-		stMyCar.uEngineRPM = (stMyCar.VehicleSpeed * uTM[stMyCar.ubShiftPos]) / 26;
-		stMyCar.uEngineRPM = Mmax(Mmin(9000, stMyCar.uEngineRPM), 750);
+		g_stMyCar.uEngineRPM = (g_stMyCar.VehicleSpeed * uTM[g_stMyCar.ubShiftPos]) / 26;
+		g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
 	}
 	
 	/* アクセル */
 	if((input & KEY_A) != 0u)		/* Aボタン */
 	{
-		switch(stMyCar.ubShiftPos)
+		switch(g_stMyCar.ubShiftPos)
 		{
 			case 0:
 			{
-				stMyCar.uEngineRPM += 200;
-				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += 200;
+//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			case 1:
 			{
-				stMyCar.uEngineRPM += 20;
-				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += 20;
+//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			case 2:
 			{
-				stMyCar.uEngineRPM += 15;
-				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += 15;
+//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			case 3:
 			{
-				stMyCar.uEngineRPM += 10;
-				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += 10;
+//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			case 4:
 			{
-				stMyCar.uEngineRPM += 6;
-				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += 6;
+//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			case 5:
 			{
-				stMyCar.uEngineRPM += 3;
-				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += 3;
+//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			default:
 			{
-				stMyCar.uEngineRPM += 100;
+				g_stMyCar.uEngineRPM += 100;
 			}
 			break;
 		}
 	}
 	else{
 		/* 回転数 */
-		switch(stMyCar.ubShiftPos)
+		switch(g_stMyCar.ubShiftPos)
 		{
 			case 0:
 			{
-				stMyCar.uEngineRPM -= 200;
+				g_stMyCar.uEngineRPM -= 200;
 			}
 			break;
 			case 1:
 			{
-				stMyCar.uEngineRPM -= 40;
+				g_stMyCar.uEngineRPM -= 40;
 			}
 			break;
 			case 2:
 			{
-				stMyCar.uEngineRPM -= 30;
+				g_stMyCar.uEngineRPM -= 30;
 			}
 			break;
 			case 3:
 			{
-				stMyCar.uEngineRPM -= 20;
+				g_stMyCar.uEngineRPM -= 20;
 			}
 			break;
 			case 4:
 			{
-				stMyCar.uEngineRPM -= 12;
+				g_stMyCar.uEngineRPM -= 12;
 			}
 			break;
 			case 5:
 			{
-				stMyCar.uEngineRPM -= 6;
+				g_stMyCar.uEngineRPM -= 6;
 			}
 			break;
 			default:
 			{
-				stMyCar.uEngineRPM -= 200;
+				g_stMyCar.uEngineRPM -= 200;
 			}
 			break;
 		}
 	}
-	stMyCar.uEngineRPM = Mmax(Mmin(9000, stMyCar.uEngineRPM), 750);
+	g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
 
 	/* 車速 */
-	if(stMyCar.ubShiftPos == 0u)		/* ニュートラル */
+	if(g_stMyCar.ubShiftPos == 0u)		/* ニュートラル */
 	{
-		stMyCar.VehicleSpeed -= 1;
+		g_stMyCar.VehicleSpeed -= 1;
 	}
 	else
 	{
 		/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 減速比 4.687 タイヤ周長2052.1mm */
 		/* タイヤ周長×６０×回転数／（１０００×変速比×減速比） */
-		stMyCar.VehicleSpeed = (SS)(((UI)26 * stMyCar.uEngineRPM) / uTM[stMyCar.ubShiftPos]);	
+		g_stMyCar.VehicleSpeed = (SS)(((UI)26 * g_stMyCar.uEngineRPM) / uTM[g_stMyCar.ubShiftPos]);	
 	}
 	
 	/* ブレーキ */
 	if( (input & KEY_B) != 0U )	/* Bボタン */
 	{
-		if(stMyCar.VehicleSpeed > 5)
+		if(g_stMyCar.VehicleSpeed > 5)
 		{
 			ADPCM_Play(4);	/* ブレーキ音 */
 		}
-		stMyCar.VehicleSpeed -= 30;	/* 変速比で変えたい */
-		stMyCar.ubBrakeLights = TRUE;	/* ブレーキランプ ON */
+		g_stMyCar.VehicleSpeed -= 30;	/* 変速比で変えたい */
+		g_stMyCar.ubBrakeLights = TRUE;	/* ブレーキランプ ON */
 	}
 	else
 	{
-		stMyCar.ubBrakeLights = FALSE;	/* ブレーキランプ OFF */
+		g_stMyCar.ubBrakeLights = FALSE;	/* ブレーキランプ OFF */
 	}
 
-	stMyCar.VehicleSpeed = Mmax(Mmin(310, stMyCar.VehicleSpeed), 0);
+	g_stMyCar.VehicleSpeed = Mmax(Mmin(310, g_stMyCar.VehicleSpeed), 0);
 	
-	if( (stMyCar.ubBrakeLights == TRUE)		/* ブレーキランプON */
-	||  (stMyCar.ubShiftPos == 0u)		)	/* ニュートラル */
+	if( (g_stMyCar.ubBrakeLights == TRUE)		/* ブレーキランプON */
+	||  (g_stMyCar.ubShiftPos == 0u)		)	/* ニュートラル */
 	{
 		speed_min = 0;
 	}
@@ -256,7 +256,7 @@ SS	UpdateMyCarInfo(SS input)
 	}
 
 	/* 車速（ゲーム内） */
-	g_speed = stMyCar.VehicleSpeed >> 3;	/* 1LSB 10km/h */
+	g_speed = g_stMyCar.VehicleSpeed >> 3;	/* 1LSB 10km/h */
 	g_speed = Mmax(Mmin(g_speed, 31), speed_min);
 
 	return ret;
@@ -299,7 +299,7 @@ SS	MyCar_Interior(UC bMode)
 		VibrationCT = 0;
 	}
 	
-	if(stMyCar.VehicleSpeed != 0)
+	if(g_stMyCar.VehicleSpeed != 0)
 	{
 		for(i = 0; i < ENEMYCAR_MAX; i++)
 		{
@@ -307,7 +307,7 @@ SS	MyCar_Interior(UC bMode)
 
 			if( (stEnemyCar.ubAlive == TRUE) && (stEnemyCar.z == 0) )
 			{
-				if( ((stEnemyCar.x - 8) <= stMyCar.Steering) && (stMyCar.Steering <= (stEnemyCar.x + 8)) )
+				if( ((stEnemyCar.x - 8) <= g_stMyCar.Steering) && (g_stMyCar.Steering <= (stEnemyCar.x + 8)) )
 				{
 					bHit = TRUE;
 				}
@@ -330,7 +330,7 @@ SS	MyCar_Interior(UC bMode)
 	HOME(0b10, x, y );				/* Screen 1 */
 
 	/* マスコットが揺れる */
-	if(stMyCar.VehicleSpeed == 0)
+	if(g_stMyCar.VehicleSpeed == 0)
 	{
 		if(rad == 180)
 		{
@@ -349,16 +349,16 @@ SS	MyCar_Interior(UC bMode)
 	{
 		US	width;
 		
-		width = 15 + (stMyCar.VehicleSpeed / 10);
+		width = 15 + (g_stMyCar.VehicleSpeed / 10);
 		
 		if(ubRadFlag == TRUE)
 		{
-			rad+=Mmax(stMyCar.VehicleSpeed/30, 1);
+			rad+=Mmax(g_stMyCar.VehicleSpeed/30, 1);
 			if(rad > 180 + width)ubRadFlag = FALSE;
 		}
 		else
 		{
-			rad-=Mmax(stMyCar.VehicleSpeed/30, 1);
+			rad-=Mmax(g_stMyCar.VehicleSpeed/30, 1);
 			if(rad < 180 - width)ubRadFlag = TRUE;
 		}
 	}
@@ -374,7 +374,7 @@ SS	MyCar_Interior(UC bMode)
 	/* タコメーター針 */
 	for( i = 0; i < 18; i++ )
 	{
-		if( ((i*500) <= stMyCar.uEngineRPM) && (stMyCar.uEngineRPM < ((i*500)+500)) )
+		if( ((i*500) <= g_stMyCar.uEngineRPM) && (g_stMyCar.uEngineRPM < ((i*500)+500)) )
 		{
 			/* 回転数でスプライトのパターンを決める */
 			break;
@@ -440,8 +440,8 @@ SS	MyCar_CourseOut(void)
 	SS	vx;
 	SS	rpm;
 	
-	vx	= stMyCar.Steering;
-	rpm	= stMyCar.uEngineRPM;
+	vx	= g_stMyCar.Steering;
+	rpm	= g_stMyCar.uEngineRPM;
 
 	if( Mabs(vx) > 25 )	/* コース外 */
 	{
@@ -459,7 +459,7 @@ SS	MyCar_CourseOut(void)
 			/* 何もしない */
 		}
 
-		stMyCar.uEngineRPM = (stMyCar.uEngineRPM>>1) + (stMyCar.uEngineRPM>>2)  + (stMyCar.uEngineRPM>>3);	/* 減速処理 */
+		g_stMyCar.uEngineRPM = (g_stMyCar.uEngineRPM>>1) + (g_stMyCar.uEngineRPM>>2)  + (g_stMyCar.uEngineRPM>>3);	/* 減速処理 */
 	}
 	
 	return ret;

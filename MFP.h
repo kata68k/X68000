@@ -17,19 +17,16 @@ enum{
 
 extern SS MFP_INIT(void);
 extern SS MFP_EXIT(void);
-extern void interrupt Timer_D_Func(void);
-extern void interrupt Hsync_Func(void);
-extern void interrupt Raster_Func(void);
-extern void interrupt Vsync_Func(void);
+extern SS MFP_RESET(void);
+extern SS TimerD_INIT(void);
+extern SS TimerD_EXIT(void);
+extern UC GetNowTime(UI *);		/* 現在の時間を取得する */
+extern UC SetNowTime(UI);		/* 現在の時間を設定する */
+extern UC GetStartTime(UI *);	/* 開始の時間を取得する */
+extern UC SetStartTime(UI);		/* 開始の時間を設定する */
+extern SS SetRasterIntData(void *, size_t);
+extern SS GetRasterIntPos(US *, US *, US *, US);
 extern SS vwait(SS);
-extern SS GetNowTime(UI *);		/* 現在の時間を取得する */
-extern SS SetNowTime(UI);		/* 現在の時間を設定する */
-extern SS GetStartTime(UI *);	/* 開始の時間を取得する */
-extern SS SetStartTime(UI);		/* 開始の時間を設定する */
-extern SS GetRasterPos(US *, US *, US);
-
-extern SS SetRasterVal(void *, size_t);	/* ラスター専用のバッファにコピーする */
-extern SS SetRasterPal(void *, size_t);	/* ラスター専用(PAL)のバッファにコピーする */
 
 
 #endif	/* MFP_H */

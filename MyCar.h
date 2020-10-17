@@ -3,6 +3,11 @@
 
 #include "inc/usr_define.h"
 
+#define MY_CAR_0_W	(65)
+#define MY_CAR_0_H	(52)
+#define MY_CAR_1_W	(256)
+#define MY_CAR_1_H	(224)
+
 /* \‘¢‘Ì’è‹` */
 
 /* Ô‚Ì\‘¢‘Ì */

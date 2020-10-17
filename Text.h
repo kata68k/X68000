@@ -5,8 +5,9 @@
 
 extern void T_INIT(void);
 extern void T_EXIT(void);
-extern void T_SetBG_to_Text(void);
 extern void T_Clear(void);
+extern void T_PALET(void);
+extern void T_SetBG_to_Text(void);
 extern void T_TopScore(void);
 extern void T_Time(void);
 extern void T_Score(void);

@@ -3,12 +3,17 @@
 
 #include <iocslib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "inc/usr_macro.h"
 #include "Graphic.h"
+
+#include "Course_Obj.h"
+#include "EnemyCAR.h"
 #include "Draw.h"
 #include "FileManager.h"
+#include "MyCar.h"
 
 #define	CONV_PAL	(0xB4)
 #define	TRANS_PAL	(0x00)
@@ -19,7 +24,7 @@ static SC	cg_list[CG_MAX][256]	=	{0};
 static UI	cg_list_max	=	0u;
 
 /* グローバル構造体 */
-ST_CRT	stCRT[CRT_MAX] = {0};
+static ST_CRT	g_stCRT[CRT_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 SS	GetCRT(ST_CRT *, SS);
@@ -31,6 +36,7 @@ void G_Background(void);
 void G_Palette(void);
 SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
 SS	G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
+SI	G_CLR(void);
 SS	G_CLR_AREA(SS, US, SS, US, UC);
 SS	G_CLR_ALL_OFFSC(UC);
 SS	G_Load(UC, US, US, US);
@@ -42,7 +48,7 @@ SS	GetCRT(ST_CRT *stDat, SS Num)
 	
 	if(Num < CRT_MAX)
 	{
-		*stDat = stCRT[Num];
+		*stDat = g_stCRT[Num];
 	}
 	else
 	{
@@ -58,7 +64,7 @@ SS	SetCRT(ST_CRT stDat, SS Num)
 	
 	if(Num < CRT_MAX)
 	{
-		stCRT[Num] = stDat;
+		g_stCRT[Num] = stDat;
 	}
 	else
 	{
@@ -85,29 +91,29 @@ void G_INIT(void)
 	}
 
 	/* CRTの設定 */
-	stCRT[0].view_offset_x	= X_OFFSET;
-	stCRT[0].view_offset_y	= Y_MIN_DRAW;
-	stCRT[0].hide_offset_x	= X_OFFSET;
-	stCRT[0].hide_offset_y	= Y_OFFSET;
-	stCRT[0].BG_offset_x	= 0;
-	stCRT[0].BG_offset_y	= 0;
-	stCRT[0].BG_under		= BG_0_UNDER;
+	g_stCRT[0].view_offset_x	= X_OFFSET;
+	g_stCRT[0].view_offset_y	= Y_MIN_DRAW;
+	g_stCRT[0].hide_offset_x	= X_OFFSET;
+	g_stCRT[0].hide_offset_y	= Y_OFFSET;
+	g_stCRT[0].BG_offset_x	= 0;
+	g_stCRT[0].BG_offset_y	= 0;
+	g_stCRT[0].BG_under		= BG_0_UNDER;
 	
-	stCRT[1].view_offset_x	= X_OFFSET;
-	stCRT[1].view_offset_y	= Y_OFFSET;
-	stCRT[1].hide_offset_x	= X_OFFSET;
-	stCRT[1].hide_offset_y	= Y_MIN_DRAW;
-	stCRT[1].BG_offset_x	= 0;
-	stCRT[1].BG_offset_y	= 32;
-	stCRT[1].BG_under		= BG_1_UNDER;
+	g_stCRT[1].view_offset_x	= X_OFFSET;
+	g_stCRT[1].view_offset_y	= Y_OFFSET;
+	g_stCRT[1].hide_offset_x	= X_OFFSET;
+	g_stCRT[1].hide_offset_y	= Y_MIN_DRAW;
+	g_stCRT[1].BG_offset_x	= 0;
+	g_stCRT[1].BG_offset_y	= 32;
+	g_stCRT[1].BG_under		= BG_1_UNDER;
 
-	stCRT[2].view_offset_x	= X_OFFSET;
-	stCRT[2].view_offset_y	= Y_MIN_DRAW;
-	stCRT[2].hide_offset_x	= X_OFFSET;
-	stCRT[2].hide_offset_y	= Y_OFFSET;
-	stCRT[2].BG_offset_x	= 0;
-	stCRT[2].BG_offset_y	= 32;
-	stCRT[2].BG_under		= BG_1_UNDER;
+	g_stCRT[2].view_offset_x	= X_OFFSET;
+	g_stCRT[2].view_offset_y	= Y_MIN_DRAW;
+	g_stCRT[2].hide_offset_x	= X_OFFSET;
+	g_stCRT[2].hide_offset_y	= Y_OFFSET;
+	g_stCRT[2].BG_offset_x	= 0;
+	g_stCRT[2].BG_offset_y	= 32;
+	g_stCRT[2].BG_under		= BG_1_UNDER;
 
 	CRTMOD(11);				/* 偶数：標準解像度、奇数：標準 */
 	G_CLR_ON();				/* グラフィックのクリア */
@@ -626,7 +632,7 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 		case 0:
 		{
 			x_min = X_OFFSET;
-			x_max = X_MAX_DRAW;
+			x_max = X_MAX_DRAW - X_MAX_DRAW_OF;
 			y_min = Y_MIN_DRAW;
 			y_max = V_SYNC_MAX;
 			break;
@@ -635,7 +641,7 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 		default:
 		{
 			x_min = X_OFFSET;
-			x_max = X_MAX_DRAW;
+			x_max = X_MAX_DRAW - X_MAX_DRAW_OF;
 			y_min = Y_OFFSET;
 			y_max = Y_OFFSET + V_SYNC_MAX;
 			break;
@@ -661,8 +667,8 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 	}
 	else if((dst_x >= x_min) && (dst_ex > x_max))
 	{
-		src_ex -= dst_ex - X_MAX_DRAW;
-		dst_ex = X_MAX_DRAW;
+		src_ex -= dst_ex - X_MAX_DRAW - X_MAX_DRAW_OF;
+		dst_ex = X_MAX_DRAW - X_MAX_DRAW_OF;
 	}
 	else if(dst_x > x_max)	/* 画面外 */
 	{
@@ -717,6 +723,11 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 }
 
 /* 画面のクリア */
+SI G_CLR(void)
+{
+	return _iocs_wipe();
+}
+
 SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 {
 	SS	ret = 0;
@@ -818,12 +829,12 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 	SS	ret = 0;
 	
 	/* 描画可能枠再設定 */
-	WINDOW( stCRT[bMode].hide_offset_x, 
-			stCRT[bMode].hide_offset_y,
-			stCRT[bMode].hide_offset_x + WIDTH,
-			stCRT[bMode].hide_offset_y + 152);	
+	WINDOW( g_stCRT[bMode].hide_offset_x, 
+			g_stCRT[bMode].hide_offset_y,
+			g_stCRT[bMode].hide_offset_x + WIDTH,
+			g_stCRT[bMode].hide_offset_y + 152);	
 	/* 消去 */
-	G_CLR_AREA(stCRT[bMode].hide_offset_x, WIDTH, stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
+	G_CLR_AREA(g_stCRT[bMode].hide_offset_x, WIDTH, g_stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
 
 	return	ret;
 }
@@ -836,6 +847,5 @@ SS G_Load(UC bCGNum, US uX, US uY, US uArea)
 
 	return	ret;
 }
-
 
 #endif	/* GRAPHIC_C */
