@@ -402,10 +402,12 @@ SS main(void)
 //				Message_Num(&, 				12,  9, 2, MONI_Type_SS, "%2d");
 //				Message_Num(&,		 			20,  9, 2, MONI_Type_SS, "%3d");
 				
-//				Message_Num(&uRas_st,			 0, 10, 2, MONI_Type_US, "%3d");
-//				Message_Num(&uRas_mid,			 7, 10, 2, MONI_Type_US, "%3d");
-//				Message_Num(&uRas_ed,			13, 10, 2, MONI_Type_US, "%3d");
-//				Message_Num(&uRas_size,			20, 10, 2, MONI_Type_US, "%3d");
+//				ST_RAS_INFO	stRasInfo;
+//				GetRasterInfo(&stRasInfo);
+//				Message_Num(&stRasInfo.st,			 0, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&stRasInfo.mid,			 7, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&stRasInfo.ed,			13, 10, 2, MONI_Type_US, "%3d");
+//				Message_Num(&stRasInfo.size,		20, 10, 2, MONI_Type_US, "%3d");
 				
 //				Message_Num(&uPal_tmp[uRas_st],	 0, 11, 2, MONI_Type_US, "%3d");
 //				Message_Num(&uRas_tmp[uRas_st],	 6, 11, 2, MONI_Type_US, "%3d");
@@ -455,8 +457,8 @@ SS main(void)
 			
 			GetRasterIntPos( &x, &y, &pat, i );
 			
-			printf("[%3d]=(%4d,%4d,%4d), ", i, x, y, pat);
-			if((j%4) == 0)printf("\n");
+			printf("[%3d]=(%4d,%4d,%4d)=(%4d), ", i, x, y, pat, (y - RASTER_MIN + i - 128) );
+			if((j%3) == 0)printf("\n");
 			j++;
 		}
 		printf("\n");

@@ -45,6 +45,9 @@ SS vwait(SS);
 SS MFP_INIT(void)
 {
 	SI	vdispst = -1;
+	volatile UC *MFP_TACR = (UC *)0xe88019;
+	volatile UC *MFP_TADR = (UC *)0xe8801f;
+
 	/* ラスタ割り込み */
 	g_bRasterSET = FALSE;
 	ras_count = 0;
@@ -53,6 +56,11 @@ SS MFP_INIT(void)
 	Hsync_count = 0;
 	/* V-Sync割り込み */
 	Vsync_count = 0;
+
+	//VDISPST 初回だけバグあり（EXCEED.さん）
+	*MFP_TACR = 0x00;	/* タイマーＡを止める */
+	*MFP_TADR = 0x01;	/* カウンタを設定(0=256回) */
+	*MFP_TACR = 0x08;	/* イベントカウントモードに設定する */
 #ifdef 	MACS_MOON
 	vdispst = MACS_Vsync(Vsync_Func);		/* V-Sync割り込み */
 #else	/* MACS_MOON */
@@ -219,12 +227,20 @@ static void interrupt Raster_Func(void)
 //	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
 
 	US nNum = ras_count;
+
+#ifdef DEBUG	/* デバッグコーナー */
+	UC	bDebugMode;
+	US	uDebugNum;
+	GetDebugMode(&bDebugMode);
+	GetDebugNum(&uDebugNum);
+#endif
 	
 	ras_count += RASTER_NEXT;		/* 次のラスタ割り込み位置の計算 */
 	*CRTC_R09 = ras_count;			/* 次のラスタ割り込み位置の設定 */
 
 	*BG0scroll_x	= g_stRasterInt[nNum].x;	/* BG0のX座標の設定 */
 	*BG0scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
+//	*BG0scroll_y	= uDebugNum + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
 //	*BG1scroll_x	= g_stRasterInt[nNum].x;	/* BG1のX座標の設定 */
 //	*BG1scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG1のY座標の設定 */
 //	*BG1scroll_x	= 256;						/* BG1のX座標の設定 *//* 空のコントロール */
@@ -236,25 +252,25 @@ static void interrupt Raster_Func(void)
 
 static void interrupt Vsync_Func(void)
 {
-	SI	vdispst = -1;
 	volatile US *BG0scroll_x  = (US *)0xEB0800;
 	volatile US *BG0scroll_y  = (US *)0xEB0802;
 	volatile US *BG1scroll_x  = (US *)0xEB0804;
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
 //	volatile US *BGCTRL		  = (US *)0xEB0808;
 
+	/* V-Sync割り込み処理 */
+#ifdef 	MACS_MOON
+	/* 何もしない */
+#else	/* MACS_MOON */
+//	SI	vdispst = -1;
+	vdispst = VDISPST((void *)0, 0, 0);	/* stop */
+#endif	/* MACS_MOON */
+
 //	*BGCTRL = Mbclr(*BGCTRL, Bit_9);
 	*BG0scroll_x	= 256;					/* BG0のX座標の設定 *//* 空のコントロール */
 	*BG0scroll_y	= g_stRasterInt[1].y;	/* BG0のY座標の設定 *//* 空のコントロール */
 	*BG1scroll_x	= 256;					/* BG1のX座標の設定 *//* 空のコントロール */
 	*BG1scroll_y	= g_stRasterInt[1].y;	/* BG1のY座標の設定 *//* 空のコントロール */
-
-	/* V-Sync割り込み処理 */
-#ifdef 	MACS_MOON
-//	vdispst = MACS_Vsync_R(Vsync_Func);	/* stop */
-#else	/* MACS_MOON */
-	vdispst = VDISPST((void *)0, 0, 0);	/* stop */
-#endif	/* MACS_MOON */
 
 	/* H-Sync割り込み処理 */
 	Hsync_count = 0;
@@ -295,7 +311,7 @@ static void interrupt Vsync_Func(void)
 	/* V-Sync割り込み処理 */
 	Vsync_count++;
 #ifdef 	MACS_MOON
-//	vdispst = MACS_Vsync(Vsync_Func);		/* V-Sync割り込み */
+	/* 何もしない */
 #else	/* MACS_MOON */
 	vdispst = VDISPST(Vsync_Func, 0, 1);	/* V-Sync割り込み 帰線 */
 #endif	/* MACS_MOON */

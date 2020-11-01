@@ -37,6 +37,7 @@ SS	InitCourseObj(void)
 		g_stCourse_Obj[i].x = 48*(i/2);
 		g_stCourse_Obj[i].y = 48*(i/2);
 		g_stCourse_Obj[i].z = 0;
+		g_stCourse_Obj[i].uTime = 0xFFFF;
 		g_stCourse_Obj[i].ubAlive = TRUE;
 	}
 	
@@ -49,7 +50,6 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 	US	uCount;
 
 	GetRoadCycleCount(&uCount);
-	uCount &= 0xFFF;
 
 	if(g_stCourse_Obj[bNum].ubAlive == TRUE)
 	{
@@ -59,14 +59,17 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		US	ras_x, ras_y, ras_pat, ras_num;
 		UC	bEven;
 		SS	Out_Of_Disp;
+		US	uTime;
 
 		ST_CRT	stCRT;
 		ST_RAS_INFO	stRasInfo;
-
+		ST_ROAD_INFO	stRoadInfo;
+		
 		GetCRT(&stCRT, bMode);
 		GetRasterInfo(&stRasInfo);
+		GetRoadInfo(&stRoadInfo);
 
-		if((bNum % 2) == 0)
+		if((bNum & 0x01) == 0)
 		{
 			bEven = TRUE;
 		}
@@ -75,70 +78,70 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 			bEven = FALSE;
 		}
 
+		/* 前回値 */
 		x = g_stCourse_Obj[bNum].x;
 		y = g_stCourse_Obj[bNum].y;
-		z = g_stCourse_Obj[bNum].z;	/* 共通カウンタの前回値 */
+		z = g_stCourse_Obj[bNum].z;
+		uTime = g_stCourse_Obj[bNum].uTime;	/* 共通カウンタの前回値 */
 
-
-		if(uCount  != z)	/* 道路更新あり */
+		if(uCount > uTime)
 		{
-			if(uCount >= z)
-			{
-				y += uCount - z;			/* 変化量 */
-			}
-			else
-			{
-				y += (0xFFF - z) + uCount;	/* 変化量 */
-			}
+			y += (uCount - uTime);	/* 変化量 */
+		}
+		y = Mmax(y, 2);
+		
+		if(ROAD_SIZE > y)
+		{
+			ras_num = (US)(stRasInfo.st + y);	/* ラスター情報の配列番号を算出 */
+			GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
 			
+			/* 2次関数的に増やす要素＋遠近法で増やす要素 */
+			if(ras_x < 256)	/* 道の左側 */
+			{
+				x_ofst = (SS)ras_x;
+			}
+			else	/* 道の右側 */
+			{
+				x_ofst = (SS)ras_x - 512;
+			}
+			/* 位置 */
+			x = 4 * (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);	/* 縦位置から横移動量を計算 */
+			if(bEven == TRUE)	/* 左 */
+			{
+				dx = stCRT.hide_offset_x + (WIDTH>>1) - x_ofst - (0 - x);
+			}
+			else				/* 右 */
+			{
+				dx = stCRT.hide_offset_x + (WIDTH>>1) - x_ofst - x;
+			}
+			/* 水平線 */
+			dy = stCRT.hide_offset_y + stRoadInfo.Horizon;
+			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った */
+			dz = Mmin( Mmax( 3 - (((x<<8) / (x + 256))>>5) , 0), 3 );
+			/* 描画 */
+			Out_Of_Disp = Put_CouseObject(	dx,	dy,	dz,	bMode_rev,	bEven);
+
+			if(Out_Of_Disp < 0)	/* 描画領域外 */
+			{
+				x = 0;
+				y = 0;
+				z = 0;
+				g_stCourse_Obj[bNum].ubAlive = FALSE;
+			}
 		}
 		else
 		{
-			/* nop */
-		}
-		ras_num = (US)(stRasInfo.st + y);
-		
-		x = 4 * (y + (ras_num - 80));
-
-		GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);
-		if(ras_x >= 256)
-		{
-			x_ofst = (SS)ras_x - 512;
+			x = 0;
+			y = 0;
+			z = 0;
+			g_stCourse_Obj[bNum].ubAlive = FALSE;
 		}
 
 		g_stCourse_Obj[bNum].x = x;
 		g_stCourse_Obj[bNum].y = y;
+		g_stCourse_Obj[bNum].z = z;
+		g_stCourse_Obj[bNum].uTime = uCount;
 		
-		/* 2次関数的に増やす要素＋遠近法で増やす要素 */
-		x = x - x_ofst;/*+ (ras_num/4)*/ /*+ ((96 * 16) / (Mmax((96-dx),0) + 16))*/
-		
-		if(bEven == TRUE)	/* 左 */
-		{
-//			x = 0 - (dy * 3) - ras_x - 48;
-			dx = 0 - x;
-		}
-		else				/* 右 */
-		{
-			dx = x;
-		}
-		dy = y;
-
-		/* 表示範囲 */
-		dz = (128 - x_ofst) + PINETREE_1_W;
-		
-		Out_Of_Disp = Put_CouseObject(
-			stCRT.hide_offset_x + (WIDTH>>1) + dx,
-			stCRT.hide_offset_y + stRasInfo.horizon,
-			//((32) / (8 + dy)),
-			Mmin( Mmax( 3 - (((x<<8) / (x + dz))>>5) , 0), 3 ),	/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った */
-			bMode_rev,
-			bEven);
-
-		if(Out_Of_Disp < 0)
-		{
-			g_stCourse_Obj[bNum].ubAlive = FALSE;
-		}
-
 #ifdef DEBUG	/* デバッグコーナー */
 		if( bNum == 0 )
 		{
@@ -162,9 +165,10 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		g_stCourse_Obj[bNum].ubType = 0;
 		g_stCourse_Obj[bNum].x = 0;
 		g_stCourse_Obj[bNum].y = 0;
+		g_stCourse_Obj[bNum].z = 0;
+		g_stCourse_Obj[bNum].uTime = uCount;
 		g_stCourse_Obj[bNum].ubAlive = TRUE;
 	}
-	g_stCourse_Obj[bNum].z = uCount;
 	
 	return ret;
 }
@@ -173,23 +177,18 @@ SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
 {
 	SS	ret = 0;
 	SS	i;
-	SS	dx, dy;
 	US	w, h;
 	US	height_sum = 0u;
 	
 	w = PINETREE_1_W >> Size;
 	h = PINETREE_1_H >> Size;
-
-	dx = x;
-//	dy = y - (h >> 1);
-	dy = y;
 	
 	for(i = 1; i <= Size; i++)
 	{
 		height_sum += (PINETREE_1_H >> (i-1));
 	}
 	
-	ret = G_BitBlt(	dx,		w,			dy,	h,	1,
+	ret = G_BitBlt(	x,		w,			y,	h,	1,
 					140,	w,	height_sum,	h,	1,
 					ubMode, POS_MID, POS_CENTER);
 	

@@ -13,7 +13,6 @@ typedef struct
 	US	mid;		/* 中間位置 */
 	US	ed;			/* 終了位置 */
 	US	size;		/* 開始と終了の差分 */
-	US	horizon;	/* 水平線 */
 }	ST_RAS_INFO;
 
 /* ラスター割り込み情報の構造体 */
@@ -49,6 +48,8 @@ extern SS GetRasterInfo(ST_RAS_INFO *);
 extern SS SetRasterInfo(ST_RAS_INFO);
 extern SS GetRasterPos(US *, US *, US);
 
+extern SS	GetRoadInfo(ST_ROAD_INFO *);
+extern SS	SetRoadInfo(ST_ROAD_INFO);
 extern void Road_Init(US);
 extern UL GetRoadDataAddr(void);
 extern SS GetRoadCycleCount(US *);

@@ -50,11 +50,16 @@
 
 /* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
 #define RASTER_NEXT	(2)
-#define RASTER_MIN	(16)//表示開始位置(40,16)
-#define RASTER_MAX	(256)//表示終了位置(552,256)
+#define RASTER_MIN	(16)		//表示開始位置(40,16)
+#define RASTER_MAX	(256)		//表示終了位置(552,256)
 #define RASTER_SIZE	(RASTER_MAX-RASTER_MIN)
-#define ROAD_SIZE	(96)
-#define ROAD_POINT	(128)
+#define ROAD_SIZE	(96)		/* BGの道のサイズ */
+#define ROAD_ST_POINT	(128)	/* BGの道の開始位置 */
+#define ROAD_ED_POINT	(190)	/* BGの道の開始位置 */
+#define ROAD_0_MIN		(32)	/* BGの道の最小(mode0)未定 */
+#define ROAD_0_MAX		(72)	/* BGの道の最大(mode0)未定 */
+#define ROAD_1_MIN		(32)	/* BGの道の最小(mode1) */
+#define ROAD_1_MAX		(72)	/* BGの道の最大(mode1) */
 
 /* スプライトＰＣＧパターン最大数 */
 #define	PCG_MAX	(256)

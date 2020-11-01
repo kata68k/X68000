@@ -16,6 +16,7 @@ typedef struct
 	SS	x;				/* X座標 */
 	SS	y;				/* Y座標 */
 	SS	z;				/* Z座標(倍率) */
+	US	uTime;			/* 時間 */
 	UC	ubAlive;		/* 表示の状態 */
 }	ST_COURSE_OBJ;
 
