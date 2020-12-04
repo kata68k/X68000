@@ -51,7 +51,7 @@ SS MFP_INIT(void)
 	/* ƒ‰ƒXƒ^Š„‚è‚İ */
 	g_bRasterSET = FALSE;
 	ras_count = 0;
-	memset(g_stRasterInt, 0, sizeof(ST_RASTER_INT) * RASTER_MAX); 
+	memset(g_stRasterInt, 0, sizeof(ST_RASTER_INT) * RASTER_MAX);
 	/* H-SyncŠ„‚è‚İ */
 	Hsync_count = 0;
 	/* V-SyncŠ„‚è‚İ */

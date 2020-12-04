@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iocslib.h>
+#include <doslib.h>
 
 #include "inc/usr_macro.h"
 #include "PCG.h"
@@ -74,7 +75,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	UL	uPCG;
 	UL	uPCG_ARY[8];
 	UL	*pDstWork, *pSrcWork;
-	UC	*pBuf, *pDstBuf, *pSrcBuf;
+	UC	*pBuf, *pDstBuf = NULL, *pSrcBuf = NULL;
 	UL	uADDR;
 	UL	uPointer_ADR, uPointer_ADR_X, uPointer_ADR_Y, uPointer_ADR_subX, uPointer_ADR_subY;
 	US	uMem_size;
@@ -82,7 +83,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	UL	code = 0;
 	UC	V=0, H=0;
 	UC	spNum;	
-	SC	bEx_num=0;
+//	SC	bEx_num=0;
 	
 	/* src size */
 	width =  16 * (SS)bX_num;
@@ -101,8 +102,8 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 //	Message_Num(&bEx_num, 11, 9, 2, MONI_Type_SC, "%2d");
 	
 	/* ì‹ÆƒGƒŠƒAŠm•Û */
-	pSrcBuf = (UC*)malloc( (size_t)uMem_size );
-	if(pSrcBuf == NULL)
+	pSrcBuf = (UC*)MyMalloc( (SI)uMem_size );
+	if( pSrcBuf == NULL )
 	{
 		return;
 	}
@@ -164,11 +165,11 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	height = 16 * Mmax(((SS)bY_num + bEx_num), 1);
 	uMem_size = width * height * sizeof(UC);
 #endif
-	pDstBuf = (UC *)malloc( (size_t)uMem_size );
-	if(pDstBuf == NULL)
+	
+	pDstBuf = (UC*)MyMalloc( (SI)uMem_size );
+	if( pDstBuf == NULL )
 	{
-		/* ƒƒ‚ƒŠ‚Ì‰ð•ú */
-		free(pSrcBuf);
+		MyMfree(pSrcBuf);	/* ƒƒ‚ƒŠ‰ð•ú */
 		return;
 	}
 	pBuf = pDstBuf;
@@ -213,8 +214,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 			}
 		}
 	}
-	/* ƒƒ‚ƒŠ‚Ì‰ð•ú */
-	free(pSrcBuf);
+	MyMfree(pSrcBuf);	/* ƒƒ‚ƒŠ‰ð•ú */
 
 	/* CG -> PCG */
 	pBuf = pDstBuf;
@@ -276,8 +276,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 		uPointer_ADR_Y += 0x800ul;
 	}
 	
-	/* ƒƒ‚ƒŠ‚Ì‰ð•ú */
-	free(pDstBuf);
+	MyMfree(pDstBuf);	/* ƒƒ‚ƒŠ‰ð•ú */
 
 	/* PCG -> SP */
 	uPointer_ADR = (UL)pDst;

@@ -34,8 +34,8 @@ SS	InitCourseObj(void)
 	for(i=0; i<COURSE_OBJ_MAX; i++)
 	{
 		g_stCourse_Obj[i].ubType = 0;
-		g_stCourse_Obj[i].x = 48*(i/2);
-		g_stCourse_Obj[i].y = 48*(i/2);
+		g_stCourse_Obj[i].x = 0;
+		g_stCourse_Obj[i].y = 4*(i/2);
 		g_stCourse_Obj[i].z = 0;
 		g_stCourse_Obj[i].uTime = 0xFFFF;
 		g_stCourse_Obj[i].ubAlive = TRUE;
@@ -55,6 +55,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 	{
 		SS	x, y, z;
 		SS	dx, dy, dz;
+		SS	my;
 		SS	x_ofst = 0;
 		US	ras_x, ras_y, ras_pat, ras_num;
 		UC	bEven;
@@ -83,6 +84,10 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		y = g_stCourse_Obj[bNum].y;
 		z = g_stCourse_Obj[bNum].z;
 		uTime = g_stCourse_Obj[bNum].uTime;	/* 共通カウンタの前回値 */
+		if(uTime == 0xFFFF)
+		{
+			uTime = uCount;
+		}
 
 		if(uCount > uTime)
 		{
@@ -90,12 +95,13 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		}
 		y = Mmax(y, 2);
 		
-		if(ROAD_SIZE > y)
+		my = (y * y) >> 3;
+		
+		if((ROAD_SIZE-RASTER_NEXT) > my)
 		{
-			ras_num = (US)(stRasInfo.st + y);	/* ラスター情報の配列番号を算出 */
+			ras_num = (US)(stRasInfo.st + my);	/* ラスター情報の配列番号を算出 */
 			GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
 			
-			/* 2次関数的に増やす要素＋遠近法で増やす要素 */
 			if(ras_x < 256)	/* 道の左側 */
 			{
 				x_ofst = (SS)ras_x;
@@ -106,18 +112,20 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 			}
 			/* 位置 */
 			x = 4 * (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);	/* 縦位置から横移動量を計算 */
+
+			dx = stCRT.hide_offset_x + (WIDTH>>1) - 8 - x_ofst;
 			if(bEven == TRUE)	/* 左 */
 			{
-				dx = stCRT.hide_offset_x + (WIDTH>>1) - x_ofst - (0 - x);
+				dx += x;
 			}
 			else				/* 右 */
 			{
-				dx = stCRT.hide_offset_x + (WIDTH>>1) - x_ofst - x;
+				dx -= x;
 			}
 			/* 水平線 */
 			dy = stCRT.hide_offset_y + stRoadInfo.Horizon;
 			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った */
-			dz = Mmin( Mmax( 3 - (((x<<8) / (x + 256))>>5) , 0), 3 );
+			dz = Mmin( Mmax( 3 - (((x<<8) / (x + 224))>>5) , 0), 3 );
 			/* 描画 */
 			Out_Of_Disp = Put_CouseObject(	dx,	dy,	dz,	bMode_rev,	bEven);
 
@@ -145,9 +153,9 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 #ifdef DEBUG	/* デバッグコーナー */
 		if( bNum == 0 )
 		{
-	//		Message_Num(&g_stCourse_Obj[bNum].x,	 0,  9, 2, MONI_Type_SS, "%4d");
-	//		Message_Num(&g_stCourse_Obj[bNum].y, 	 6,  9, 2, MONI_Type_SS, "%4d");
-	//		Message_Num(&g_stCourse_Obj[bNum].z, 	12,  9, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&dx,	 0,  9, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&dy, 	 6,  9, 2, MONI_Type_SS, "%4d");
+	//		Message_Num(&dz, 	12,  9, 2, MONI_Type_SS, "%4d");
 	//		Message_Num(&ras_x, 			 0, 10, 2, MONI_Type_US, "%4d");
 	//		Message_Num(&ras_y, 			 6, 10, 2, MONI_Type_US, "%4d");
 	//		Message_Num(&x_ofst, 			 0, 11, 2, MONI_Type_SS, "%4d");

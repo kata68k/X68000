@@ -9,6 +9,8 @@
 #include "MyCar.h"
 #include "OverKata.h"
 #include "APL_Math.h"
+#include "Course_Obj.h"
+#include "Draw.h"
 #include "Input.h"
 #include "EnemyCAR.h"
 #include "FileManager.h"
@@ -28,20 +30,22 @@ ST_CARDATA	g_stMyCar = {0};
 SS	MyCar_G_Load(void);
 SS	GetMyCar(ST_CARDATA *stDat);
 SS	SetMyCar(ST_CARDATA stDat);
-SS	UpdateMyCarInfo(SS);
+SS	MyCarInfo_Init(void);
+SS	MyCarInfo_Update(SS);
 SS	MyCar_Interior(UC);
 SS	MyCar_CourseOut(void);
 SS	GetMyCarSpeed(SS *);
-
+void MyCar_Image(void);
+void MyCar_Background(void);
 
 /* 関数 */
 SS	MyCar_G_Load(void)
 {
 	SS	ret = 0;
 	
-	G_MyCar();		/* 自車の表示 */
-
-	G_Background();	/* 背景の表示 */
+	MyCar_Image();		/* 自車の表示 */
+	
+	MyCar_Background();	/* 背景の表示 */
 
 	return ret;
 }
@@ -60,7 +64,26 @@ SS	SetMyCar(ST_CARDATA stDat)
 	return ret;
 }
 
-SS	UpdateMyCarInfo(SS input)
+SS	MyCarInfo_Init(void)
+{
+	SS	ret = 0;
+	
+	g_stMyCar.ubCarType		= 0u;	/* 車の種類 */
+	g_stMyCar.uEngineRPM	= 0u;	/* エンジン回転数 */
+	g_stMyCar.VehicleSpeed	= 0;	/* 車速 */
+	g_stMyCar.Steering		= 0;	/* ステア */
+	g_stMyCar.ubShiftPos	= 0u;	/* ギア段 */
+	g_stMyCar.bThrottle		= 0;		/* スロットル開度 */
+	g_stMyCar.ubBrakeLights	= FALSE;	/* ブレーキライト */
+	g_stMyCar.ubHeadLights	= FALSE;	/* ヘッドライト */
+	g_stMyCar.ubWiper		= FALSE;	/* ワイパー */
+	g_stMyCar.bTire			= 0;	/* タイヤの状態 */
+	g_stMyCar.ubOBD			= FALSE;	/* 故障の状態 */
+	
+	return ret;
+}
+
+SS	MyCarInfo_Update(SS input)
 {
 	SS	ret = 0;
 	SS	speed_min;
@@ -242,6 +265,8 @@ SS	UpdateMyCarInfo(SS input)
 	{
 		g_stMyCar.ubBrakeLights = FALSE;	/* ブレーキランプ OFF */
 	}
+	
+	/* 衝突判定 */
 
 	g_stMyCar.VehicleSpeed = Mmax(Mmin(310, g_stMyCar.VehicleSpeed), 0);
 	
@@ -368,7 +393,9 @@ SS	MyCar_Interior(UC bMode)
 	y =  0 + ((-32 * APL_Cos(rad)) >> 8) - Vibration;
 
 	palNum = 9;
+#if 1
 	GetDebugNum(&nRatio);
+#endif	
 	PCG_Rotation((US *)PCG_dst, (US *)PCG_src, 3, 3, x, y, &sp_num, palNum, (nRatio-0x80), 180-rad);
 
 	/* タコメーター針 */
@@ -474,6 +501,229 @@ SS	GetMyCarSpeed(SS *speed)
 	return ret;
 }
 
+void MyCar_Image(void)
+{
+	SS x,y;
+
+	/* FPS */
+	G_Load_Mem( 0, X_OFFSET,	0,			0);	/* インテリア */
+	G_Load_Mem( 0, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
+
+	/* メーターの穴 */
+	for(x = 0; x < 17; x++)
+	{
+		Draw_Circle(X_OFFSET + 106,				195,	x, TRANS_PAL, 0, 360, 255);	/* 穴をあける */
+		Draw_Circle(X_OFFSET + 106, Y_OFFSET +	195,	x, TRANS_PAL, 0, 360, 255);	/* 穴をあける */
+	}
+//	Draw_Fill(X_OFFSET + 90, 			180 + 1,	X_OFFSET + 90 + 31, 			180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
+//	Draw_Fill(X_OFFSET + 90, Y_OFFSET + 180 + 1,	X_OFFSET + 90 + 31, Y_OFFSET +	180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
+
+	/* 余白の塗りつぶし */
+	Draw_Fill(X_OFFSET, (       0 + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W,        0 + V_SYNC_MAX, 0x01);
+	Draw_Fill(X_OFFSET, (Y_OFFSET + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W, Y_OFFSET + V_SYNC_MAX, 0x01);
+	
+#if 0	/* TPS */
+//	SS x_offset, y_offset;
+//	APICG_DataLoad2G("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
+	x_offset = X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1));
+	y_offset = V_SYNC_MAX - RASTER_MIN - MY_CAR_0_H - 16;
+	
+	for(y = y_offset; y < (y_offset + MY_CAR_0_H); y++)
+	{
+		for(x = x_offset; x < x_offset + MY_CAR_0_W; x++)
+		{
+			US color;
+			
+			Draw_Pget(x, y, &color);
+
+			switch(color)
+			{
+				case TRANS_PAL:
+				{
+					color = 0x01;	/* 透過色→不透過色 */
+					break;
+				}
+				case CONV_PAL:
+				{
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
+					break;
+				}
+				default:
+				{
+					/* 何もしない*/
+					break;
+				}
+			}
+			Draw_Pset(x, y, color);
+		}
+	}
+	Draw_Fill(X_OFFSET, (y_offset + MY_CAR_0_H), X_OFFSET + WIDTH, V_SYNC_MAX, 0xFF);
+#else
+#endif
+}
+
+void MyCar_Background(void)
+{
+	SS ret;
+	US height_sum = 0u;
+	UI i;
+//	SS x,y;
+
+	ret = G_Load_Mem( 2, 0,	0,	1);	/* ライバル車 */
+//	APICG_DataLoad2G("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
+	if(ret >= 0)
+	{
+#if 0	/* 画像がしっかり作られてたらいらない処理 */
+		G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
+		
+		/* 画像変換(ライバル車) */
+		for(y=0; y<ENEMY_CAR_1_H; y++)
+		{
+			for(x=0; x<ENEMY_CAR_1_W; x++)
+			{
+				US color;
+				
+				Draw_Pget(x, y, &color);
+
+				switch(color)
+				{
+					case TRANS_PAL:
+					{
+						color = 0x01;	/* 透過色→不透過色 */
+						break;
+					}
+					case CONV_PAL:
+					{
+						color = TRANS_PAL;	/* 変換対象色→透過色 */
+						break;
+					}
+					default:
+					{
+						/* 何もしない*/
+						break;
+					}
+				}
+				Draw_Pset(x, y, color);
+			}
+		}
+#endif
+		/* パターンを */
+		height_sum = 0u;
+		for(i=1; i<4; i++)
+		{
+			height_sum += (ENEMY_CAR_1_H >> (i-1));
+			
+			G_Stretch_Pict(
+							0,				ENEMY_CAR_1_W>>i,
+							height_sum,		ENEMY_CAR_1_H>>i,
+							1,
+							0,	ENEMY_CAR_1_W,
+							0,	ENEMY_CAR_1_H,
+							1);
+		}
+	}
+	
+	ret = G_Load_Mem( 4, 140,	0,	1);	/* ヤシの木 */
+	if(ret >= 0)
+	{
+#if 0	/* 画像がしっかり作られてたらいらない処理 */
+		G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
+		
+		/* 画像変換(ヤシの木) */
+		for(y=0; y<PINETREE_1_H; y++)
+		{
+			for(x=140; x<=140+PINETREE_1_W; x++)
+			{
+				US color;
+				
+				Draw_Pget(x, y, &color);
+
+				switch(color)
+				{
+					case TRANS_PAL:
+					{
+						color = 0x01;	/* 透過色→不透過色 */
+						break;
+					}
+					case CONV_PAL:
+					{
+						color = TRANS_PAL;	/* 変換対象色→透過色 */
+						break;
+					}
+					default:
+					{
+						/* 何もしない*/
+						break;
+					}
+				}
+				Draw_Pset(x, y, color);
+			}
+		}
+#endif
+		/* パターンを */
+		height_sum = 0u;
+		for(i=1; i<4; i++)
+		{
+			height_sum += (PINETREE_1_H >> (i-1));
+
+			G_Stretch_Pict(
+							140,		140+PINETREE_1_W>>i,
+							height_sum,		PINETREE_1_H>>i,
+							1,
+							140,	140+PINETREE_1_W,
+							0,		PINETREE_1_H,
+							1);
+		}
+	}
+	
+#if 0
+	/* 画像変換(背景) */
+	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + BG_1_H; y++)
+	{
+		for(x=X_OFFSET-32; x<X_OFFSET - 32 + BG_1_W; x++)
+		{
+			US color;
+			
+			Draw_Pget(x, y, &color);
+
+			switch(color)
+			{
+				case TRANS_PAL:
+				{
+					color = 0x01;	/* 透過色→不透過色 */
+					break;
+				}
+				case CONV_PAL:
+				{
+					color = TRANS_PAL;	/* 変換対象色→透過色 */
+					break;
+				}
+				default:
+				{
+					/* 何もしない*/
+					break;
+				}
+			}
+			Draw_Pset(x, y, color);
+		}
+	}
+#endif
+
+#if 0
+	SS e;
+	
+	APAGE(2);				/* グラフィックの書き込み */
+
+	/* 建物とコースの間 */
+	Draw_Fill( X_MIN_DRAW,  Y_HORIZON + Y_OFFSET, X_MAX_DRAW,  Y_HORIZON + Y_OFFSET, 1);
+
+	/* 建物 */
+	for(e = 0; e < 8; e++)
+	{
+		Draw_Fill((e << 6), Y_HORIZON-16-1 + Y_OFFSET, (e << 6) + 10, Y_HORIZON-1 + Y_OFFSET, 0xFF);
+	}
+#endif
+}
 
 #endif	/* MyCar_C */
 

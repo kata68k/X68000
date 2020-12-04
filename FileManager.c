@@ -1,6 +1,7 @@
 #ifndef	FILEMANAGER_C
 #define	FILEMANAGER_C
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,27 +11,28 @@
 #include <iocslib.h>
 
 #include "inc/usr_macro.h"
-#include "inc/apicglib.h"
 
 #include "FileManager.h"
+#include "Graphic.h"
 
 /* ＰＣＧデータ */
-static unsigned int pcg_size;
-static unsigned char *pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
-static unsigned short pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ */
+static UC	*pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
+static US	pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ */
 
 /* 関数のプロトタイプ宣言 */
 SS File_Load(SC *, void *, size_t, size_t);
 SS File_Load_CSV(SC *, US *, US *, US *);
 SS PCG_SP_dataload(SC *);
 SS PCG_PAL_dataload(SC *);
-SS APICG_DataLoad(SC *, US, US, US);
 SS Load_Music_List(SC *, SC (*)[256], UI *);
 SS Load_SE_List(SC *, SC (*)[256], UI *);
 SS Load_CG_List(SC *, SC (*)[256], UI *);
 SS Load_MACS_List(SC *, SC (*)[256], UI *);
-SS File_To_Mem(SC *, SC *, SI);
 SS GetFileLength(SC *, SI *);
+SS GetFilePICinfo(SC *, BITMAPINFOHEADER *);
+SS GetRectangleSise(US *, US, US, US);
+void *MyMalloc(SI);
+SS MyMfree(void *);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
@@ -264,9 +266,9 @@ SS File_Load_Course_CSV(SC *fname, ST_ROADDATA *st_ptr, US *Col, US *Row)
 
 SS PCG_SP_dataload(SC *fname)
 {
-	FILE *fp;
 	SS ret = 0;
-	UI i,j;
+
+	FILE *fp;
 
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
 
@@ -277,18 +279,26 @@ SS PCG_SP_dataload(SC *fname)
 	}
 	else
 	{
+		SI	pcg_size;
 		pcg_size = filelength( fileno( fp ) );
-		pcg_dat = ( char *) malloc( pcg_size );
-		j = fread( pcg_dat
-			,  128		/* 1PCG = 128byte */
-			,  PCG_MAX	/* 256PCG */
-			,  fp
-			) ;
-		fclose( fp ) ;
+		
+		pcg_dat = NULL;
+		pcg_dat = (UC*)MyMalloc( pcg_size );
+		if(pcg_dat != NULL)
+		{
+			UI i,j;
+			
+			j = fread( pcg_dat
+				,  128		/* 1PCG = 128byte */
+				,  PCG_MAX	/* 256PCG */
+				,  fp
+				) ;
+			fclose( fp ) ;
 
-		for( i = 0 ; i < PCG_MAX ; i++ ){
-			SP_DEFCG( i, 1, pcg_dat );
-			pcg_dat += 128;
+			for( i = 0 ; i < PCG_MAX ; i++ ){
+				SP_DEFCG( i, 1, pcg_dat );
+				pcg_dat += 128;
+			}
 		}
 	}
 	
@@ -297,8 +307,9 @@ SS PCG_SP_dataload(SC *fname)
 
 SS PCG_PAL_dataload(SC *fname)
 {
-	FILE *fp;
 	SS ret = 0;
+
+	FILE *fp;
 	UI i;
 
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
@@ -324,48 +335,6 @@ SS PCG_PAL_dataload(SC *fname)
 		}
 	}
 	
-	return ret;
-}
-
-#define	PIC_FILE_BUF_SIZE	(16*1024)
-
-/* PICファイルを読み込み */
-SS APICG_DataLoad(SC *fname, US pos_x, US pos_y, US uArea)
-{
-	US *GR;
-	UC *file_buf, *work_buf;
-	SS ret;
-	file_buf = _dos_malloc (PIC_FILE_BUF_SIZE);
-	work_buf = _dos_malloc (256 * 256);
-	
-	if(uArea != 0)
-	{
-		GR = (US *)0xC80000;	/* Screen1 */
-	}
-	else{
-		GR = (US *)0xC00000;	/* Screen0 */
-	}
-	
-	if (((int) file_buf < 0) || ((int) work_buf < 0)) {
-		/* メモリエラー */
-		ret = -1;
-	} else {
-		ret = APICLOAD(	GR, 
-						fname,				/* PICファイル名 */
-						pos_x, pos_y,		/* 描画先のX座標とY座標 */
-						file_buf,
-						PIC_FILE_BUF_SIZE,	
-						APF_NOINITCRT | 	/* 1で画面モードを初期化しません */
-						APF_NOCLRBUF | 		/* 1で展開先バッファをクリアしません */
-						APF_NOPRFC,			/* 1でファイル名とコメントを表示しません */
-						work_buf);
-		if (ret < 0) {
-			/* メモリエラー */
-			ret = -1;
-		}
-		_dos_mfree (work_buf);
-		_dos_mfree (file_buf);
-	}
 	return ret;
 }
 
@@ -505,28 +474,39 @@ SS Load_MACS_List(SC *fname, SC (*macs_list)[256], UI *list_max)
 	return ret;
 }
 
-SS File_To_Mem(SC *fname, SC *mem, SI Size)
+SS	GetFileLength(SC *pFname, SI *pSize)
 {
 	FILE *fp;
 	SS ret = 0;
+	SI	Tmp;
 
-	fp = fopen( fname , "rb" ) ;
-	if(fp == NULL)
+	fp = fopen( pFname , "rb" ) ;
+	if(fp == NULL)		/* Error */
 	{
 		ret = -1;
 	}
 	else
 	{
-		if(Size <= 0)
+		Tmp = fileno( fp );
+		if(Tmp == -1)	/* Error */
 		{
-			GetFileLength(fname, &Size);
+			*pSize = 0;
+			ret = -1;
 		}
-		
-		fread( mem
-			,  1	/* 1byte */
-			,  Size	/* file size */
-			,  fp
-			) ;
+		else
+		{
+			Tmp = filelength( Tmp );
+			if(Tmp == -1)		/* Error */
+			{
+				*pSize = 0;
+				ret = -1;
+			}
+			else
+			{
+				*pSize = Tmp;
+//				printf("GetFileLength = (%4d, %4d)\n", *pSize, Tmp );
+			}
+		}
 
 		fclose( fp ) ;
 	}
@@ -534,10 +514,15 @@ SS File_To_Mem(SC *fname, SC *mem, SI Size)
 	return ret;
 }
 
-SS	GetFileLength(SC *pFname, SI *pSize)
+SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 {
 	FILE *fp;
 	SS ret = 0;
+	UC	bFlag = FALSE;
+	UC	*pBuf;
+	UC	sBuf[128] = {0};
+	US	uWord;
+	UI	i;
 
 	fp = fopen( pFname , "rb" ) ;
 	if(fp == NULL)
@@ -546,7 +531,183 @@ SS	GetFileLength(SC *pFname, SI *pSize)
 	}
 	else
 	{
-		*pSize = filelength( fileno( fp ) );
+		memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+		pBuf = &sBuf[0];	/* 先頭アドレス */
+
+		/* PIC */
+		fread( pBuf, sizeof(UC), 3, fp );
+		if(strncmp( pBuf, "PIC", 3 ) == 0)
+		{
+			/* 一致 */
+//			printf("%sファイルです\n", pBuf );
+			bFlag = TRUE;
+		}
+		else
+		{
+			bFlag = FALSE;
+			printf("error:PICファイルではありません = %s\n", pBuf );
+		}
+		
+		memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+		pBuf = &sBuf[0];	/* 先頭アドレス */
+
+		/* 拡張ヘッダか？ */
+		fread( pBuf, sizeof(UC), 3, fp );
+		if(strncmp( pBuf, "/MM", 3 ) == 0)
+		{
+			/* 一致 */
+//			printf("拡張ファイルです\n", pBuf );
+
+			memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+			pBuf = &sBuf[0];	/* 先頭アドレス */
+
+			for(i=0; i < 128; i++)
+			{
+				/* 拡張ヘッダ判定 */
+				fread( pBuf, sizeof(UC), 1, fp );
+				if(strncmp( pBuf, "/", 1 ) == 0)
+				{
+					*pBuf = 0x00;
+//					printf("%s\n", &sBuf[0]);
+					
+					memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+					pBuf = &sBuf[0];	/* 先頭アドレス */
+
+					fread( pBuf, sizeof(UC), 1, fp );
+					/* 拡張ヘッダ終了判定 */
+					if(strncmp( &sBuf[0], ":", 1 ) == 0)
+					{
+						break;
+					}
+					else
+					{
+						pBuf++;
+					}
+					
+					fread( pBuf, sizeof(UC), 1, fp );
+					/* 画像データの作者判定 */
+					if(strncmp( &sBuf[0], "AU", 2 ) == 0)
+					{
+//						printf("画像データの作者:");
+						memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+						pBuf = &sBuf[0];	/* 先頭アドレス */
+					}
+					/* 画像のロード座標 */
+					else if(strncmp( &sBuf[0], "XY", 2 ) == 0)
+					{
+//						printf("XY:");
+						memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+						pBuf = &sBuf[0];	/* 先頭アドレス */
+					}
+					else
+					{
+						pBuf++;
+					}
+				}
+				else
+				{
+					pBuf++;
+				}
+			}
+			
+			memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+			pBuf = &sBuf[0];	/* 先頭アドレス */
+
+			/* コメント終了まで読み込む */
+			for(i=0; i < 128; i++)
+			{
+				fread( pBuf, sizeof(UC), 1, fp);
+				if(*pBuf == 0x1Au)
+				{
+					if(i != 0u)
+					{
+//						printf("コメント(%d)：%s\n", i, sBuf[0] );
+					}
+					bFlag = TRUE;
+					break;
+				}
+				pBuf++;
+			}
+		}
+		else
+		{
+			/* 普通のヘッダファイルでした */
+			pBuf += 3;
+			bFlag = FALSE;
+
+			for(i=0; i < 128; i++)
+			{
+				fread( pBuf, sizeof(UC), 1, fp);
+				if(*pBuf == 0x1Au)
+				{
+//					printf("コメント(%d)：%s\n", i, sBuf[0] );
+					bFlag = TRUE;
+					break;
+				}
+				pBuf++;
+			}
+		}
+
+		/* ダミー */
+		if(bFlag == TRUE)
+		{
+			bFlag = FALSE;
+
+			memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+			pBuf = &sBuf[0];	/* 先頭アドレス */
+			
+			while(1)
+			{
+				fread( pBuf, sizeof(UC), 1, fp);
+				if(*pBuf == 0x00u)
+				{
+					bFlag = TRUE;
+					break;
+				}
+				pBuf++;
+			}
+		}
+
+		/* 予約文字(0) */
+		if(bFlag == TRUE)
+		{
+			bFlag = FALSE;
+			fread( pBuf, sizeof(UC), 1, fp);
+			if(*pBuf == 0x00u)
+			{
+				bFlag = TRUE;
+			}
+		}
+
+		/* タイプ・モード */
+		if(bFlag == TRUE)
+		{
+			bFlag = FALSE;
+			fread( pBuf, sizeof(UC), 1, fp);
+			if(*pBuf == 0x00u)
+			{
+//				printf("Type/Mode：%d\n", *pBuf );
+				bFlag = TRUE;
+			}
+		}
+		
+		if(bFlag == TRUE)
+		{
+			/* 色のビット数 */
+			fread( &uWord, sizeof(US), 1, fp);
+			info->biBitCount = uWord;
+//			printf("color bit：%d\n", uWord );
+
+			/* Ｘ方向のサイズ */
+			fread( &uWord, sizeof(US), 1, fp);
+			info->biWidth	= (SL)uWord;
+//			printf("X,Y：(%4d,", uWord );
+
+			/* Ｙ方向のサイズ */
+			fread( &uWord, sizeof(US), 1, fp);
+			info->biHeight	= (SL)uWord;
+//			printf("%4d)\n", uWord );
+		}
 
 		fclose( fp ) ;
 	}
@@ -554,5 +715,72 @@ SS	GetFileLength(SC *pFname, SI *pSize)
 	return ret;
 }
 
+SS	GetRectangleSise(US *uSize, US uWidth, US uHeight, US uMaxSize)
+{
+	SS ret = 0;
+	
+	*uSize = Mmax( ((((uWidth+ 7u) & 0xFFF8u) * uHeight) << uMaxSize),  (512u << uMaxSize) );
+	
+	return ret;
+}
+
+void *MyMalloc(SI Size)
+{
+	void *pPtr = NULL;
+	
+	if(Size >= 0x1000000u)
+	{
+		printf("メモリ確保サイズが大きすぎるよ！(0x%x)\n", Size );
+	}
+	else
+	{
+		pPtr = _dos_malloc(Size);	/* メモリ確保 */
+//		pPtr = malloc(Size);	/* メモリ確保 */
+		
+		if(pPtr == NULL)
+		{
+			puts("メモリが確保できませんでした");
+		}
+		else if((UI)pPtr >= 0x81000000)
+		{
+			if((UI)pPtr >= 0x82000000)
+			{
+				puts("メモリ不足です");
+			}
+			else
+			{
+				printf("メモリが確保できませんでした(%d)\n", (UI)pPtr - 0x81000000 );
+			}
+			pPtr = NULL;
+		}
+		else
+		{
+			//printf("メモリアドレス(0x%p)=%d\n", pPtr, Size);
+		}
+	}
+	
+	return pPtr;
+}
+
+SS	MyMfree(void *pPtr)
+{
+	SS ret = 0;
+	UI	result;
+	
+	if(pPtr == 0)
+	{
+		puts("自プロセス、子プロセスで確保したメモリをフルで解放します");
+	}
+	
+	result = _dos_mfree(pPtr);
+	//free(pPtr);
+	
+	if(result < 0)
+	{
+		ret = -1;
+	}
+	
+	return ret;
+}
 #endif	/* FILEMANAGER_C */
 

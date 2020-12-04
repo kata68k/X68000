@@ -1,6 +1,7 @@
 #ifndef	INPUT_C
 #define	INPUT_C
 
+#include <doslib.h>
 #include <iocslib.h>
 
 #include "inc/usr_macro.h"
@@ -12,6 +13,7 @@
 US	get_key(US *, UC, UC );
 US	DirectInputKeyNum(US *, US );
 UC	ChatCancelSW(UC , UC *);
+SS	KeyHitESC(void);
 
 /* 関数 */
 US get_key( US *key, UC bPlayer, UC mode )
@@ -245,5 +247,36 @@ UC	ChatCancelSW(UC bJudge, UC *bFlag)
 #endif
 #endif
 
+SS	KeyHitESC(void)
+{
+	SS	ret = 0;
+	static UC bFlag = 0;
+	
+	{
+		UI	loop = 1;
+		do
+		{
+			if( ( BITSNS( 0 ) & 0x02 ) != 0 )	/* ＥＳＣ */
+			{
+				bFlag = 1u;
+			}
+			else if(bFlag == 1u)
+			{
+				_dos_kflushio(0xFF);	/* キーバッファをクリア */
+				bFlag = 0u;
+				loop = 0;				/* ループ脱出 */
+			}
+			else
+			{
+				bFlag = 0u;
+			}
+			if(loop == 0)break;
+		}
+		while( loop );
+	}
+	
+	return ret;
+}
+	
 #endif	/* INPUT_C */
 

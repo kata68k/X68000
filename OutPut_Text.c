@@ -341,7 +341,7 @@ SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
 	UC	*pDst2;
 	UC	*pDst3;
 	SS	ret = 0;
-	SS	i, j, k;
+	US	i, j, k;
 	US	BitMask[4][4] = { 
 			0x1000, 0x2000, 0x4000, 0x8000,
 			0x0100, 0x0200, 0x0400, 0x0800,
@@ -519,10 +519,10 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 	UC	*T1_HEAD = (UC *)0xE20000;
 	UC	*T2_HEAD = (UC *)0xE40000;
 	UC	*T3_HEAD = (UC *)0xE60000;
-	UC	*pSrc0 = (UC *)0xE07400;
-	UC	*pSrc1 = (UC *)0xE27400;
-	UC	*pSrc2 = (UC *)0xE47400;
-	UC	*pSrc3 = (UC *)0xE67400;
+	UC	*pSrc0 = (UC *)0xE07800;//400
+	UC	*pSrc1 = (UC *)0xE27800;//400
+	UC	*pSrc2 = (UC *)0xE47800;//400
+	UC	*pSrc3 = (UC *)0xE67800;//400
 //	UC	*T3_END = (UC *)0xE7FFFF;
 	UC	*pDst0;
 	UC	*pDst1;

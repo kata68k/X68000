@@ -33,5 +33,6 @@
 extern US	get_key(US *, UC, UC );
 extern US	DirectInputKeyNum(US *, US );
 extern UC	ChatCancelSW(UC , UC *);
+extern SS	KeyHitESC(void);
 
 #endif	/* INPUT_H */

@@ -17,10 +17,10 @@ enum{
 };
 
 enum{
-	BG_Normal=0,
-	BG_V_rev,
-	BG_H_rev,
-	BG_VH_rev
+	BG_Normal=0,	/* ’Êí */
+	BG_V_rev,		/* ‚’¼”½“] */
+	BG_H_rev,		/* …•½”½“] */
+	BG_VH_rev		/* ‚’¼…•½”½“] */
 };
 
 /* \‘¢‘Ì */

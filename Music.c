@@ -270,7 +270,7 @@ void Exit_Music(void)
 SI Music_Play(UC bPlayNum)
 {
 	SI	ret=0;
-	if(bPlayNum >= m_list_max)return ret;
+	if(bPlayNum > m_list_max)return ret;
 
 	Music_Stop();	/* 音楽停止 */
 #ifdef	ZM_V2
@@ -311,7 +311,7 @@ SI SE_Play(UC bPlayNum)
 	#ifdef	ZM_V3
 	SI	HeadNum = 0;
 	
-	if(bPlayNum >= s_list_max)return ret;
+	if(bPlayNum > s_list_max)return ret;
 	
 	HeadNum = se_dat_addr[bPlayNum];
 	
@@ -338,7 +338,7 @@ SI SE_Play_Fast(UC bPlayNum)
 	UC	bCh, bTrk;
 	SI	level;
 
-	if(bPlayNum >= m_list_max)return ret;
+	if(bPlayNum > m_list_max)return ret;
 
 	bCh		= 6;
 	bTrk	= 6;
@@ -381,7 +381,7 @@ SI SE_Play_Fast(UC bPlayNum)
 	#ifdef	ZM_V3
 	SI	HeadNum = 0;
 
-	if(bPlayNum >= s_list_max)return ret;
+	if(bPlayNum > s_list_max)return ret;
 	
 	HeadNum = se_dat_addr[bPlayNum];
 	
@@ -401,6 +401,8 @@ SI ADPCM_Play(UC bPlayNum)
 {
 	SI	ret=0;
 	
+	if(bPlayNum > p_list_max)return ret;
+
 	/* 色々試したけどIOCSライブラリの方を使う */
 	_iocs_adpcmout(adpcm_dat[bPlayNum], 0x403, adpcm_dat_size[bPlayNum]);
 #if 0
@@ -416,7 +418,7 @@ SI ADPCM_Play(UC bPlayNum)
 //	SC	errtbl[64]={0};
 //	UC	**p;
 
-	if(bPlayNum >= p_list_max)return ret;
+	if(bPlayNum > p_list_max)return ret;
 	
 	//ret = zm_se_adpcm1( -1, 0x40, 4, 3, adpcm_dat_size[bPlayNum], 0, 7, adpcm_dat[bPlayNum]);
 	/* 引数

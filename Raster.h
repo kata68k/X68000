@@ -28,8 +28,6 @@ typedef struct
 {
 	SS	Horizon;		/* 水平位置 */
 	SS	Horizon_tmp;	/* 仮水平位置 */
-	SS	Horizon_offset;	/* 水平位置のオフセット */
-	
 	SS	offset_x;		/*  */
 	SS	offset_y;		/*  */
 	SS	offset_val;		/*  */

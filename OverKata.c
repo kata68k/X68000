@@ -75,7 +75,7 @@ SS main(void)
 	
 	usr_abort = App_exit;	/* 例外発生で終了処理を実施する */
 
-	init_trap14();	/* デバッグ用致命的エラーハンドリング */
+//	init_trap14();	/* デバッグ用致命的エラーハンドリング */
 
 	/* 変数の初期化 */
 	g_mode = 1;
@@ -88,18 +88,107 @@ SS main(void)
 	puts("デバッグコーナー 開始");
 	/* ↓自由にコードを書いてね */
 	{
-		printf("MoonRegst = %d\n", MoonRegst("UFUFU.MCS"));
-		printf("MoonPlay  = %d\n", MoonPlay("UFUFU.MCS"));
+		US	uOld;
+		UI	x = 0, y = 0;
+		UI	dx = 0, dy = 0;
+		US	count = 0;
+		US	*pBuf = NULL;
+		US	*pDstGR = NULL;
+		US	*pSrcGR = NULL;
+
+		g_uDebugNum = 0x1;
+		uOld = !g_uDebugNum;
+		/* スーパーバイザーモード開始 */
+		g_nSuperchk = SUPER(0);
+
+		/* 画面 */
+		g_nCrtmod = CRT_INIT();
+
+		/* グラフィック */
+		G_INIT();			/* 画面の初期設定 */
+		G_Palette_INIT();	/* グラフィックパレットの初期化 */
+		/* データの読み込み */
+		CG_File_Load();		/* グラフィックデータ読み込み */
+
+		/* テキスト */
+		T_INIT();	/* テキストＶＲＡＭ初期化 */
+		
+//		pBuf = (US*)MyMalloc( Mmax((52*512*2), 512*2) );
+//		APICG_DataLoad2M( 1, x, y, 0, pBuf);
+//		dx = 128;
+//		dy = 128;
+//		for(y=0; y < 52; y++)
+//		{
+//			pDstGR = (US *)(0xC00000 + ((dy + y) << 10) + (dx << 1));
+//			pSrcGR = pBuf + (y << 9);
+//			
+//			for(x=0; x < 64; x++)
+//			{
+//				if(*pSrcGR == 0xB4)
+//				{
+//					*pSrcGR = 0x00;
+//				}
+//				*pDstGR = *pSrcGR & 0x00FF;
+//				pDstGR++;
+//				pSrcGR++;
+//			}
+//		}
+		
+		puts("ＥＳＣキーで終了");
+		loop = 1;
+		do
+		{
+			if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
+			if(loop == 0)break;
+
+			DirectInputKeyNum(&g_uDebugNum, 1);	/* キーボードから数字を入力 */
+			
+			if(g_uDebugNum != uOld)
+			{
+//				pDstGR = (US*)0xC00000;
+//				memset(pDstGR, 0x42, 0x80000);
+				
+				uOld = g_uDebugNum;
+				//G_Load_Mem(g_uDebugNum, dx, dy, 0);
+				G_Load_Mem( 0, X_OFFSET,	0,			0);	/* インテリア */
+				G_Load_Mem( 0, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
+			}
+
+			if(count == 0)
+			{
+				x = 0;
+				y = 128;
+			}
+			else
+			{
+//				UI uWidth, uHeight, uFileSize;
+//				Get_PicImageInfo(1, &uWidth, &uHeight, &uFileSize);
+//				G_CLR_AREA(x, uWidth, y, uHeight, 0);
+//				x = count % 256;
+//				y = 64 + ((64 * APL_Cos((x<<1)%360)) >> 8);
+//				G_Load_Mem(2, 64, 64, 0);
+//				G_Load_Mem(1, x, y, 0);
+			}
+			//printf("%5d = (%4d, %4d)\n", count, x, y );
+			
+			count++;
+
+			/* 同期待ち */
+			vwait(1);
+		}
+		while( loop );
+		
+		MyMfree(pBuf);	/* メモリ解放 */
+
+		/* 画面 */
+		CRTMOD(g_nCrtmod);			/* モードをもとに戻す */
+
+		/*スーパーバイザーモード終了*/
+		SUPER(g_nSuperchk);
+
+		_dos_kflushio(0xFF);	/* キーバッファをクリア */
 	}
 	/* ↑自由にコードを書いてね */
-	puts("ＥＳＣキーで終了");
-	loop = 1;
-	do
-	{
-		if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
-		if(loop == 0)break;
-	}
-	while( loop );
 	puts("デバッグコーナー 終了");
 	
 	exit(0);
@@ -203,7 +292,7 @@ SS main(void)
 			{
 				Music_Play(2);	/* タイトル曲 */
 				
-				G_Load( 8, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
+				G_Load_Mem( 8, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
 			
 				BG_TextPut("OVER KATA", 96, 128);		/* タイトル文字 */
 				BG_TextPut("PUSH A BUTTON", 80, 160);	/* ボタン押してね */
@@ -261,18 +350,13 @@ SS main(void)
 			break;
 			case SCENE_START_E:	/* ゲーム開始シーン(終了処理) */
 			{
-				/* コースデータの初期化 */
-				Road_Init(1);
-				
-				/* ラスター情報の初期化 */
-				Raster_Init();
-				
 				/* スプライト＆ＢＧ表示 */
 				PCG_INIT();		/* スプライト／ＢＧの初期化 */
 				PCG_VIEW(TRUE);	
 
 				/* 自車の画像読み込み*/
 				MyCar_G_Load();
+				MyCarInfo_Init();
 				
 				/* ライバル車の初期化 */
 				InitEnemyCAR();
@@ -280,6 +364,12 @@ SS main(void)
 				/* コースのオブジェクトの初期化 */
 				InitCourseObj();
 
+				/* コースデータの初期化 */
+				Road_Init(1);
+				
+				/* ラスター情報の初期化 */
+				Raster_Init();
+				
 				/* テキスト表示 */
 				T_Clear();		/* テキストクリア */
 				T_PALET();		/* テキストパレット設定 */
@@ -289,7 +379,7 @@ SS main(void)
 				T_Speed();		/* SPEED */
 				T_Gear();		/* GEAR */
 				T_SetBG_to_Text();	/* テキスト用作業用データ展開 */
-
+				
 				SetTaskInfo(SCENE_GAME_S);	/* ゲーム(開始処理)タスクへ設定 */
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
@@ -308,7 +398,7 @@ SS main(void)
 				}
 				
 				/* 自車の情報を取得 */
-				UpdateMyCarInfo(input);		/* 自車の情報を更新 */
+				MyCarInfo_Update(input);	/* 自車の情報を更新 */
 				
 				/* ラスター処理 */
 				Raster_Main(g_mode);
@@ -471,16 +561,19 @@ SS main(void)
 
 static void App_Init(void)
 {
-	/* タイマーD初期化 */
-	TimerD_INIT();
-	
-	/* 音楽の初期化 */
-	Init_Music();
+	puts("App_Init 開始");
 
+	/* デバッグ値初期化 */
+	SetDebugNum(0x80);
+
+	/* MFP */
+	TimerD_INIT();	/* タイマーD初期化 */
+
+	/* 音楽 */
+	Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
 	Music_Play(1);	/* ローディング中 */
-
+	
 	/* スーパーバイザーモード開始 */
-	/*ＤＯＳのスーパーバイザーモード開始*/
 	g_nSuperchk = SUPER(0);
 	if( g_nSuperchk < 0 ) {
 		puts("すでにスーパーバイザーモード");
@@ -488,48 +581,56 @@ static void App_Init(void)
 		puts("スーパーバイザーモード開始");
 	}
 	
-	g_nCrtmod = CRTMOD(-1);	/* 現在のモードを返す */
-	
+	/* 画面 */
+	g_nCrtmod = CRT_INIT();
+
+	/* グラフィック */
+	G_INIT();			/* 画面の初期設定 */
+	G_Palette_INIT();	/* グラフィックパレットの初期化 */
+
+	/* データの読み込み */
+	CG_File_Load();		/* グラフィックデータ読み込み */
+
 	/* 動画 */
 	MOV_INIT();	/* 初期化処理 */
-	
-	/* グラフィック表示 */
-	G_INIT();	/*画面の初期設定*/
 
-	/* スプライト／ＢＧ表示 */
+	/* スプライト／ＢＧ */
 	PCG_INIT();	/* スプライト／ＢＧの初期化 */
 
 	/* テキスト */
 	T_INIT();	/* テキストＶＲＡＭ初期化 */
+
+	puts("App_Init 終了");
 }
 
 static void App_exit(void)
 {
-	/* MFP */
-	MFP_EXIT();		/* MFP関連の解除 */
-	TimerD_EXIT();	/* Timer-Dの解除 */
+	puts("App_exit 開始");
 	
-	/* グラフィック表示 */
-	G_CLR_ON();
+	/* MFP */
+	MFP_EXIT();				/* MFP関連の解除 */
+	TimerD_EXIT();			/* Timer-Dの解除 */
+
+	/* 音楽 */
+	Exit_Music();			/* 音楽停止 */
+	
+	/* テキスト */
+	T_EXIT();				/* テキスト終了処理 */
 
 	/* スプライト＆ＢＧ */
-	PCG_VIEW(FALSE);	/* スプライト＆ＢＧ非表示 */
+	PCG_VIEW(FALSE);		/* スプライト＆ＢＧ非表示 */
 
-	/* テキスト */
-	T_EXIT();	/* テキスト初期化 */
+	/* 画面 */
+	CRTMOD(g_nCrtmod);		/* モードをもとに戻す */
 
-	CRTMOD(g_nCrtmod);			/* モードをもとに戻す */
-	
-	/* 音楽停止 */
-	Exit_Music();
-
-	/* タイマーD終了 */
-	TimerD_EXIT();
+	MyMfree(0);				/* 全てのメモリを解放 */
 	
 	_dos_kflushio(0xFF);	/* キーバッファをクリア */
 
 	/*スーパーバイザーモード終了*/
 	SUPER(g_nSuperchk);
+	
+	puts("App_exit 終了");
 }
 
 SS BG_main(UC* bFlip)
@@ -568,19 +669,22 @@ SS BG_main(UC* bFlip)
 			case Clear_G:
 			{
 				G_CLR_ALL_OFFSC(g_mode);
-				bFlipState = Enemy1_G;
-//				bFlipState = Object1_G;
+				bFlipState++;
 				*bFlip = FALSE;
 				break;
 			}
-			/* ライバル車 */
-			case Enemy1_G:
-			case Enemy2_G:
-			case Enemy3_G:
-			case Enemy4_G:
+			/* 背景 */
+			case BackGround_G:
 			{
-				bNum = bFlipState - Enemy1_G;
-				EnemyCAR_main(bNum, g_mode, g_mode_rev);
+				/* FPS */
+				if(g_mode == 2)
+				{
+					G_Load_Mem( 6, X_OFFSET,	Y_OFFSET,	1);	/* 背景 */
+				}
+				else
+				{
+					G_Load_Mem( 6, X_OFFSET,	Y_MIN_DRAW,	1);	/* 背景 */
+				}
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
@@ -595,6 +699,18 @@ SS BG_main(UC* bFlip)
 			{
 				bNum = bFlipState - Object1_G;
 				Course_Obj_main(bNum, g_mode, g_mode_rev);
+				bFlipState++;
+				*bFlip = FALSE;
+				break;
+			}
+			/* ライバル車 */
+			case Enemy1_G:
+			case Enemy2_G:
+			case Enemy3_G:
+			case Enemy4_G:
+			{
+				bNum = bFlipState - Enemy1_G;
+				EnemyCAR_main(bNum, g_mode, g_mode_rev);
 				bFlipState++;
 				*bFlip = FALSE;
 				break;

@@ -73,20 +73,24 @@ SI MOV_Play(UC bPlayNum)
 	moon_stat = MoonPlay(mov_list[bPlayNum]);	/* 再生 */
 	if(moon_stat != 0)
 	{
-		printf("MoonPlay  = %d\n", moon_stat);
+		//printf("MoonPlay  = %d\n", moon_stat);
+		/* アボート(-4)した場合は、何かしら作法が必要だったような… */
 	}
 //	MACS_Sleep();	/* スリープ */
 
 #else	/* MACSDRV単独の場合 */
 	
-	SC	*pBuff;
+	SC	*pBuff = NULL;
 	SI	FileSize = 0;
 	GetFileLength(mov_list[bPlayNum], &FileSize);	/* ファイルのサイズ取得 */
 	printf("MacsData = %d\n", FileSize);
-	pBuff = (SC*)malloc(FileSize);		/* メモリ確保 */
-	File_To_Mem(mov_list[bPlayNum], pBuff, FileSize );	/* ファイル読み込みからメモリへ保存 */
-	MACS_Play(pBuff);	/* 再生 */
-	free(pBuff);
+	pBuff = (SC*)MyMalloc(FileSize);	/* メモリ確保 */
+	if(pBuff != NULL)
+	{
+		File_Load(mov_list[bPlayNum], pBuff, sizeof(UC), FileSize );	/* ファイル読み込みからメモリへ保存 */
+		MACS_Play(pBuff);	/* 再生 */
+		MyMfree(pBuff);	/* メモリ解放 */
+	}
 #endif
 
 #endif	/* MACS_MOON */

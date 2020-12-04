@@ -3,8 +3,8 @@
 2=Over_C.pic
 3=Over_D.pic
 4=Over_E.pic
-5=GAROU_SP.pic
-6=EVO256_gen.pic
-7=enemy.pic
+5=enemy.pic
+6=GAROU_SP.pic
+7=EVO256_gen.pic
 8=OverKata_T.pic
-
+9=Over_B.pic

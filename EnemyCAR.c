@@ -32,7 +32,7 @@ SS	InitEnemyCAR(void)
 	for(i=0; i<ENEMYCAR_MAX; i++)
 	{
 		stEnemyCar[i].ubCarType = 0;
-		stEnemyCar[i].VehicleSpeed = 120;
+		stEnemyCar[i].VehicleSpeed = 80;
 		stEnemyCar[i].x = 0;
 		stEnemyCar[i].y = 0;
 		stEnemyCar[i].z = 4;
@@ -84,10 +84,14 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 		if(pstEnemyCar[bNum]->ubAlive == TRUE)
 		{
 			SS	x, y, z;
-			US	ras_x, ras_y, ras_pat;
+			SS	dx, dy, dz;
+			SS	my;
+			US	ras_x, ras_y, ras_pat, ras_num;
+			SS	Out_Of_Disp;
 			ST_CARDATA	stMyCar;
 			ST_CRT		stCRT;
 			ST_RAS_INFO	stRasInfo;
+			ST_ROAD_INFO	stRoadInfo;
 
 			ras_x = 0;
 			ras_y = 0;
@@ -98,30 +102,52 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 
 			GetCRT(&stCRT, bMode);
 			GetMyCar(&stMyCar);
-
-			//y += ((stMyCar.VehicleSpeed - pstEnemyCar[bNum]->VehicleSpeed) / 10);
-			y += RASTER_NEXT;
-
 			GetRasterInfo(&stRasInfo);
-			GetRasterIntPos(&ras_x, &ras_y, &ras_pat, (US)(stRasInfo.st + y));
-			x = ras_x;
-			z = ((4 * 8) / (8 + y));
-			
-			pstEnemyCar[bNum]->x = x;
-			pstEnemyCar[bNum]->y = y;
-			pstEnemyCar[bNum]->z = z;
-			
-			if((stRasInfo.st + y) < (stRasInfo.ed - 32))
+			GetRoadInfo(&stRoadInfo);
+
+			/* ライバル車との距離 */
+			if(stMyCar.VehicleSpeed >= pstEnemyCar[bNum]->VehicleSpeed)
 			{
-				Put_EnemyCAR(	stCRT.hide_offset_x + (WIDTH>>1) - x,
-								stCRT.hide_offset_y + stRasInfo.horizon + y,
-								z,
-								bMode_rev);
+				y += (stMyCar.VehicleSpeed - pstEnemyCar[bNum]->VehicleSpeed);
+			}
+			else
+			{
+				y -= (pstEnemyCar[bNum]->VehicleSpeed - stMyCar.VehicleSpeed);
+			}
+			y = Mmax(y, 2);
+			my = y >> 3;
+			
+			if( (my > 0) && ((ROAD_SIZE-RASTER_NEXT)-48 > my) )
+			{
+				ras_num = (US)(stRasInfo.st + my);	/* ラスター情報の配列番号を算出 */
+				GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
+				
+				if(ras_x < 256)	/* 道の左側 */
+				{
+					x = (SS)ras_x;
+				}
+				else	/* 道の右側 */
+				{
+					x = (SS)ras_x - 512;
+				}
+				z =  3 - (((my<<8) / (my + (ROAD_SIZE-RASTER_NEXT)))>>5);
+
+				dx = stCRT.hide_offset_x + (WIDTH>>1) - x;
+				dy = stCRT.hide_offset_y + stRoadInfo.Horizon + (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);
+				dz = Mmin( Mmax(z, 0), 3 );
+				
+				pstEnemyCar[bNum]->x = x;
+				pstEnemyCar[bNum]->y = y;
+				pstEnemyCar[bNum]->z = z;
+				
+				Out_Of_Disp = Put_EnemyCAR(	dx,	dy, dz,	bMode_rev);
+				if(Out_Of_Disp < 0)	/* 描画領域外 */
+				{
+					pstEnemyCar[bNum]->ubAlive = FALSE;
+				}
 #ifdef DEBUG	/* デバッグコーナー */
 				{
-					Draw_Pset(	stCRT.hide_offset_x + (WIDTH>>1) - x,
-								stCRT.hide_offset_y + stRasInfo.horizon + y,
-								0xBE);	/* デバッグ用 */
+					Draw_Pset(	dx, dy,	0xBE);	/* デバッグ用 */
 				}
 #endif
 			}
@@ -147,13 +173,16 @@ SS	SetAlive_EnemyCAR(void)
 {
 	SS	ret = 0;
 	SS	i;
+	ST_CARDATA	stMyCar;
+
+	GetMyCar(&stMyCar);
 
 	for(i=0; i<ENEMYCAR_MAX; i++)
 	{
 		if(pstEnemyCar[i]->ubAlive == FALSE)
 		{
 			pstEnemyCar[i]->ubCarType = 0;
-			pstEnemyCar[i]->VehicleSpeed = 120;
+			pstEnemyCar[i]->VehicleSpeed = Mmax((stMyCar.VehicleSpeed - 10), 80);
 			pstEnemyCar[i]->x = 0;
 			pstEnemyCar[i]->y = 0;
 			pstEnemyCar[i]->z = 4;
@@ -183,9 +212,9 @@ SS	Put_EnemyCAR(US x, US y, US Size, UC ubMode)
 		height_sum += (ENEMY_CAR_1_H >> (i-1));
 	}
 
-	G_BitBlt(	x,	w,					y,	h,	1,
-				0,	0+w,	height_sum,	h,	1,
-				ubMode, POS_MID, POS_BOTTOM);
+	ret = G_BitBlt(	x,	w,	y,	h,	1,
+					0,	0+w,	height_sum,	h,	1,
+					ubMode, POS_MID, POS_CENTER);
 	
 	return	ret;
 }

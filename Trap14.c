@@ -63,7 +63,7 @@ static void interrupt trap14(void)
 			/* Ç®Ç©ÇµÇ»ñΩóﬂ */
 			trapbuf.flag = code;
 			trapbuf.mes = "Ç®Ç©ÇµÇ»ñΩóﬂÇé¿çsÇµÇ‹ÇµÇΩ";
-		break;
+			break;
 	}
 	
 	if ((code & 0xFF00))

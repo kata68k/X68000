@@ -1,38 +1,49 @@
 #ifndef	GRAPHIC_C
 #define	GRAPHIC_C
 
-#include <iocslib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iocslib.h>
+#include <doslib.h>
 
 #include "inc/usr_macro.h"
+#include "inc/apicglib.h"
 #include "Graphic.h"
 
-#include "Course_Obj.h"
 #include "EnemyCAR.h"
 #include "Draw.h"
 #include "FileManager.h"
+#include "Input.h"
 #include "MyCar.h"
 
-#define	CONV_PAL	(0xB4)
-#define	TRANS_PAL	(0x00)
-#define	CG_MAX	(16)
+/* define定義 */
+#define	PIC_FILE_BUF_SIZE	(512*1024)
+#define	PIC_WORK_BUF_SIZE	(512*1024)
 
 /* グローバル変数 */
-static SC	cg_list[CG_MAX][256]	=	{0};
-static UI	cg_list_max	=	0u;
+UI	g_CG_List_Max	=	0u;
+SC	g_CG_List[CG_MAX][256]	=	{0};
+UC	*g_pCG_FileBuf[CG_MAX];
+
 
 /* グローバル構造体 */
-static ST_CRT	g_stCRT[CRT_MAX] = {0};
+ST_CRT		g_stCRT[CRT_MAX] = {0};
+PICIMAGE	g_stPicImage[CG_MAX];
+struct APICGINFO	g_CGInfo[CG_MAX];
 
 /* 関数のプロトタイプ宣言 */
 SS	GetCRT(ST_CRT *, SS);
 SS	SetCRT(ST_CRT, SS);
+SS	CRT_INIT(void);
+SS	Get_CG_FileList_MaxNum(UI *);
+UC	*Get_CG_FileBuf(UC);
+SS	Get_PicImageInfo(UC , UI *, UI *, UI *);
+void CG_File_Load(void);
 void G_INIT(void);
 void G_HOME(void);
 void G_MyCar(void);
-void G_Background(void);
+void G_Palette_INIT(void);
 void G_Palette(void);
 SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
 SS	G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
@@ -40,6 +51,9 @@ SI	G_CLR(void);
 SS	G_CLR_AREA(SS, US, SS, US, UC);
 SS	G_CLR_ALL_OFFSC(UC);
 SS	G_Load(UC, US, US, US);
+SS	G_Load_Mem(UC, US, US, US);
+SS	APICG_DataLoad2G(SC *, UL, UL, US);
+SS	APICG_DataLoad2M(UC , UL, UL, US, US *);
 
 /* 関数 */
 SS	GetCRT(ST_CRT *stDat, SS Num)
@@ -74,48 +88,318 @@ SS	SetCRT(ST_CRT stDat, SS Num)
 	return ret;
 }
 
-void G_INIT(void)
+SS CRT_INIT(void)
 {
-	UI	nPalette;
-	US	i;
-	volatile US *VIDEO_REG1 = (US *)0xE82400;
-	volatile US *VIDEO_REG2 = (US *)0xE82500;
-	volatile US *VIDEO_REG3 = (US *)0xE82600;
-	volatile US *V_Sync_end = (US *)0xE8000E;
+	SS	ret = 0;
+	
+	ret = CRTMOD(-1);	/* 現在のモードを返す */
 
-	/* グラフィックリスト */
-	Load_CG_List("data\\cg\\g_list.txt", cg_list, &cg_list_max);
-	for(i = 0; i < cg_list_max; i++)
-	{
-		printf("CG File %2d = %s\n", i, cg_list[i] );
-	}
+	CRTMOD(11);			/* 偶数：標準解像度、奇数：標準 */
 
 	/* CRTの設定 */
 	g_stCRT[0].view_offset_x	= X_OFFSET;
 	g_stCRT[0].view_offset_y	= Y_MIN_DRAW;
 	g_stCRT[0].hide_offset_x	= X_OFFSET;
 	g_stCRT[0].hide_offset_y	= Y_OFFSET;
-	g_stCRT[0].BG_offset_x	= 0;
-	g_stCRT[0].BG_offset_y	= 0;
-	g_stCRT[0].BG_under		= BG_0_UNDER;
+	g_stCRT[0].BG_offset_x		= 0;
+	g_stCRT[0].BG_offset_y		= 0;
+	g_stCRT[0].BG_under			= BG_0_UNDER;
 	
 	g_stCRT[1].view_offset_x	= X_OFFSET;
 	g_stCRT[1].view_offset_y	= Y_OFFSET;
 	g_stCRT[1].hide_offset_x	= X_OFFSET;
 	g_stCRT[1].hide_offset_y	= Y_MIN_DRAW;
-	g_stCRT[1].BG_offset_x	= 0;
-	g_stCRT[1].BG_offset_y	= 32;
-	g_stCRT[1].BG_under		= BG_1_UNDER;
+	g_stCRT[1].BG_offset_x		= 0;
+	g_stCRT[1].BG_offset_y		= 32;
+	g_stCRT[1].BG_under			= BG_1_UNDER;
 
 	g_stCRT[2].view_offset_x	= X_OFFSET;
 	g_stCRT[2].view_offset_y	= Y_MIN_DRAW;
 	g_stCRT[2].hide_offset_x	= X_OFFSET;
 	g_stCRT[2].hide_offset_y	= Y_OFFSET;
-	g_stCRT[2].BG_offset_x	= 0;
-	g_stCRT[2].BG_offset_y	= 32;
-	g_stCRT[2].BG_under		= BG_1_UNDER;
+	g_stCRT[2].BG_offset_x		= 0;
+	g_stCRT[2].BG_offset_y		= 32;
+	g_stCRT[2].BG_under			= BG_1_UNDER;
+	
+	return ret;
+}
 
-	CRTMOD(11);				/* 偶数：標準解像度、奇数：標準 */
+SS Get_CG_FileList_MaxNum(UI *uMaxNum)
+{
+	SS	ret = 0;
+	
+	*uMaxNum = g_CG_List_Max;
+	
+	return ret;
+}
+
+UC *Get_CG_FileBuf(UC bNum)
+{
+	UC *ret = 0;
+	
+	ret = g_pCG_FileBuf[bNum];
+//	printf("Get(%d,0x%p,0x%p)\n", bNum, g_pCG_FileBuf[bNum], ret );
+	
+	return ret;
+}
+
+SS Get_PicImageInfo(UC bNum, UI *pWidth, UI *pHeight, UI *pFileSize)
+{
+	SS	ret = 0;
+	BITMAPFILEHEADER *pFile;
+	BITMAPINFOHEADER *pInfo;
+	
+	if(g_CG_List_Max <= bNum)
+	{
+		ret = -1;
+	}
+	
+	pFile = g_stPicImage[bNum].pBMf;
+	*pFileSize	= pFile->bfSize;
+
+	pInfo = g_stPicImage[bNum].pBMi;
+	*pWidth		= pInfo->biWidth;
+	*pHeight	= pInfo->biHeight;
+
+#ifdef DEBUG
+//	printf("st 0x%p\n", g_stPicImage );
+//	printf("Get(%d,0x%p)\n", bNum, g_stPicImage[bNum].pImageData );
+//	printf("Get(%d,0x%p, 0x%p)\n", bNum, g_stPicImage[bNum].pBMf, g_stPicImage[bNum].pBMi);
+//	printf("Get(%d)=(x:%d,y:%d) %d\n", bNum, *pWidth, *pHeight, *pFileSize );
+#endif
+	
+	return ret;
+}
+
+void CG_File_Load(void)
+{
+	US	i;
+	SI	FileSize;
+
+	/* グラフィックリスト */
+	Load_CG_List("data\\cg\\g_list.txt", g_CG_List, &g_CG_List_Max);
+	
+	for(i = 0; i < g_CG_List_Max; i++)
+	{
+		SI	Size;
+		UI	uSize8x = 0;
+		BITMAPFILEHEADER *pFile;
+		BITMAPINFOHEADER *pInfo;
+
+		/* PICヘッダにメモリ割り当て */
+		g_stPicImage[i].pBMf = (BITMAPFILEHEADER*)MyMalloc( FILE_HEADER_SIZE );
+		g_stPicImage[i].pBMi = (BITMAPINFOHEADER*)MyMalloc( INFO_HEADER_SIZE );
+		pFile = g_stPicImage[i].pBMf;
+		pInfo = g_stPicImage[i].pBMi;
+
+		/* PIC画像のファイルサイズを取得 */
+		GetFileLength( g_CG_List[i], &FileSize );			/* ファイルサイズ取得 */
+		if(FileSize <= 0)
+		{
+			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			continue;
+		}
+		pFile->bfSize = FileSize;		/* ファイルサイズ設定 */
+
+		/* PIC画像の情報を取得 */
+		GetFilePICinfo( g_CG_List[i], g_stPicImage[i].pBMi );	/* PICヘッダの読み込み */
+
+#ifdef DEBUG
+//		printf("Head1(%d,0x%p)=%d\n", i, g_stPicImage[i].pBMf, pFile->bfSize );
+//		printf("Head2(%d,0x%p)=(%d,%d)\n", i, g_stPicImage[i].pBMi, pInfo->biWidth, pInfo->biHeight );
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		/* メモリ展開用のサイズ演算 */
+		uSize8x = ((((pInfo->biWidth)+7)/8) * 8);	/* 8の倍数 */
+		Size = (pInfo->biHeight) * uSize8x * sizeof(US);
+#ifdef DEBUG
+//		printf("Head3(%d)=(%d)\n", i, Size );
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		/* メモリ確保 */
+		g_stPicImage[i].pImageData = NULL;
+		g_stPicImage[i].pImageData = (US*)MyMalloc( Size );	/* メモリの確保 */
+		if( g_stPicImage[i].pImageData == NULL )
+		{
+			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			continue;
+		}
+		memset(g_stPicImage[i].pImageData, 0, Size);	/* メモリクリア */
+#ifdef DEBUG
+//		printf("Mem(%d,0x%p)\n", i, g_stPicImage[i].pImageData);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		
+		/* ファイルをメモリに保存する */
+		g_pCG_FileBuf[i] = NULL;
+		g_pCG_FileBuf[i] = (UC*)MyMalloc( FileSize );	/* メモリ確保 */
+		if( g_pCG_FileBuf[i] == NULL )
+		{
+			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			continue;
+		}
+		File_Load( g_CG_List[i], (UC *)g_pCG_FileBuf[i], sizeof(UC), FileSize);	/* メモリに読み込み */
+#ifdef DEBUG
+//		printf("File(%d,0x%p) = %d\n", i, g_pCG_FileBuf[i], FileSize);
+//		puts("========================");
+//		G_Load(i,0,0,0);
+//		if(i==0)
+//		{
+//			KeyHitESC();	/* デバッグ用 */
+//		}
+#endif
+	}
+
+	for(i = 0; i < g_CG_List_Max; i++)
+	{
+		US	*pBuf = NULL;
+		US	*pSrcBuf = NULL;
+		US	*pDstBuf = NULL;
+		SI	Res;
+		UI	x, y;
+		UI	uWidth, uHeight;
+		UI	uSize8x = 0;
+		UI	uAPICG_work_Size;
+
+		BITMAPINFOHEADER *pInfo;
+		
+		/* メモリサイズ */
+		pInfo = g_stPicImage[i].pBMi;
+		uWidth	= pInfo->biWidth;
+		uHeight	= pInfo->biHeight;
+		uSize8x = (((uWidth+7)/8) * 8);	/* 8の倍数 */
+#ifdef DEBUG
+//		printf("Load1(%d,0x%p)=(%d,%d)(%d)\n", i, g_stPicImage[i].pBMi, pInfo->biWidth, pInfo->biHeight, uSize8x );
+#endif
+		
+		/* メモリ確保(画面を模擬) */
+		uAPICG_work_Size = PIC_WORK_BUF_SIZE / 2;
+		pSrcBuf = (US*)MyMalloc( uAPICG_work_Size );
+		if( pSrcBuf == NULL )	/* メモリの確保 */
+		{
+			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			continue;
+		}
+		memset(pSrcBuf, 0, uAPICG_work_Size);	/* メモリクリア */
+		pBuf = pSrcBuf;	/* 作業用にアドレスコピー */
+#ifdef DEBUG
+//		printf("Load2(%d,0x%p, 0x%p)=%d\n", i, pBuf, pSrcBuf, uAPICG_work_Size );
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		/* メモリ上にPIC画像を展開する */
+		Res = APICG_DataLoad2M( i, 0, 0, 0, pBuf);	/* 確保したメモリ上にロード */
+		if( Res < 0 )	/* 展開失敗 */
+		{
+			printf("error(%d):CG File%2d=%s\n", Res, i, g_CG_List[i] );
+#ifdef DEBUG
+//			KeyHitESC();	/* デバッグ用 */
+#endif
+			continue;
+		}
+#ifdef DEBUG
+//		printf("Load3(%d,0x%p)\n", i, pBuf);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		/* パレット */
+		G_Palette();	/* 0番パレット変更 */
+		
+		/* 加工する */
+		for(x=0; x < (uAPICG_work_Size / 2); x++)
+		{
+			if(*pBuf == CONV_PAL)	/* 透明色 */
+			{
+				*pBuf = TRANS_PAL;	/* 透過色 */
+			}
+			pBuf++;
+		}
+		pBuf = pSrcBuf;
+#ifdef DEBUG
+//		printf("Load4(%d,0x%p)\n", i, pBuf);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		
+#if 0	/* 画面に表示 */
+		{
+			US	*pDstGR = NULL;
+			UI	dx = 0, dy = 0;
+
+//			memset((US*)0xC00000, 0x42, 0x80000);	/* デバッグ用 */
+			
+			for(y=0; y < uHeight; y++)
+			{
+				pDstGR = (US *)(0xC00000 + ((dy + y) << 10) + (dx << 1));
+				pBuf = pSrcBuf + (y << 9);
+				
+				for(x=0; x < uWidth; x++)
+				{
+					*pDstGR = *pBuf & 0x00FF;
+					pDstGR++;
+					pBuf++;
+				}
+			}
+		}
+		pBuf = pSrcBuf;
+#endif
+		
+		/* 書き込み先のメモリチェック */
+		if( g_stPicImage[i].pImageData == NULL )
+		{
+			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			continue;
+		}
+		/* 作業用ポインタ */
+		pDstBuf = g_stPicImage[i].pImageData; 
+		
+#ifdef DEBUG
+//		printf("Load5(%d,0x%p, 0x%p)\n", i, g_stPicImage[i].pImageData, pDstBuf);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		
+		/* 加工後をメモリに保存する */
+		for(y=0; y < uHeight; y++)
+		{
+			pBuf = pSrcBuf + (y << 9);
+			
+			for(x=0; x < uSize8x; x++)
+			{
+				if(x < uWidth)
+				{
+					*pDstBuf = *pBuf & 0x00FF;
+					pBuf++;
+				}
+				else
+				{
+					*pDstBuf = 0x00;
+				}
+				pDstBuf++;
+			}
+		}
+#ifdef DEBUG
+//		printf("Load6(%d,0x%p, 0x%p, 0x%p)\n", i, g_stPicImage[i].pImageData, pBuf, pSrcBuf);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+		
+		/* メモリ操作 */
+		if(pSrcBuf != NULL)
+		{
+			MyMfree(pSrcBuf);	/* メモリ解放 */
+		}
+		printf("CG File %2d = %s(%d Byte)(x:%d(%d),y:%d)\n", i, g_CG_List[i], FileSize, uWidth, uSize8x, uHeight );
+#ifdef DEBUG
+//		puts("========================");
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+	}
+	printf("CG File Load 完了 = %d\n", g_CG_List_Max );
+}
+
+void G_INIT(void)
+{
+	volatile US *VIDEO_REG1 = (US *)0xE82400;
+	volatile US *VIDEO_REG2 = (US *)0xE82500;
+	volatile US *VIDEO_REG3 = (US *)0xE82600;
+	volatile US *V_Sync_end = (US *)0xE8000E;
+
 	G_CLR_ON();				/* グラフィックのクリア */
 	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
 //											   210
@@ -193,17 +477,10 @@ void G_INIT(void)
 //											   +0
 //											   +1
 	*V_Sync_end = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
-
-	/* グラフィックパレットの初期化 */
-	for(nPalette=0; nPalette < 0xFF; nPalette++)
-	{
-		GPALET( nPalette, SetRGB(0, 0, 0));	/* Black */
-	}
 }
 
 void G_HOME(void)
 {
-	G_CLR_ON();				/* グラフィックのクリア */
 	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
 	HOME(0, X_OFFSET, Y_OFFSET);
 	HOME(1, X_OFFSET, Y_OFFSET);
@@ -212,246 +489,15 @@ void G_HOME(void)
 	WIPE();
 }
 
-void G_MyCar(void)
+void G_Palette_INIT(void)
 {
-	SS x,y;
-//	SS x_offset, y_offset;
+	UI	nPalette;
 
-	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET, 	Y_OFFSET,	0);	/* FPS */
-	APICG_DataLoad("data/cg/Over_A.pic"	, X_OFFSET,				0,	0);	/* FPS */
-//	APICG_DataLoad("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
-
-	APAGE(0);		/* グラフィックの書き込み */
-
-	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
-
-	/* 画像がしっかり作られてたらいらない処理 */
-	
-	/* 画像変換 */
-//	for(y=Y_OFFSET; y<=(Y_OFFSET)+MY_CAR_1_H; y++)
-	for(y=0; y<=Y_MAX_DRAW; y++)
+	/* グラフィックパレットの初期化 */
+	for(nPalette=0; nPalette < 0xFF; nPalette++)
 	{
-		for(x=X_OFFSET; x<=X_OFFSET+MY_CAR_1_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
+		GPALET( nPalette, SetRGB(0, 0, 0));	/* Black */
 	}
-	Draw_Fill(X_OFFSET + 90, 			180 + 1,	X_OFFSET + 90 + 31, 			180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
-	Draw_Fill(X_OFFSET + 90, Y_OFFSET + 180 + 1,	X_OFFSET + 90 + 31, Y_OFFSET +	180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
-#if 0	/* TPS */
-	x_offset = X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1));
-	y_offset = V_SYNC_MAX - RASTER_MIN - MY_CAR_0_H - 16;
-	
-	for(y = y_offset; y < (y_offset + MY_CAR_0_H); y++)
-	{
-		for(x = x_offset; x < x_offset + MY_CAR_0_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
-	}
-	Draw_Fill(X_OFFSET, (y_offset + MY_CAR_0_H), X_OFFSET + WIDTH, V_SYNC_MAX, 0xFF);
-#else
-#endif
-}
-
-void G_Background(void)
-{
-	SS i;
-#if 1	/* 画像がしっかり作られてたらいらない処理 */
-	SS x,y;
-	US height_sum = 0u;
-
-	APICG_DataLoad("data/cg/Over_C.pic"	, 0,					0,	1);	/* ライバル車 */
-//	APICG_DataLoad("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
-	APICG_DataLoad("data/cg/Over_E.pic"	, 140,					0,	1);	/* ヤシの木 */
-
-	APAGE(1);		/* グラフィックの書き込み */
-
-	G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
-	
-	/* 画像変換(ライバル車) */
-	for(y=0; y<ENEMY_CAR_1_H; y++)
-	{
-		for(x=0; x<ENEMY_CAR_1_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
-	}
-	
-	/* パターンを */
-	height_sum = 0u;
-	for(i=1; i<4; i++)
-	{
-		height_sum += (ENEMY_CAR_1_H >> (i-1));
-		
-		G_Stretch_Pict(
-						0,				ENEMY_CAR_1_W>>i,
-						height_sum,		ENEMY_CAR_1_H>>i,
-						1,
-						0,	ENEMY_CAR_1_W,
-						0,	ENEMY_CAR_1_H,
-						1);
-	}
-
-	/* 画像変換(ヤシの木) */
-	for(y=0; y<PINETREE_1_H; y++)
-	{
-		for(x=140; x<=140+PINETREE_1_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
-	}
-
-	/* パターンを */
-	height_sum = 0u;
-	for(i=1; i<4; i++)
-	{
-		height_sum += (PINETREE_1_H >> (i-1));
-
-		G_Stretch_Pict(
-						140,		140+PINETREE_1_W>>i,
-						height_sum,		PINETREE_1_H>>i,
-						1,
-						140,	140+PINETREE_1_W,
-						0,		PINETREE_1_H,
-						1);
-	}
-
-#if 0
-	/* 画像変換(背景) */
-	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + BG_1_H; y++)
-	{
-		for(x=X_OFFSET-32; x<X_OFFSET - 32 + BG_1_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
-	}
-#endif
-
-#else
-	SS e;
-	
-	APAGE(2);				/* グラフィックの書き込み */
-
-	/* 建物とコースの間 */
-	Draw_Fill( X_MIN_DRAW,  Y_HORIZON + Y_OFFSET, X_MAX_DRAW,  Y_HORIZON + Y_OFFSET, 1);
-
-	/* 建物 */
-	for(e = 0; e < 8; e++)
-	{
-		Draw_Fill((e << 6), Y_HORIZON-16-1 + Y_OFFSET, (e << 6) + 10, Y_HORIZON-1 + Y_OFFSET, 0xFF);
-	}
-#endif
 }
 
 void G_Palette(void)
@@ -834,7 +880,7 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 			g_stCRT[bMode].hide_offset_x + WIDTH,
 			g_stCRT[bMode].hide_offset_y + 152);	
 	/* 消去 */
-	G_CLR_AREA(g_stCRT[bMode].hide_offset_x, WIDTH, g_stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
+	ret = G_CLR_AREA(g_stCRT[bMode].hide_offset_x, WIDTH, g_stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
 
 	return	ret;
 }
@@ -843,9 +889,232 @@ SS G_Load(UC bCGNum, US uX, US uY, US uArea)
 {
 	SS	ret = 0;
 
-	APICG_DataLoad( cg_list[bCGNum], uX, uY, uArea);
+	ret = APICG_DataLoad2G( g_CG_List[bCGNum], uX, uY, uArea);
 
 	return	ret;
 }
+
+SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
+{
+	SS	ret = 0;
+
+	US	*pDstGR, *pSrcGR;
+	UI	DstGR_H;
+	UI	Addr_Max;
+	UI	uMaxNum;
+	SS	x, y;
+	UI	uWidth, uHeight, uFileSize;
+	US	uSize8x = 0;
+
+	Get_CG_FileList_MaxNum(&uMaxNum);
+	if(uMaxNum <= bCGNum)
+	{
+		ret = -1;
+		return	ret;
+	}
+	pSrcGR = g_stPicImage[bCGNum].pImageData;	/* Src PIC */
+	
+	Get_PicImageInfo( bCGNum, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+	uSize8x	= (((uWidth+7)/8) * 8);	/* 8の倍数 */
+	
+	if(	(uWidth >= 512) || (uHeight >= 512) )
+	{
+		ret = -1;
+		return	ret;
+	}
+	
+	/* アドレス算出 */
+	if(uArea == 0)
+	{
+		DstGR_H = 0xC00000;	/* Screen0 */
+		Addr_Max = 0xC80000;
+	}
+	else{
+		DstGR_H = 0xC80000;	/* Screen1 */
+		Addr_Max = 0xD00000;
+	}
+	
+	for(y = 0; y < uHeight; y++)
+	{
+		/* アドレス算出 */
+		pDstGR = (US *)(DstGR_H + (((uY + y) << 10) + (uX << 1)));
+		if(Addr_Max <= (UI)pDstGR)
+		{
+			continue;
+		}
+	
+		for(x = 0; x < uSize8x; x++)
+		{
+			if(x < uWidth)
+			{
+				if(*pSrcGR != 0x00)
+				{
+					*pDstGR = *pSrcGR;
+				}
+				if(Addr_Max > (UI)pDstGR)
+				{
+					pDstGR++;
+				}
+			}
+			pSrcGR++;
+		}
+	}
+	
+	return	ret;
+}
+
+/* PICファイルを読み込み */
+SS APICG_DataLoad2G(SC *fname, UL pos_x, UL pos_y, US uArea)
+{
+	SS ret;
+
+	US *GR;
+	UC *file_buf = NULL, *work_buf = NULL;
+	
+	file_buf = (UC*)MyMalloc(PIC_FILE_BUF_SIZE);
+	work_buf = (UC*)MyMalloc(PIC_WORK_BUF_SIZE);
+	
+	if(uArea != 0)
+	{
+		GR = (US *)0xC80000;	/* Screen1 */
+	}
+	else{
+		GR = (US *)0xC00000;	/* Screen0 */
+	}
+	
+	if( (file_buf == NULL) || (work_buf == NULL) )
+	{
+		/* メモリエラー */
+		ret = -1;
+	}
+	else
+	{
+		ret = APICLOAD(	(US*)GR, 
+						fname,				/* PICファイル名 */
+						pos_x, pos_y,		/* 描画先のX座標とY座標 */
+						file_buf,
+						PIC_FILE_BUF_SIZE,	
+						APF_NOINITCRT | 	/* 1で画面モードを初期化しません */
+						APF_NOCLRBUF | 		/* 1で展開先バッファをクリアしません */
+						APF_NOPRFC,			/* 1でファイル名とコメントを表示しません */
+						work_buf);
+		if (ret < 0) {
+			/* メモリエラー */
+			ret = -1;
+		}
+		if(work_buf != NULL)
+		{
+			MyMfree(work_buf);	/* メモリ解放 */
+		}
+		if(file_buf != NULL)
+		{
+			MyMfree(file_buf);	/* メモリ解放 */
+		}
+	}
+	return ret;
+}
+
+SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
+{
+	US *GR;
+	UC *work_buf = NULL;
+	UI	uMaxNum;
+	SS ret = 0;
+	
+	Get_CG_FileList_MaxNum(&uMaxNum);
+	if(uMaxNum <= uNum)
+	{
+		ret = -1;
+		return	ret;
+	}
+
+	if(pDst == NULL)
+	{
+		switch(uArea)
+		{
+		case 0:
+		default:
+			GR = (US *)0xC00000;	/* Screen0 */
+			break;
+		case 1:
+			GR = (US *)0xC80000;	/* Screen1 */
+			break;
+		}
+	}
+	else{
+		GR = pDst;					/* メモリ */
+		pos_x = 0;					/* 強制0 */
+		pos_y = 0;					/* 強制0 */
+	}
+	
+	{
+		UI uWidth, uHeight, uFileSize;
+		UC *pFileBuf;
+
+		pFileBuf = (UC*)Get_CG_FileBuf(uNum);	/* ファイルバッファのポインタ取得 */
+		Get_PicImageInfo(uNum, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+
+#ifdef DEBUG
+//		printf("MAPIC1(%d:0x%p)=(0x%p)\n", uNum, pDst, pFileBuf);
+//		printf("MAPIC2(%d:%d)=(%d,%d)(%d)\n", uNum, uArea, uWidth, uHeight, uFileSize );
+#endif
+
+//		work_buf = (UC*)MyMalloc( uHeight * (((uWidth+7)/8) * 8) );
+		work_buf = (UC*)MyMalloc( PIC_WORK_BUF_SIZE );	/* 画面と同じ */
+		if( work_buf == NULL )
+		{
+			/* メモリエラー */
+			ret = -1;
+		}
+		else
+		{
+			//int M_APICLOAD( UWORD *, struct APICGINFO *, long, long, UBYTE *, long, ULONG, UBYTE * );
+			/* メモリからロード */
+			ret = M_APICLOAD(	(US*)GR,			/* Load Ptr */
+								&g_CGInfo[uNum],	/* Data Information */
+								pos_x, pos_y,		/* Load Position */
+								pFileBuf,			/* Load FileBuf */
+								uFileSize,			/* Load FileSize */
+								APF_NOINITCRT | 	/* 1で画面モードを初期化しません */
+								APF_NOCLRBUF | 		/* 1で展開先バッファをクリアしません */
+								APF_NOPRFC,			/* 1でファイル名とコメントを表示しません */
+								work_buf			/* WorkBuf */
+							);
+		}
+#ifdef DEBUG
+//		printf("MAPIC3(%d)=(%d,%d)(%d,%d)(%d)\n", uNum,
+//												g_CGInfo[uNum].STARTX,	g_CGInfo[uNum].STARTY,
+//												g_CGInfo[uNum].SIZEX,	g_CGInfo[uNum].SIZEY,	g_CGInfo[uNum].COLOR );
+#endif
+		
+		if(work_buf != NULL)
+		{
+			MyMfree(work_buf);	/* メモリ解放 */
+		}
+	}
+	return ret;
+}
+
+#if 0
+      +--------------------------------------------------------------+
+      |0       |                |正常にロード・セーブが行なわれまし  |
+      |        |                |た（エラーなし）。                  |
+      |--------+----------------+------------------------------------|
+      |-1～-96 |                |Human68Kが返すエラーコードです。    |
+      |--------+----------------+------------------------------------|
+      |-123    |_ERRAPG_FORMAT  |フォーマットが違う、あるいは壊れて  |
+      |        |                |いるファイルです。                  |
+      |--------+----------------+------------------------------------|
+      |-122    |_ERRAPG_FILEBUF |ファイルバッファが小さすぎます。    |
+      |--------+----------------+------------------------------------|
+      |-121    |_ERRAPG_RECT    |座標が領域をはみ出しています。      |
+      |--------+----------------+------------------------------------|
+      |-119    |_ERRAPG_MODE    |セーブできない画面モードです。      |
+      |--------+----------------+------------------------------------|
+      |-115    |_ERRAPG_WORKBUF |ワークバッファが小さすぎます。      |
+      |--------+----------------+------------------------------------|
+      |-113    |_ERRAPG_FUTURE  |未対応のヘッダです。                |
+      +--------------------------------------------------------------+
+#endif
 
 #endif	/* GRAPHIC_C */

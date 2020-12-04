@@ -68,12 +68,12 @@ void T_SetBG_to_Text(void)
 	US	x, y;
 
 	/* テキストエリアに作業データ展開1 */
-	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 232);
+	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 240);//232
 	/* テキストエリアに作業データ展開2 */
 	for(i=0; i < 10; i++)
 	{
 		x = 0;
-		y = 240;
+		y = 248;//240	248+8=256以降はNG
 		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
 		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
 	}
