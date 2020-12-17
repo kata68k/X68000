@@ -33,7 +33,6 @@ enum
 };
 
 #define	CG_MAX	(16)
-#define	CONV_PAL	(0xB4)
 #define	TRANS_PAL	(0x00)
 
 #define FILE_TYPE			(0x424D)	/* "BM"値 */
@@ -80,12 +79,20 @@ typedef struct tagPICIMAGE {
 	US	*pImageData;
 } PICIMAGE;
 
+typedef struct tagCG_LIST {
+	SC	bFileName[256];		/* パス */
+	UC	ubType;				/* 0:通常、1:スプライトライク */
+	UC	ubTransPal;			/* 透過色パレット番号 */
+} CG_LIST;
+
 extern	SS	GetCRT(ST_CRT *, SS);
 extern	SS	SetCRT(ST_CRT, SS);
 extern	SS	CRT_INIT(void);
 extern	SS	Get_CG_FileList_MaxNum(UI *);
 extern	UC	*Get_CG_FileBuf(UC);
 extern	SS	Get_PicImageInfo(UC , UI *, UI *, UI *);
+extern	SS	Get_PicImagePallet(UC);
+extern	SS	Set_PicImagePallet(UC);
 extern	void	CG_File_Load(void);
 extern	void	G_INIT(void);
 extern	void	G_HOME(void);
@@ -100,5 +107,6 @@ extern	SS	G_Load(UC, US, US, US);
 extern	SS	G_Load_Mem(UC, US, US, US);
 extern	SS	APICG_DataLoad2G(SC *, UL, UL, US);
 extern	SS	APICG_DataLoad2M(UC, UL, UL, US, US *);
+extern	SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 
 #endif	/* GRAPHIC_H */

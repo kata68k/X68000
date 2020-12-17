@@ -20,16 +20,26 @@
 /* define定義 */
 #define	PIC_FILE_BUF_SIZE	(512*1024)
 #define	PIC_WORK_BUF_SIZE	(512*1024)
+#define	PIC_R	(3)
+#define	PIC_B	(3)
+#define	PIC_G	(3)
+#define	COLOR_R	(0)
+#define	COLOR_B	(1)
+#define	COLOR_G	(2)
+#define	COLOR_MAX	(PIC_R * PIC_B * PIC_G)
+#define	G_COLOR		(0x20)
+#define	G_COLOR_SP	(1)	/* 特殊プライオリティとか */
 
 /* グローバル変数 */
 UI	g_CG_List_Max	=	0u;
-SC	g_CG_List[CG_MAX][256]	=	{0};
 UC	*g_pCG_FileBuf[CG_MAX];
-
+US	g_CG_ColorCode[CG_MAX][256]	=	{0};
+UC	g_CG_MaxColor[CG_MAX][3]	=	{0};
 
 /* グローバル構造体 */
 ST_CRT		g_stCRT[CRT_MAX] = {0};
 PICIMAGE	g_stPicImage[CG_MAX];
+CG_LIST		g_stCG_LIST[CG_MAX];
 struct APICGINFO	g_CGInfo[CG_MAX];
 
 /* 関数のプロトタイプ宣言 */
@@ -39,6 +49,8 @@ SS	CRT_INIT(void);
 SS	Get_CG_FileList_MaxNum(UI *);
 UC	*Get_CG_FileBuf(UC);
 SS	Get_PicImageInfo(UC , UI *, UI *, UI *);
+SS	Get_PicImagePallet(UC);
+SS	Set_PicImagePallet(UC);
 void CG_File_Load(void);
 void G_INIT(void);
 void G_HOME(void);
@@ -54,6 +66,7 @@ SS	G_Load(UC, US, US, US);
 SS	G_Load_Mem(UC, US, US, US);
 SS	APICG_DataLoad2G(SC *, UL, UL, US);
 SS	APICG_DataLoad2M(UC , UL, UL, US, US *);
+SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 
 /* 関数 */
 SS	GetCRT(ST_CRT *stDat, SS Num)
@@ -94,7 +107,7 @@ SS CRT_INIT(void)
 	
 	ret = CRTMOD(-1);	/* 現在のモードを返す */
 
-	CRTMOD(11);			/* 偶数：標準解像度、奇数：標準 */
+	CRTMOD(11);			/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
 
 	/* CRTの設定 */
 	g_stCRT[0].view_offset_x	= X_OFFSET;
@@ -171,13 +184,61 @@ SS Get_PicImageInfo(UC bNum, UI *pWidth, UI *pHeight, UI *pFileSize)
 	return ret;
 }
 
+SS Get_PicImagePallet(UC bNum)
+{
+	SS	ret = 0;
+	UI	i;
+
+	/* パレットの取得 */
+	for(i=0; i<256; i++)
+	{
+		g_CG_ColorCode[bNum][i] = GPALET( i, -1 );	/* 現在の設置を保存 */
+	}
+	
+	return ret;
+}
+
+SS Set_PicImagePallet(UC bNum)
+{
+	SS	ret = 0;
+	UI	i;
+	UI	offset_val;
+	static UI offset = 0;
+	
+	/* パレットの設定 */
+	if(g_stCG_LIST[bNum].ubType != 0u)	/* スプライトライク */
+	{
+		offset_val = G_COLOR * offset * G_COLOR_SP;
+		for(i=0; i< (COLOR_MAX * G_COLOR_SP) + 2; i++)
+		{
+			GPALET( i+offset_val, g_CG_ColorCode[bNum][i] );
+		}
+		offset++;
+		if(offset >= 0x100 / (G_COLOR * G_COLOR_SP))
+		{
+			offset = 0;
+		}
+		ret = offset_val;
+	}
+	else
+	{
+		for(i=0; i<256; i++)
+		{
+			GPALET( i, g_CG_ColorCode[bNum][i] );
+		}
+		offset = 0;
+	}
+	
+	return ret;
+}
+
 void CG_File_Load(void)
 {
 	US	i;
 	SI	FileSize;
 
 	/* グラフィックリスト */
-	Load_CG_List("data\\cg\\g_list.txt", g_CG_List, &g_CG_List_Max);
+	Load_CG_List("data\\cg\\g_list.txt", g_stCG_LIST, &g_CG_List_Max);
 	
 	for(i = 0; i < g_CG_List_Max; i++)
 	{
@@ -193,16 +254,16 @@ void CG_File_Load(void)
 		pInfo = g_stPicImage[i].pBMi;
 
 		/* PIC画像のファイルサイズを取得 */
-		GetFileLength( g_CG_List[i], &FileSize );			/* ファイルサイズ取得 */
+		GetFileLength( g_stCG_LIST[i].bFileName, &FileSize );			/* ファイルサイズ取得 */
 		if(FileSize <= 0)
 		{
-			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
 			continue;
 		}
 		pFile->bfSize = FileSize;		/* ファイルサイズ設定 */
 
 		/* PIC画像の情報を取得 */
-		GetFilePICinfo( g_CG_List[i], g_stPicImage[i].pBMi );	/* PICヘッダの読み込み */
+		GetFilePICinfo( g_stCG_LIST[i].bFileName, g_stPicImage[i].pBMi );	/* PICヘッダの読み込み */
 
 #ifdef DEBUG
 //		printf("Head1(%d,0x%p)=%d\n", i, g_stPicImage[i].pBMf, pFile->bfSize );
@@ -221,7 +282,7 @@ void CG_File_Load(void)
 		g_stPicImage[i].pImageData = (US*)MyMalloc( Size );	/* メモリの確保 */
 		if( g_stPicImage[i].pImageData == NULL )
 		{
-			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
 			continue;
 		}
 		memset(g_stPicImage[i].pImageData, 0, Size);	/* メモリクリア */
@@ -235,10 +296,10 @@ void CG_File_Load(void)
 		g_pCG_FileBuf[i] = (UC*)MyMalloc( FileSize );	/* メモリ確保 */
 		if( g_pCG_FileBuf[i] == NULL )
 		{
-			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
 			continue;
 		}
-		File_Load( g_CG_List[i], (UC *)g_pCG_FileBuf[i], sizeof(UC), FileSize);	/* メモリに読み込み */
+		File_Load( g_stCG_LIST[i].bFileName, (UC *)g_pCG_FileBuf[i], sizeof(UC), FileSize);	/* メモリに読み込み */
 #ifdef DEBUG
 //		printf("File(%d,0x%p) = %d\n", i, g_pCG_FileBuf[i], FileSize);
 //		puts("========================");
@@ -256,7 +317,6 @@ void CG_File_Load(void)
 		US	*pSrcBuf = NULL;
 		US	*pDstBuf = NULL;
 		SI	Res;
-		UI	x, y;
 		UI	uWidth, uHeight;
 		UI	uSize8x = 0;
 		UI	uAPICG_work_Size;
@@ -277,7 +337,7 @@ void CG_File_Load(void)
 		pSrcBuf = (US*)MyMalloc( uAPICG_work_Size );
 		if( pSrcBuf == NULL )	/* メモリの確保 */
 		{
-			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
 			continue;
 		}
 		memset(pSrcBuf, 0, uAPICG_work_Size);	/* メモリクリア */
@@ -290,31 +350,15 @@ void CG_File_Load(void)
 		Res = APICG_DataLoad2M( i, 0, 0, 0, pBuf);	/* 確保したメモリ上にロード */
 		if( Res < 0 )	/* 展開失敗 */
 		{
-			printf("error(%d):CG File%2d=%s\n", Res, i, g_CG_List[i] );
+			printf("error(%d):CG File%2d=%s\n", Res, i, g_stCG_LIST[i].bFileName );
 #ifdef DEBUG
 //			KeyHitESC();	/* デバッグ用 */
 #endif
 			continue;
 		}
-#ifdef DEBUG
-//		printf("Load3(%d,0x%p)\n", i, pBuf);
-//		KeyHitESC();	/* デバッグ用 */
-#endif
-		/* パレット */
-		G_Palette();	/* 0番パレット変更 */
-		
-		/* 加工する */
-		for(x=0; x < (uAPICG_work_Size / 2); x++)
-		{
-			if(*pBuf == CONV_PAL)	/* 透明色 */
-			{
-				*pBuf = TRANS_PAL;	/* 透過色 */
-			}
-			pBuf++;
-		}
 		pBuf = pSrcBuf;
 #ifdef DEBUG
-//		printf("Load4(%d,0x%p)\n", i, pBuf);
+//		printf("Load3(%d,0x%p)\n", i, pBuf);
 //		KeyHitESC();	/* デバッグ用 */
 #endif
 		
@@ -344,7 +388,7 @@ void CG_File_Load(void)
 		/* 書き込み先のメモリチェック */
 		if( g_stPicImage[i].pImageData == NULL )
 		{
-			printf("error:CG File %2d = %s\n", i, g_CG_List[i] );
+			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
 			continue;
 		}
 		/* 作業用ポインタ */
@@ -354,37 +398,49 @@ void CG_File_Load(void)
 //		printf("Load5(%d,0x%p, 0x%p)\n", i, g_stPicImage[i].pImageData, pDstBuf);
 //		KeyHitESC();	/* デバッグ用 */
 #endif
-		
-		/* 加工後をメモリに保存する */
-		for(y=0; y < uHeight; y++)
+		if(g_stCG_LIST[i].ubType != 0u)	/* スプライトライク */
 		{
-			pBuf = pSrcBuf + (y << 9);
+			G_Subtractive_Color(pSrcBuf, pDstBuf, uWidth, uHeight, uSize8x, i);	/* 減色処理 */
+		}
+		else		/* 通常の256色CG */
+		{
+			UI	x, y;
 			
-			for(x=0; x < uSize8x; x++)
+			/* 加工後をメモリに保存する */
+			for(y=0; y < uHeight; y++)
 			{
-				if(x < uWidth)
+				pBuf = pSrcBuf + (y << 9);
+				
+				for(x=0; x < uSize8x; x++)
 				{
-					*pDstBuf = *pBuf & 0x00FF;
-					pBuf++;
+					if(x < uWidth)
+					{
+						*pDstBuf = *pBuf & 0x00FF;
+						pBuf++;
+					}
+					else
+					{
+						*pDstBuf = 0x00;
+					}
+					pDstBuf++;
 				}
-				else
-				{
-					*pDstBuf = 0x00;
-				}
-				pDstBuf++;
 			}
 		}
+		
 #ifdef DEBUG
 //		printf("Load6(%d,0x%p, 0x%p, 0x%p)\n", i, g_stPicImage[i].pImageData, pBuf, pSrcBuf);
 //		KeyHitESC();	/* デバッグ用 */
 #endif
+		/* パレット */
+		G_Palette();	/* 0番パレット変更 */
+		Get_PicImagePallet(i);	/* パレットを保存 */
 		
 		/* メモリ操作 */
 		if(pSrcBuf != NULL)
 		{
 			MyMfree(pSrcBuf);	/* メモリ解放 */
 		}
-		printf("CG File %2d = %s(%d Byte)(x:%d(%d),y:%d)\n", i, g_CG_List[i], FileSize, uWidth, uSize8x, uHeight );
+		printf("CG File %2d = %s(x:%d,y:%d)\n", i, g_stCG_LIST[i].bFileName, uWidth, uHeight );
 #ifdef DEBUG
 //		puts("========================");
 //		KeyHitESC();	/* デバッグ用 */
@@ -404,78 +460,55 @@ void G_INIT(void)
 	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
 //											   210
 	*VIDEO_REG1 = Mbset(*VIDEO_REG1,   0x07, 0b001);	/* 512x512 256color 2men */
-//											   |||
-//											   |++		00.    16 color 4 screen
-//											   |++		01.   256 color 2 screen
-//											   |++		11. 65535 color 1 screen
-//											   +0		VR.  512 x 512
-//											   +1		VR. 1024 x1024
-
-//											   DCBA9876543210
-	*VIDEO_REG2 = Mbset(*VIDEO_REG2, 0x3FFF, 0b10000111100100);	/* 優先順位 TX>GR>SP GR0>GR1>GR2>GR3 */
-//											   |||||||||||||+0
-//											   |||||||||||||+1
-//											   ||||||||||||+0
-//											   ||||||||||||+1
-//											   |||||||||||+0
-//											   |||||||||||+1
-//											   ||||||||||+0
-//											   ||||||||||+1
-//											   |||||||||+0
-//											   |||||||||+1
-//											   ||||||||+0
-//											   ||||||||+1
-//											   |||||||+0
-//											   |||||||+1
-//											   ||||||+0
-//											   ||||||+1
-//											   |||||+0
-//											   |||||+1
-//											   ||||+0
-//											   ||||+1
-//											   |||+0
-//											   |||+1
-//											   ||+0
-//											   ||+1
-//											   |+0
-//											   |+1
-//											   +0
-//											   +1
+//											   ||+--------------bit0 
+//											   |+---------------bit1 
+//											   |						00.    16 color 4 screen
+//											   |						01.   256 color 2 screen
+//											   |						11. 65535 color 1 screen
+//											   +----------------bit2 
+//																		0	VR.  512 x 512
+//																		1	VR. 1024 x1024
 
 //											   FEDCBA9876543210
+	*VIDEO_REG2 = Mbset(*VIDEO_REG2, 0x3FFF, 0b0010000111100100);	/* 優先順位 TX>GR>SP GR0>GR1>GR2>GR3 */
+//											   |||||||||||||||+-bit0 0	
+//											   ||||||||||||||+--bit1 0	
+//											   |||||||||||||+---bit2 1	
+//											   ||||||||||||+----bit3 0	
+//											   |||||||||||+-----bit4 0	
+//											   ||||||||||+------bit5 1	
+//											   |||||||||+-------bit6 1	
+//											   ||||||||+--------bit7 1	
+//											   ||||||||					優先順位 GR0>GR1>GR2>GR3
+//											   |||||||+---------bit8 GR	1
+//											   ||||||+----------bit9 GR	0
+//											   |||||+-----------bitA TX	0
+//											   ||||+------------bitB TX	0
+//											   |||+-------------bitC SP	0
+//											   ||+--------------bitD SP	1
+//											   ||						優先順位 TX>GR>SP
+//											   |+---------------bitE (Reserve)
+//											   +----------------bitF (Reserve)
+
+//											   FEDCBA9876543210
+//	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x3F, 0b0001010011101111);	/* 特殊モードあり 仮想画面512x512 */
 	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x3F, 0b0000000001101111);	/* 特殊モードなし 仮想画面512x512 */
-//											   |||||||||||||||+0	512x512 Pri0 OFF
-//											   |||||||||||||||+1	512x512 Pri0 ON
-//											   ||||||||||||||+0		512x512 Pri1 OFF
-//											   ||||||||||||||+1		512x512 Pri1 ON
-//											   |||||||||||||+0		512x512 Pri2 OFF
-//											   |||||||||||||+1		512x512 Pri2 ON
-//											   ||||||||||||+0		512x512 Pri3 OFF
-//											   ||||||||||||+1		512x512 Pri3 ON
-//											   |||||||||||+0		1024x1024 OFF
-//											   |||||||||||+1		1024x1024 ON
-//											   ||||||||||+0			TEXT OFF
-//											   ||||||||||+1			TEXT ON
-//											   |||||||||+0			SP OFF
-//											   |||||||||+1			SP ON
-//											   ||||||||+0	--------
-//											   ||||||||+1	--------
-//											   |||||||+0	
-//											   |||||||+1
-//											   ||||||+0
-//											   ||||||+1
-//											   |||||+0
-//											   |||||+1
-//											   ||||+0
-//											   ||||+1
-//											   |||+0
-//											   |||+1
-//											   ||+0
-//											   ||+1
-//											   |+0
-//											   |+1
-//											   +0
-//											   +1
+//											   |||||||||||||||+-bit0 GS0	512x512 Pri0 <0:OFF 1:ON>
+//											   ||||||||||||||+--bit1 GS1	512x512 Pri1 <0:OFF 1:ON>
+//											   |||||||||||||+---bit2 GS2	512x512 Pri2 <0:OFF 1:ON>
+//											   ||||||||||||+----bit3 GS3	512x512 Pri3 <0:OFF 1:ON>
+//											   |||||||||||+-----bit4 GS4	1024x1024 <0:OFF 1:ON>
+//											   ||||||||||+------bit5 TON	TEXT <0:OFF 1:ON>
+//											   |||||||||+-------bit6 SON	SP <0:OFF 1:ON>
+//											   ||||||||+--------bit7 (Reserve)
+//											   |||||||+---------bit8 G/T	
+//											   ||||||+----------bit9 G/G	
+//											   |||||+-----------bitA B/P	1
+//											   ||||+------------bitB H/P	
+//											   |||+-------------bitC EXON	1
+//											   ||+--------------bitD VHT	
+//											   |+---------------bitE AH		
+//											   +----------------bitF Ys		
 	*V_Sync_end = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
 }
 
@@ -503,6 +536,7 @@ void G_Palette_INIT(void)
 void G_Palette(void)
 {
 	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
+//	GPALET( 1, SetRGB( 1,  1,  1));	/* Black */
 #if 0
 	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
 	GPALET( 1, SetRGB(16, 16, 16));	/* Glay1 */
@@ -889,7 +923,7 @@ SS G_Load(UC bCGNum, US uX, US uY, US uArea)
 {
 	SS	ret = 0;
 
-	ret = APICG_DataLoad2G( g_CG_List[bCGNum], uX, uY, uArea);
+	ret = APICG_DataLoad2G( g_stCG_LIST[bCGNum].bFileName, uX, uY, uArea);
 
 	return	ret;
 }
@@ -905,6 +939,7 @@ SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
 	SS	x, y;
 	UI	uWidth, uHeight, uFileSize;
 	US	uSize8x = 0;
+	SS	Pal_offset;
 
 	Get_CG_FileList_MaxNum(&uMaxNum);
 	if(uMaxNum <= bCGNum)
@@ -933,6 +968,8 @@ SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
 		DstGR_H = 0xC80000;	/* Screen1 */
 		Addr_Max = 0xD00000;
 	}
+
+	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
 	
 	for(y = 0; y < uHeight; y++)
 	{
@@ -949,7 +986,7 @@ SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
 			{
 				if(*pSrcGR != 0x00)
 				{
-					*pDstGR = *pSrcGR;
+					*pDstGR = *pSrcGR + Pal_offset;
 				}
 				if(Addr_Max > (UI)pDstGR)
 				{
@@ -1116,5 +1153,204 @@ SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
       |-113    |_ERRAPG_FUTURE  |未対応のヘッダです。                |
       +--------------------------------------------------------------+
 #endif
+
+SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidthEx, UI uNum)
+{
+	SS	ret = 0;
+	UI	i, j, k, m;
+	UI	x, y, z;
+	UI	uAPICG_work_Size;
+	UI	uSize8x = 0;
+	US	*pBuf = NULL;
+	US	col;
+	UC	ubR=0,ubG=0,ubB=0;
+	UC	ubNotUsePal[256];
+	US	uColTbl[256];
+	UC	ubConvPal;
+	
+	/* 均等量子化テーブル */
+	UC	ubGen8_R[PIC_R];
+	UC	ubGen8_G[PIC_G];
+	UC	ubGen8_B[PIC_B];
+
+	pBuf = pSrcBuf;
+	uAPICG_work_Size = PIC_WORK_BUF_SIZE / 2;
+	uSize8x = uWidthEx;
+	z = (PIC_R * PIC_G * PIC_B) + 2;
+	ubConvPal = g_stCG_LIST[uNum].ubTransPal;
+	
+	/* 除外パレット抽出準備 */
+	for(j=0; j<256; j++)
+	{
+		ubNotUsePal[j] = j;
+		uColTbl[j] = 0;
+	}
+
+	/* 減色カラーの対象を抽出 */
+	for(j=0; j < (uAPICG_work_Size / 2); j++)
+	{
+		col = GPALET( *pBuf, -1 );	/* 現在の設置を抽出 */
+		
+		if(*pBuf == ubConvPal)	/* 透明色 */
+		{
+			/* 何もしない */
+		}
+		else
+		{
+			/* 最大値を取得 */
+			ubR = Mmax( ubR, GetR(col) );
+			ubG = Mmax( ubG, GetG(col) );
+			ubB = Mmax( ubB, GetB(col) );
+		}
+		pBuf++;
+	}
+	g_CG_MaxColor[uNum][COLOR_R] = ubR;
+	g_CG_MaxColor[uNum][COLOR_G] = ubG;
+	g_CG_MaxColor[uNum][COLOR_B] = ubB;
+
+	pBuf = pSrcBuf;
+	
+	/* 減色カラーの設定 */
+	ubGen8_R[0] = 0x01;
+	for(j=1; j<PIC_R; j++)
+	{
+		ubGen8_R[j] = g_CG_MaxColor[uNum][COLOR_R] / (PIC_R-j);
+	}
+	ubGen8_G[0] = 0x01;
+	for(j=1; j<PIC_G; j++)
+	{
+		ubGen8_G[j] = g_CG_MaxColor[uNum][COLOR_G] / (PIC_G-j);
+	}
+	ubGen8_B[0] = 0x01;
+	for(j=1; j<PIC_B; j++)
+	{
+		ubGen8_B[j] = g_CG_MaxColor[uNum][COLOR_B] / (PIC_B-j);
+	}
+	
+	m = 1;
+	uColTbl[0] = SetRGB(0, 0, 0);	/* 透過 */
+//	uColTbl[1] = SetRGB(0, 0, 0);	/* 特殊プライオリティ用 */
+	for(i=0; i<PIC_R; i++)
+	{
+		for(j=0; j<PIC_G; j++)
+		{
+			for(k=0; k<PIC_B; k++)
+			{
+				uColTbl[m] = SetRGB(ubGen8_R[i], ubGen8_G[j], ubGen8_B[k]);
+				m++;
+//				uColTbl[m] = SetRGB(0, 0, 0);	/* 特殊プライオリティ用 */
+//				m++;
+			}
+		}
+	}
+	
+	/* 加工後をメモリに保存する */
+	for(y=0; y < uHeight; y++)
+	{
+		pBuf = pSrcBuf + (y << 9);
+		
+		for(x=0; x < uSize8x; x++)
+		{
+			if(x < uWidth)
+			{
+				UC pal;
+				
+				pal = (UC)(*pBuf & 0x00FF);	/* 画像のパレット番号を取得 */
+
+				ubNotUsePal[pal] = 0;	/* 使用したパレット */
+
+				if(pal == ubConvPal)	/* 変換対象色 */
+				{
+					pal = TRANS_PAL;	/* 透過色 */
+				}
+				else
+				{
+					UC ubTmp;
+					
+					col = GPALET(pal, -1);	/* パレット番号からカラーコードを取得 */
+					ubR = GetR(col);
+					ubG = GetG(col);
+					ubB = GetB(col);
+					
+					/* 均等量子化 */
+					k = 0;
+					ubTmp = McmpSub(ubGen8_R[0], ubR);
+					for(m=1; m<PIC_R; m++)
+					{
+						if( ubTmp > McmpSub(ubGen8_R[m], ubR) )
+						{
+							ubTmp = McmpSub(ubGen8_R[m], ubR);
+							k = m;
+						}
+					}
+					ubR = ubGen8_R[k];
+					
+					k = 0;
+					ubTmp = McmpSub(ubGen8_G[0], ubG);
+					for(m=1; m<PIC_G; m++)
+					{
+						if( ubTmp > McmpSub(ubGen8_G[m], ubG) )
+						{
+							ubTmp = McmpSub(ubGen8_G[m], ubG);
+							k = m;
+						}
+					}
+					ubG = ubGen8_G[k];
+
+					k = 0;
+					ubTmp = McmpSub(ubGen8_B[0], ubB);
+					for(m=1; m<PIC_B; m++)
+					{
+						if( ubTmp > McmpSub(ubGen8_B[m], ubB) )
+						{
+							ubTmp = McmpSub(ubGen8_B[m], ubB);
+							k = m;
+						}
+					}
+					ubB = ubGen8_B[k];
+					
+					col = SetRGB(ubR, ubG, ubB);	/* ３色を合成 */
+					for( i=0; i<z; i++ )
+					{
+						if(uColTbl[i] == col)
+						{
+							pal = i;
+							break;
+						}
+					}
+				}
+				*pDstBuf = pal;		/* コピー先へ */
+				
+				pBuf++;
+			}
+			else
+			{
+				*pDstBuf = 0x00;
+			}
+			pDstBuf++;
+		}
+	}
+	
+	for(j=0; j<256; j++)
+	{
+		if(j <= z)
+		{
+			GPALET( j, uColTbl[j] );	/* 減色結果でパレット更新 */
+		}
+		else
+		{
+			GPALET( j, 0 );				/* 0 */
+		}
+	}
+//	for(j=0; j<256; j++)
+//	{
+//		if(ubNotUsePal[j] != 0)
+//		{
+//			GPALET( j, SetRGB(0, 0, 0) );	/* 使ってないパレットは透過色設定 */
+//		}
+//	}
+	
+	return ret;
+}
 
 #endif	/* GRAPHIC_C */

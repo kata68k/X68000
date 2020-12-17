@@ -43,9 +43,9 @@ SS	MyCar_G_Load(void)
 {
 	SS	ret = 0;
 	
-	MyCar_Image();		/* 自車の表示 */
-	
 	MyCar_Background();	/* 背景の表示 */
+
+	MyCar_Image();		/* 自車の表示 */
 
 	return ret;
 }
@@ -522,41 +522,14 @@ void MyCar_Image(void)
 	Draw_Fill(X_OFFSET, (       0 + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W,        0 + V_SYNC_MAX, 0x01);
 	Draw_Fill(X_OFFSET, (Y_OFFSET + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W, Y_OFFSET + V_SYNC_MAX, 0x01);
 	
+//	Set_PicImagePallet(0);	/* パレット設定 */
+
 #if 0	/* TPS */
 //	SS x_offset, y_offset;
 //	APICG_DataLoad2G("data/cg/Over_B.pic"	, X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1)),  V_SYNC_MAX-RASTER_MIN-MY_CAR_0_H - 16,	0);	/* TPS */
 	x_offset = X_OFFSET + ((WIDTH>>1) - (MY_CAR_0_W>>1));
 	y_offset = V_SYNC_MAX - RASTER_MIN - MY_CAR_0_H - 16;
 	
-	for(y = y_offset; y < (y_offset + MY_CAR_0_H); y++)
-	{
-		for(x = x_offset; x < x_offset + MY_CAR_0_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
-	}
 	Draw_Fill(X_OFFSET, (y_offset + MY_CAR_0_H), X_OFFSET + WIDTH, V_SYNC_MAX, 0xFF);
 #else
 #endif
@@ -570,43 +543,10 @@ void MyCar_Background(void)
 //	SS x,y;
 
 	ret = G_Load_Mem( 2, 0,	0,	1);	/* ライバル車 */
+//	Set_PicImagePallet(2);	/* パレット設定 */
 //	APICG_DataLoad2G("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
 	if(ret >= 0)
 	{
-#if 0	/* 画像がしっかり作られてたらいらない処理 */
-		G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
-		
-		/* 画像変換(ライバル車) */
-		for(y=0; y<ENEMY_CAR_1_H; y++)
-		{
-			for(x=0; x<ENEMY_CAR_1_W; x++)
-			{
-				US color;
-				
-				Draw_Pget(x, y, &color);
-
-				switch(color)
-				{
-					case TRANS_PAL:
-					{
-						color = 0x01;	/* 透過色→不透過色 */
-						break;
-					}
-					case CONV_PAL:
-					{
-						color = TRANS_PAL;	/* 変換対象色→透過色 */
-						break;
-					}
-					default:
-					{
-						/* 何もしない*/
-						break;
-					}
-				}
-				Draw_Pset(x, y, color);
-			}
-		}
-#endif
 		/* パターンを */
 		height_sum = 0u;
 		for(i=1; i<4; i++)
@@ -624,42 +564,9 @@ void MyCar_Background(void)
 	}
 	
 	ret = G_Load_Mem( 4, 140,	0,	1);	/* ヤシの木 */
+//	Set_PicImagePallet(4);	/* パレット設定 */
 	if(ret >= 0)
 	{
-#if 0	/* 画像がしっかり作られてたらいらない処理 */
-		G_Palette();	/* グラフィックパレットの設定 */	/* 透過色 */
-		
-		/* 画像変換(ヤシの木) */
-		for(y=0; y<PINETREE_1_H; y++)
-		{
-			for(x=140; x<=140+PINETREE_1_W; x++)
-			{
-				US color;
-				
-				Draw_Pget(x, y, &color);
-
-				switch(color)
-				{
-					case TRANS_PAL:
-					{
-						color = 0x01;	/* 透過色→不透過色 */
-						break;
-					}
-					case CONV_PAL:
-					{
-						color = TRANS_PAL;	/* 変換対象色→透過色 */
-						break;
-					}
-					default:
-					{
-						/* 何もしない*/
-						break;
-					}
-				}
-				Draw_Pset(x, y, color);
-			}
-		}
-#endif
 		/* パターンを */
 		height_sum = 0u;
 		for(i=1; i<4; i++)
@@ -675,39 +582,6 @@ void MyCar_Background(void)
 							1);
 		}
 	}
-	
-#if 0
-	/* 画像変換(背景) */
-	for(y=Y_OFFSET + 4; y<(Y_OFFSET + 4) + BG_1_H; y++)
-	{
-		for(x=X_OFFSET-32; x<X_OFFSET - 32 + BG_1_W; x++)
-		{
-			US color;
-			
-			Draw_Pget(x, y, &color);
-
-			switch(color)
-			{
-				case TRANS_PAL:
-				{
-					color = 0x01;	/* 透過色→不透過色 */
-					break;
-				}
-				case CONV_PAL:
-				{
-					color = TRANS_PAL;	/* 変換対象色→透過色 */
-					break;
-				}
-				default:
-				{
-					/* 何もしない*/
-					break;
-				}
-			}
-			Draw_Pset(x, y, color);
-		}
-	}
-#endif
 
 #if 0
 	SS e;

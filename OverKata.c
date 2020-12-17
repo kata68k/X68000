@@ -75,7 +75,7 @@ SS main(void)
 	
 	usr_abort = App_exit;	/* 例外発生で終了処理を実施する */
 
-//	init_trap14();	/* デバッグ用致命的エラーハンドリング */
+	init_trap14();	/* デバッグ用致命的エラーハンドリング */
 
 	/* 変数の初期化 */
 	g_mode = 1;
@@ -669,6 +669,8 @@ SS BG_main(UC* bFlip)
 			case Clear_G:
 			{
 				G_CLR_ALL_OFFSC(g_mode);
+
+//				bFlipState = Object1_G;
 				bFlipState++;
 				*bFlip = FALSE;
 				break;

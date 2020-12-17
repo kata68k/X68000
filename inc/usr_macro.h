@@ -50,6 +50,17 @@
 #define Mabs(x) ((x) < 0 ? -(x) : (x))
 
 /*
+        McmpSub - 比較して減算する -
+*/
+/**
+ * 指定された引数の絶対値を返す.
+ * @param [in] x        絶対値にする対象の変数
+ * @retval 絶対値
+ * @attention 引数は複数回評価される.
+ */
+#define McmpSub(x,y) ( (x < y) ? (y - x) : (x - y) )
+
+/*
         Mbset - bitセット -
 */
 /**
@@ -87,6 +98,9 @@
 #define Mdec(x,y) ((x > (x - y)) ? (x - y) : 0)
 
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
+#define GetR(color)	(( color >> 6) & 0x1Fu)
+#define GetG(color)	(( color >> 11) & 0x1Fu)
+#define GetB(color)	(( color >> 1) & 0x1Fu)
 
 #define SetBGcode(V,H,PAL,PCG)	((V << 15) + (H << 14) + (PAL << 8) + PCG)
 

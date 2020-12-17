@@ -13,7 +13,7 @@ extern SS PCG_SP_dataload(SC *);
 extern SS PCG_PAL_dataload(SC *);
 extern SS Load_Music_List(SC *, SC (*)[256], UI *);
 extern SS Load_SE_List(SC *, SC (*)[256], UI *);
-extern SS Load_CG_List(SC *, SC (*)[256], UI *);
+extern SS Load_CG_List(SC *, CG_LIST *, UI *);
 extern SS Load_MACS_List(SC *, SC (*)[256], UI *);
 extern SS GetFileLength(SC *, SI *);
 extern SS GetFilePICinfo(SC *, BITMAPINFOHEADER *);

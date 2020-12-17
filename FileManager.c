@@ -26,7 +26,7 @@ SS PCG_SP_dataload(SC *);
 SS PCG_PAL_dataload(SC *);
 SS Load_Music_List(SC *, SC (*)[256], UI *);
 SS Load_SE_List(SC *, SC (*)[256], UI *);
-SS Load_CG_List(SC *, SC (*)[256], UI *);
+SS Load_CG_List(SC *, CG_LIST *, UI *);
 SS Load_MACS_List(SC *, SC (*)[256], UI *);
 SS GetFileLength(SC *, SI *);
 SS GetFilePICinfo(SC *, BITMAPINFOHEADER *);
@@ -406,13 +406,13 @@ SS Load_SE_List(SC *fname, SC (*music_list)[256], UI *list_max)
 	return ret;
 }
 
-SS Load_CG_List(SC *fname, SC (*cg_list)[256], UI *list_max)
+SS Load_CG_List(SC *fname, CG_LIST *cg_list, UI *list_max)
 {
 	FILE *fp;
 	SS ret = 0;
 	SC buf[1000], *p;
 	SC z_name[256];
-	UI i=0, num=0;
+	UI i=0, num=0, bType = 0, bTransPal = 0;
 	
 	fp = fopen(fname, "r");
 	if(fp == NULL)
@@ -426,11 +426,18 @@ SS Load_CG_List(SC *fname, SC (*cg_list)[256], UI *list_max)
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
+			sscanf(p,"%d= %s %d %d", &num, z_name, &bType, &bTransPal);
+#ifdef DEBUG
+//			printf("%d=%s,%d\n", num, z_name, bType);
+//			KeyHitESC();	/* デバッグ用 */
+#endif
 			if(i == num)
 			{
-				sprintf(cg_list[i], "data\\cg\\%s", z_name);
+				sprintf( cg_list->bFileName, "data\\cg\\%s", z_name );
+				cg_list->ubType = bType;
+				cg_list->ubTransPal = bTransPal;
 			}
+			cg_list++;
 			i++;
 		}
 		fclose(fp);
