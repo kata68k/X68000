@@ -225,6 +225,7 @@ static void interrupt Raster_Func(void)
 	volatile US *CRTC_R09 = (US *)0xE80012u;	/* ラスター割り込み位置 */
 //	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
 //	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
+	volatile US *VIDEO_REG3 = (US *)0xE82600;
 
 	US nNum = ras_count;
 
@@ -246,6 +247,7 @@ static void interrupt Raster_Func(void)
 //	*BG1scroll_x	= 256;						/* BG1のX座標の設定 *//* 空のコントロール */
 //	*BG1scroll_y	= g_stRasterInt[1].y;		/* BG1のY座標の設定 *//* 空のコントロール */
 //	*CRTC_R12		= g_stRasterInt[nNum].x + X_OFFSET;			/* GRのX座標の設定 */
+	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000000000);	/* GR2(GR3,GR4)=OFF */
 
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
@@ -257,7 +259,8 @@ static void interrupt Vsync_Func(void)
 	volatile US *BG1scroll_x  = (US *)0xEB0804;
 	volatile US *BG1scroll_y  = (US *)0xEB0806;
 //	volatile US *BGCTRL		  = (US *)0xEB0808;
-
+	volatile US *VIDEO_REG3 = (US *)0xE82600;
+	
 	/* V-Sync割り込み処理 */
 #ifdef 	MACS_MOON
 	/* 何もしない */
@@ -271,7 +274,9 @@ static void interrupt Vsync_Func(void)
 	*BG0scroll_y	= g_stRasterInt[1].y;	/* BG0のY座標の設定 *//* 空のコントロール */
 	*BG1scroll_x	= 256;					/* BG1のX座標の設定 *//* 空のコントロール */
 	*BG1scroll_y	= g_stRasterInt[1].y;	/* BG1のY座標の設定 *//* 空のコントロール */
-
+	
+	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000001100);	/* GR2(GR3,GR4)=ON */
+	
 	/* H-Sync割り込み処理 */
 	Hsync_count = 0;
 //	HSYNCST(Hsync_Func);					/* H-Sync割り込み */
@@ -344,12 +349,15 @@ SS vwait(SS count)				/* 約count／60秒待つ	*/
 	SS ret = 0;
 	volatile UC *mfp = (UC *)0xe88001;
 //	volatile US *BGCTRL = (US *)0xEB0808;
+//	volatile US *VIDEO_REG3 = (US *)0xE82600;
+	
 //	*BGCTRL = Mbset(*BGCTRL, Bit_9, Bit_9);
 	
 	while(count--){
 		while(!((*mfp) & 0b00010000));	/* 垂直表示期間待ち	*/
 		while((*mfp) & 0b00010000);	/* 垂直帰線期間待ち	*/
 	}
+//	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000001100);	/* GR2(GR3,GR4)=ON */
 
 	return ret;
 }

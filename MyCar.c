@@ -503,12 +503,14 @@ SS	GetMyCarSpeed(SS *speed)
 
 void MyCar_Image(void)
 {
-	SS x,y;
+	SS x;
+	struct _txfillptr stTxFill;
 
 	/* FPS */
-	G_Load_Mem( 0, X_OFFSET,	0,			0);	/* インテリア */
-	G_Load_Mem( 0, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
-
+//	G_Load_Mem( 0, X_OFFSET,	0,			0);	/* インテリア */
+//	G_Load_Mem( 0, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
+	PutGraphic_To_Text( 0, 0, 0			);	/* インテリア */
+	PutGraphic_To_Text( 0, 0, Y_OFFSET	);	/* インテリア */
 	/* メーターの穴 */
 	for(x = 0; x < 17; x++)
 	{
@@ -521,6 +523,26 @@ void MyCar_Image(void)
 	/* 余白の塗りつぶし */
 	Draw_Fill(X_OFFSET, (       0 + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W,        0 + V_SYNC_MAX, 0x01);
 	Draw_Fill(X_OFFSET, (Y_OFFSET + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W, Y_OFFSET + V_SYNC_MAX, 0x01);
+	
+	/* テキスト塗りつぶし */
+	for(x = 0; x < 4; x++)
+	{
+		stTxFill.vram_page = x;
+		stTxFill.fill_patn = 0;
+
+//		stTxFill.x = 0;
+//		stTxFill.x1= MY_CAR_1_W;
+//		stTxFill.y = MY_CAR_1_H;
+//		stTxFill.y1= V_SYNC_MAX;
+//		_iocs_txfill(&stTxFill);
+
+		stTxFill.x = 90;
+		stTxFill.x1= 32;	/* xから増加分 */
+		stTxFill.y = 180;	
+		stTxFill.y1= 31;	/* yから増加分 */
+		_iocs_txfill(&stTxFill);
+
+	}
 	
 //	Set_PicImagePallet(0);	/* パレット設定 */
 
@@ -541,8 +563,8 @@ void MyCar_Background(void)
 	US height_sum = 0u;
 	UI i;
 //	SS x,y;
-
-	ret = G_Load_Mem( 2, 0,	0,	1);	/* ライバル車 */
+	
+	ret = G_Load_Mem( 2, 0,	0,	0);	/* ライバル車 */
 //	Set_PicImagePallet(2);	/* パレット設定 */
 //	APICG_DataLoad2G("data/cg/Over_D.pic"	, X_OFFSET,	Y_OFFSET +  4,	1);	/* 背景 */
 	if(ret >= 0)
@@ -556,14 +578,14 @@ void MyCar_Background(void)
 			G_Stretch_Pict(
 							0,				ENEMY_CAR_1_W>>i,
 							height_sum,		ENEMY_CAR_1_H>>i,
-							1,
+							0,
 							0,	ENEMY_CAR_1_W,
 							0,	ENEMY_CAR_1_H,
-							1);
+							0);
 		}
 	}
 	
-	ret = G_Load_Mem( 4, 140,	0,	1);	/* ヤシの木 */
+	ret = G_Load_Mem( 4, 140,	0,	0);	/* ヤシの木 */
 //	Set_PicImagePallet(4);	/* パレット設定 */
 	if(ret >= 0)
 	{
@@ -576,13 +598,15 @@ void MyCar_Background(void)
 			G_Stretch_Pict(
 							140,		140+PINETREE_1_W>>i,
 							height_sum,		PINETREE_1_H>>i,
-							1,
+							0,
 							140,	140+PINETREE_1_W,
 							0,		PINETREE_1_H,
-							1);
+							0);
 		}
 	}
 
+	G_Load_Mem( 6, X_OFFSET,	Y_OFFSET+8,	1);	/* 背景 */
+	G_Load_Mem( 6, X_OFFSET,	Y_MIN_DRAW+8,	1);	/* 背景 */
 #if 0
 	SS e;
 	

@@ -45,8 +45,24 @@ void T_EXIT(void)
 
 void T_Clear(void)
 {
+	struct _txfillptr stTxFill;
+	
+	stTxFill.vram_page = 0;
+	stTxFill.x = 0;
+	stTxFill.y = 0;
+	stTxFill.x1= 1023;
+	stTxFill.y1= 1023;
+	stTxFill.fill_patn = 0;
+	
 	_iocs_scroll(8, 0, 0);	/* テキスト画面 */
-	_iocs_txrascpy(256 / 4 * 256, 256 / 4, 0b1111);	/* テキスト画面クリア */
+//	_iocs_txrascpy(256 / 4 * 256, 256 / 4, 0b1111);	/* テキスト画面クリア */
+	_iocs_txfill(&stTxFill);
+	stTxFill.vram_page = 1;
+	_iocs_txfill(&stTxFill);
+	stTxFill.vram_page = 2;
+	_iocs_txfill(&stTxFill);
+	stTxFill.vram_page = 3;
+	_iocs_txfill(&stTxFill);
 }
 
 void T_PALET(void)
@@ -60,6 +76,7 @@ void T_PALET(void)
 	TPALET2( 5, SetRGB(30,  8,  0));	/* Orenge */
 	TPALET2( 6, SetRGB(30, 30,  0));	/* Yellow */
 	TPALET2( 7, SetRGB( 0, 31,  0));	/* Green */
+	TPALET2( 8, SetRGB( 8,  8,  8));	/* Glay */
 }
 
 void T_SetBG_to_Text(void)

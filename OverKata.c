@@ -354,8 +354,9 @@ SS main(void)
 				PCG_INIT();		/* スプライト／ＢＧの初期化 */
 				PCG_VIEW(TRUE);	
 
-				/* 自車の画像読み込み*/
-				MyCar_G_Load();
+				/* テキスト表示 */
+				T_Clear();			/* テキストクリア */
+				MyCar_G_Load();		/* 自車の画像読み込み*/
 				MyCarInfo_Init();
 				
 				/* ライバル車の初期化 */
@@ -371,7 +372,6 @@ SS main(void)
 				Raster_Init();
 				
 				/* テキスト表示 */
-				T_Clear();		/* テキストクリア */
 				T_PALET();		/* テキストパレット設定 */
 				T_TopScore();	/* TOP */
 				T_Time();		/* TIME */
@@ -509,9 +509,10 @@ SS main(void)
 //				Message_Num(&road_distance,		12, 12, 2, MONI_Type_SS, "%3d");
 //				Message_Num(&road_angle,		20, 12, 2, MONI_Type_SS, "%3d");
 				
-				Message_Num(&unTime_cal,	 	 0, 13, 2, MONI_Type_UI, "%3d");
-				Message_Num(&unTime_cal_PH,		 6, 13, 2, MONI_Type_UI, "%3d");
-				Message_Num(&g_uDebugNum,		12, 13, 2, MONI_Type_US, "%3d");
+				Message_Num(&unTime_cal,	 	 0, 8, 2, MONI_Type_UI, "%3d");
+				Message_Num(&unTime_cal_PH,		 6, 8, 2, MONI_Type_UI, "%3d");
+				Message_Num(&g_uDebugNum,		12, 8, 2, MONI_Type_US, "%3d");
+				
 			}
 		}
 #endif
@@ -681,11 +682,13 @@ SS BG_main(UC* bFlip)
 				/* FPS */
 				if(g_mode == 2)
 				{
-					G_Load_Mem( 6, X_OFFSET,	Y_OFFSET,	1);	/* 背景 */
+					PutGraphic_To_Symbol("test2", X_OFFSET + 128, Y_OFFSET + 48, 20);
+					//G_Load_Mem( 6, X_OFFSET,	Y_OFFSET,	1);	/* 背景 */
 				}
 				else
 				{
-					G_Load_Mem( 6, X_OFFSET,	Y_MIN_DRAW,	1);	/* 背景 */
+					PutGraphic_To_Symbol("test1", X_OFFSET + 128, Y_MIN_DRAW + 48, 20);
+					//G_Load_Mem( 6, X_OFFSET,	Y_MIN_DRAW,	1);	/* 背景 */
 				}
 				bFlipState++;
 				*bFlip = FALSE;

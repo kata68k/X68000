@@ -196,8 +196,8 @@ SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
 		height_sum += (PINETREE_1_H >> (i-1));
 	}
 	
-	ret = G_BitBlt(	x,		w,			y,	h,	1,
-					140,	w,	height_sum,	h,	1,
+	ret = G_BitBlt(	x,		w,			y,	h,	0,
+					140,	w,	height_sum,	h,	0,
 					ubMode, POS_MID, POS_CENTER);
 	
 	return	ret;

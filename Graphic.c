@@ -67,6 +67,8 @@ SS	G_Load_Mem(UC, US, US, US);
 SS	APICG_DataLoad2G(SC *, UL, UL, US);
 SS	APICG_DataLoad2M(UC , UL, UL, US, US *);
 SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
+SS	PutGraphic_To_Text(UC , US , US );
+SS	PutGraphic_To_Symbol(const UC *, US , US , US );
 
 /* 関数 */
 SS	GetCRT(ST_CRT *stDat, SS Num)
@@ -104,10 +106,23 @@ SS	SetCRT(ST_CRT stDat, SS Num)
 SS CRT_INIT(void)
 {
 	SS	ret = 0;
+	volatile US *CRTC_R21 = (US *)0xE8002Au;
 	
 	ret = CRTMOD(-1);	/* 現在のモードを返す */
-
 	CRTMOD(11);			/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+
+//										   FEDCBA9876543210
+	*CRTC_R21 = Mbset(*CRTC_R21, 0x03FF, 0b0000000111110000);	/* CRTC R21 */
+//										   |||||||||||||||+-bit0 CP0	
+//										   ||||||||||||||+--bit1 CP1	
+//										   |||||||||||||+---bit2 CP2	
+//										   ||||||||||||+----bit3 CP3	
+//										   |||||||||||+-----bit4 AP0	同時アクセス
+//										   ||||||||||+------bit5 AP1	同時アクセス
+//										   |||||||||+-------bit6 AP2	同時アクセス
+//										   ||||||||+--------bit7 AP3	同時アクセス
+//										   |||||||+---------bit8 SA		同時アクセスON
+//										   ||||||+----------bit9 MEN	同時アクセスマスク
 
 	/* CRTの設定 */
 	g_stCRT[0].view_offset_x	= X_OFFSET;
@@ -206,7 +221,7 @@ SS Set_PicImagePallet(UC bNum)
 	static UI offset = 0;
 	
 	/* パレットの設定 */
-	if(g_stCG_LIST[bNum].ubType != 0u)	/* スプライトライク */
+	if(g_stCG_LIST[bNum].ubType == 1u)	/* スプライトライク */
 	{
 		offset_val = G_COLOR * offset * G_COLOR_SP;
 		for(i=0; i< (COLOR_MAX * G_COLOR_SP) + 2; i++)
@@ -214,20 +229,30 @@ SS Set_PicImagePallet(UC bNum)
 			GPALET( i+offset_val, g_CG_ColorCode[bNum][i] );
 		}
 		offset++;
-		if(offset >= 0x100 / (G_COLOR * G_COLOR_SP))
+	}
+	else if(g_stCG_LIST[bNum].ubType == 2u)	/* テキスト描画 */
+	{
+		offset_val = 8;
+		for(i=0; i< 8; i++)
 		{
-			offset = 0;
+			TPALET2( i+offset_val, g_CG_ColorCode[bNum][i+1] );
 		}
-		ret = offset_val;
 	}
 	else
 	{
+		offset_val = 0;
 		for(i=0; i<256; i++)
 		{
 			GPALET( i, g_CG_ColorCode[bNum][i] );
 		}
 		offset = 0;
 	}
+
+	if(offset >= 0x100 / (G_COLOR * G_COLOR_SP))
+	{
+		offset = 0;
+	}
+	ret = offset_val;
 	
 	return ret;
 }
@@ -398,7 +423,11 @@ void CG_File_Load(void)
 //		printf("Load5(%d,0x%p, 0x%p)\n", i, g_stPicImage[i].pImageData, pDstBuf);
 //		KeyHitESC();	/* デバッグ用 */
 #endif
-		if(g_stCG_LIST[i].ubType != 0u)	/* スプライトライク */
+		if(g_stCG_LIST[i].ubType == 1u)	/* スプライトライク */
+		{
+			G_Subtractive_Color(pSrcBuf, pDstBuf, uWidth, uHeight, uSize8x, i);	/* 減色処理 */
+		}
+		else if(g_stCG_LIST[i].ubType == 2u)	/* テキストロード */
 		{
 			G_Subtractive_Color(pSrcBuf, pDstBuf, uWidth, uHeight, uSize8x, i);	/* 減色処理 */
 		}
@@ -914,7 +943,7 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 			g_stCRT[bMode].hide_offset_x + WIDTH,
 			g_stCRT[bMode].hide_offset_y + 152);	
 	/* 消去 */
-	ret = G_CLR_AREA(g_stCRT[bMode].hide_offset_x, WIDTH, g_stCRT[bMode].hide_offset_y, 152, 1);	/* Screen1 消去 */
+	ret = G_CLR_AREA(g_stCRT[bMode].hide_offset_x, WIDTH, g_stCRT[bMode].hide_offset_y, 152, 0);	/* Screen0 消去 */
 
 	return	ret;
 }
@@ -1167,6 +1196,9 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	UC	ubNotUsePal[256];
 	US	uColTbl[256];
 	UC	ubConvPal;
+	UC	ubType;
+	UC	ubCow_R, ubCow_G, ubCow_B;
+	UC	ubTableOffset;
 	
 	/* 均等量子化テーブル */
 	UC	ubGen8_R[PIC_R];
@@ -1176,8 +1208,40 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	pBuf = pSrcBuf;
 	uAPICG_work_Size = PIC_WORK_BUF_SIZE / 2;
 	uSize8x = uWidthEx;
-	z = (PIC_R * PIC_G * PIC_B) + 2;
 	ubConvPal = g_stCG_LIST[uNum].ubTransPal;
+	ubType    = g_stCG_LIST[uNum].ubType;
+	
+	switch(ubType)		
+	{
+		case 1:	/* スプライトライク */
+		{
+			ubCow_R = PIC_R;
+			ubCow_G = PIC_G;
+			ubCow_B = PIC_B;
+			ubTableOffset = 2u;
+			
+			break;
+		}
+		case 2:	/* テキスト描画 */
+		{
+			ubCow_R = 2u;
+			ubCow_G = 2u;
+			ubCow_B = 2u;
+			ubTableOffset = 0u;
+
+			break;
+		}
+		default:
+		{
+			ubCow_R = PIC_R;
+			ubCow_G = PIC_G;
+			ubCow_B = PIC_B;
+			ubTableOffset = 2u;
+
+			break;
+		}
+	}
+	z = (ubCow_R * ubCow_G * ubCow_B) + ubTableOffset;
 	
 	/* 除外パレット抽出準備 */
 	for(j=0; j<256; j++)
@@ -1212,34 +1276,31 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	
 	/* 減色カラーの設定 */
 	ubGen8_R[0] = 0x01;
-	for(j=1; j<PIC_R; j++)
+	for(j=1; j<ubCow_R; j++)
 	{
-		ubGen8_R[j] = g_CG_MaxColor[uNum][COLOR_R] / (PIC_R-j);
+		ubGen8_R[j] = g_CG_MaxColor[uNum][COLOR_R] / (ubCow_R-j);
 	}
 	ubGen8_G[0] = 0x01;
-	for(j=1; j<PIC_G; j++)
+	for(j=1; j<ubCow_G; j++)
 	{
-		ubGen8_G[j] = g_CG_MaxColor[uNum][COLOR_G] / (PIC_G-j);
+		ubGen8_G[j] = g_CG_MaxColor[uNum][COLOR_G] / (ubCow_G-j);
 	}
 	ubGen8_B[0] = 0x01;
-	for(j=1; j<PIC_B; j++)
+	for(j=1; j<ubCow_B; j++)
 	{
-		ubGen8_B[j] = g_CG_MaxColor[uNum][COLOR_B] / (PIC_B-j);
+		ubGen8_B[j] = g_CG_MaxColor[uNum][COLOR_B] / (ubCow_B-j);
 	}
 	
 	m = 1;
 	uColTbl[0] = SetRGB(0, 0, 0);	/* 透過 */
-//	uColTbl[1] = SetRGB(0, 0, 0);	/* 特殊プライオリティ用 */
-	for(i=0; i<PIC_R; i++)
+	for(i=0; i<ubCow_R; i++)
 	{
-		for(j=0; j<PIC_G; j++)
+		for(j=0; j<ubCow_G; j++)
 		{
-			for(k=0; k<PIC_B; k++)
+			for(k=0; k<ubCow_B; k++)
 			{
 				uColTbl[m] = SetRGB(ubGen8_R[i], ubGen8_G[j], ubGen8_B[k]);
 				m++;
-//				uColTbl[m] = SetRGB(0, 0, 0);	/* 特殊プライオリティ用 */
-//				m++;
 			}
 		}
 	}
@@ -1275,7 +1336,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 					/* 均等量子化 */
 					k = 0;
 					ubTmp = McmpSub(ubGen8_R[0], ubR);
-					for(m=1; m<PIC_R; m++)
+					for(m=1; m<ubCow_R; m++)
 					{
 						if( ubTmp > McmpSub(ubGen8_R[m], ubR) )
 						{
@@ -1287,7 +1348,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 					
 					k = 0;
 					ubTmp = McmpSub(ubGen8_G[0], ubG);
-					for(m=1; m<PIC_G; m++)
+					for(m=1; m<ubCow_G; m++)
 					{
 						if( ubTmp > McmpSub(ubGen8_G[m], ubG) )
 						{
@@ -1299,7 +1360,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 
 					k = 0;
 					ubTmp = McmpSub(ubGen8_B[0], ubB);
-					for(m=1; m<PIC_B; m++)
+					for(m=1; m<ubCow_B; m++)
 					{
 						if( ubTmp > McmpSub(ubGen8_B[m], ubB) )
 						{
@@ -1350,6 +1411,97 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 //		}
 //	}
 	
+	return ret;
+}
+
+SS PutGraphic_To_Text(UC bCGNum, US dx, US dy)
+{
+	SS	ret = 0;
+
+	UI	x, y, z;
+	UI	uMaxNum;
+	UI	uWidth, uHeight, uFileSize;
+	US	uSize8x = 0;
+	
+	US	uDstTxAddr;
+	US	*pSrcGR;
+	
+	UC	*T0_HEAD = (UC *)0xE00000;
+	UC	*T1_HEAD = (UC *)0xE20000;
+	UC	*T2_HEAD = (UC *)0xE40000;
+	UC	*T3_HEAD = (UC *)0xE60000;
+	UC	*pDst0;
+	UC	*pDst1;
+	UC	*pDst2;
+	UC	*pDst3;
+	US	unPal;
+	US	unTmp[4];
+	
+	Get_CG_FileList_MaxNum(&uMaxNum);
+	if(uMaxNum <= bCGNum)
+	{
+		ret = -1;
+		return	ret;
+	}
+	pSrcGR = g_stPicImage[bCGNum].pImageData;	/* Src PIC */
+	
+	Get_PicImageInfo( bCGNum, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+	uSize8x	= (((uWidth+7)/8) * 8);	/* 8の倍数 */
+
+	Set_PicImagePallet(bCGNum);	/* パレットを設定 */
+	
+	for(y = dy; y < dy+uHeight; y++)
+	{
+		for(x = dx; x < dx+uWidth; x+=8)	/* 8bit */
+		{
+			/* アドレス算出 */
+//			if( (k < 0) || ((k+size) > 0x1FFFF) ) break;
+			uDstTxAddr = (y * 0x80) + (x>>3);
+			pDst0 = T0_HEAD + uDstTxAddr;
+			pDst1 = T1_HEAD + uDstTxAddr;
+			pDst2 = T2_HEAD + uDstTxAddr;
+			pDst3 = T3_HEAD + uDstTxAddr;
+			
+			unTmp[0] = 0;
+			unTmp[1] = 0;
+			unTmp[2] = 0;
+			unTmp[3] = 0;
+			for(z = 0; z < 8; z++)	/* 8dot分実施 */
+			{
+				unPal = *pSrcGR;
+				unTmp[0] |= ((unPal & 0b1000) >> 3) << (7-z);
+				unTmp[1] |= ((unPal & 0b0100) >> 2) << (7-z);
+				unTmp[2] |= ((unPal & 0b0010) >> 1) << (7-z);
+				unTmp[3] |= ((unPal & 0b0001) >> 0) << (7-z);
+				pSrcGR++;
+			}
+			*pDst0 = unTmp[0];
+			*pDst1 = unTmp[1];
+			*pDst2 = unTmp[2];
+			*pDst3 = unTmp[3];
+		}
+	}
+
+	return ret;
+}
+
+SS PutGraphic_To_Symbol(const UC *sString, US dx, US dy, US uPal)
+{
+	SS	ret = 0;
+	
+	struct _symbolptr stSymbol;
+	
+	stSymbol.x1 = dx;
+	stSymbol.y1 = dy;
+	stSymbol.string_address = sString;
+	stSymbol.mag_x = 1;
+	stSymbol.mag_y = 1;
+	stSymbol.color = uPal;
+	stSymbol.font_type = 0;
+	stSymbol.angle = 0;
+	
+	_iocs_symbol(&stSymbol);
+
 	return ret;
 }
 

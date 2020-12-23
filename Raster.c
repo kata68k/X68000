@@ -149,7 +149,7 @@ void Raster_Main(UC bMode)
 	uRas_st = Mmax(Mmin(g_stRoadInfo.Horizon + RASTER_MIN, RASTER_MAX), RASTER_MIN);	/* ラスター開始位置 */
 	if((uRas_st & 0x01) != 0)
 	{
-		uRas_st -= 1;	/* 奇数なら無理矢理偶数にする */
+		uRas_st += 1;	/* 奇数なら無理矢理偶数にする */
 	}
 //	uRas_st -= (uRas_st % 2);	/* 偶数にする(for分がRASTER_NEXT分インクリメントするので) */
 //	uRas_ed -= (uRas_ed % 2);	/* 偶数にする */
@@ -166,7 +166,7 @@ void Raster_Main(UC bMode)
 	{
 		SS	col;
 		
-		APAGE(1);				/* グラフィックの書き込み */
+		APAGE(0);				/* グラフィックの書き込み */
 
 		/* 水平線 */
 		col = 0x35;

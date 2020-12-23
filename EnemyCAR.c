@@ -212,8 +212,8 @@ SS	Put_EnemyCAR(US x, US y, US Size, UC ubMode)
 		height_sum += (ENEMY_CAR_1_H >> (i-1));
 	}
 
-	ret = G_BitBlt(	x,	w,	y,	h,	1,
-					0,	0+w,	height_sum,	h,	1,
+	ret = G_BitBlt(	x,	w,	y,	h,	0,
+					0,	0+w,	height_sum,	h,	0,
 					ubMode, POS_MID, POS_CENTER);
 	
 	return	ret;

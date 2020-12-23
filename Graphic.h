@@ -108,5 +108,7 @@ extern	SS	G_Load_Mem(UC, US, US, US);
 extern	SS	APICG_DataLoad2G(SC *, UL, UL, US);
 extern	SS	APICG_DataLoad2M(UC, UL, UL, US, US *);
 extern	SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
+extern	SS	PutGraphic_To_Text(UC , US , US );
+extern	SS	PutGraphic_To_Symbol(const UC *, US , US , US );
 
 #endif	/* GRAPHIC_H */

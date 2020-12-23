@@ -669,4 +669,3 @@ SS PutTextInfo(ST_TEXTINFO stTextInfo)
 }
 
 #endif	/* OUTPUT_TEXT_C */
-
