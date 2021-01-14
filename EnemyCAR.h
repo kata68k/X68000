@@ -19,6 +19,10 @@ typedef struct
 	SS	x;					/* X座標 */
 	SS	y;					/* Y座標 */
 	SS	z;					/* Z座標(倍率) */
+	SS	sx;					/* X座標(当たり判定開始座標) */
+	SS	ex;					/* X座標(当たり判定終了座標) */
+	SS	sy;					/* Y座標(当たり判定開始座標) */
+	SS	ey;					/* Y座標(当たり判定終了座標) */
 	UC	ubBrakeLights;		/* ブレーキライト */
 	UC	ubOBD;				/* 故障の状態 */
 	UC	ubAlive;			/* 表示の状態 */

@@ -29,6 +29,8 @@ enum
 	Enemy2_G,
 	Enemy3_G,
 	Enemy4_G,
+	MyCar_G,
+	Debug_View_G,
 	Flip_G
 };
 
@@ -96,6 +98,7 @@ extern	SS	Set_PicImagePallet(UC);
 extern	void	CG_File_Load(void);
 extern	void	G_INIT(void);
 extern	void	G_HOME(void);
+extern	void	G_VIEW(UC);
 extern	void	G_Palette_INIT(void);
 extern	void	G_Palette(void);
 extern	SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
@@ -103,6 +106,7 @@ extern	SS	G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , U
 extern	SI	G_CLR(void);
 extern	SS	G_CLR_AREA(SS, US, SS, US, UC);
 extern	SS	G_CLR_ALL_OFFSC(UC);
+extern	SS	G_FILL_AREA(SS, US, SS, US, UC, UC);
 extern	SS	G_Load(UC, US, US, US);
 extern	SS	G_Load_Mem(UC, US, US, US);
 extern	SS	APICG_DataLoad2G(SC *, UL, UL, US);
@@ -110,5 +114,6 @@ extern	SS	APICG_DataLoad2M(UC, UL, UL, US, US *);
 extern	SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 extern	SS	PutGraphic_To_Text(UC , US , US );
 extern	SS	PutGraphic_To_Symbol(const UC *, US , US , US );
+extern	SS	G_Scroll(US, US, UC);
 
 #endif	/* GRAPHIC_H */

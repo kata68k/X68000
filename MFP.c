@@ -220,8 +220,8 @@ static void interrupt Raster_Func(void)
 {
 	volatile US *BG0scroll_x  = (US *)0xEB0800;
 	volatile US *BG0scroll_y  = (US *)0xEB0802;
-//	volatile US *BG1scroll_x  = (US *)0xEB0804;
-//	volatile US *BG1scroll_y  = (US *)0xEB0806;
+	volatile US *BG1scroll_x  = (US *)0xEB0804;
+	volatile US *BG1scroll_y  = (US *)0xEB0806;
 	volatile US *CRTC_R09 = (US *)0xE80012u;	/* ラスター割り込み位置 */
 //	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
 //	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
@@ -239,16 +239,32 @@ static void interrupt Raster_Func(void)
 	ras_count += RASTER_NEXT;		/* 次のラスタ割り込み位置の計算 */
 	*CRTC_R09 = ras_count;			/* 次のラスタ割り込み位置の設定 */
 
-	*BG0scroll_x	= g_stRasterInt[nNum].x;	/* BG0のX座標の設定 */
-	*BG0scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
-//	*BG0scroll_y	= uDebugNum + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
-//	*BG1scroll_x	= g_stRasterInt[nNum].x;	/* BG1のX座標の設定 */
-//	*BG1scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG1のY座標の設定 */
-//	*BG1scroll_x	= 256;						/* BG1のX座標の設定 *//* 空のコントロール */
-//	*BG1scroll_y	= g_stRasterInt[1].y;		/* BG1のY座標の設定 *//* 空のコントロール */
 //	*CRTC_R12		= g_stRasterInt[nNum].x + X_OFFSET;			/* GRのX座標の設定 */
-	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000000000);	/* GR2(GR3,GR4)=OFF */
+	if( g_stRasterInt[0].y < nNum )
+	{
+		/* GRSC1 */
+		*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000000000);	/* GRSC1(GR3,GR4)=OFF */
+		/* BG0 */
+		*BG0scroll_x	= g_stRasterInt[nNum].x;							/* BG0のX座標の設定 */
+		*BG0scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
+//		*BG0scroll_y	= uDebugNum + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
 
+		/* BG1 */
+		*BG1scroll_x	= g_stRasterInt[nNum].x;							/* BG1のX座標の設定 */
+		*BG1scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG1のY座標の設定 */
+//		*BG1scroll_x	= 256;						/* BG1のX座標の設定 *//* 空のコントロール */
+//		*BG1scroll_y	= g_stRasterInt[1].y;		/* BG1のY座標の設定 *//* 空のコントロール */
+	}
+	else
+	{
+		/* BG0 */
+		*BG0scroll_x	= 256;					/* BG0のX座標の設定 */
+		*BG0scroll_y	= g_stRasterInt[1].y;	/* BG0のY座標の設定 */
+		/* BG1 */
+		*BG1scroll_x	= 256;					/* BG1のX座標の設定 */
+		*BG1scroll_y	= g_stRasterInt[1].y;	/* BG1のY座標の設定 */
+	}
+	
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
 

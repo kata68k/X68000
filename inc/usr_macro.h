@@ -89,7 +89,7 @@
         Mdec - デクリメント（０クリップ） -
 */
 /**
- * 指定された引数のビットをセット.
+ * カウンタ値を減算したい値で０までデクリメント
  * @param [in] x        カウンタ
  * @param [in] y        減算したい値
  * @retval 減算された値
@@ -97,11 +97,23 @@
  */
 #define Mdec(x,y) ((x > (x - y)) ? (x - y) : 0)
 
+/*
+        Minc - デクリメント（最大値クリップ） -
+*/
+/**
+ * カウンタ値を減算したい値で最大値までインクリメント
+ * @param [in] x        カウンタ
+ * @param [in] y        加算したい値
+ * @retval 減算された値
+ * @attention 引数は複数回評価される.
+ */
+#define Minc(x,y) ((x < (x + y)) ? (x + y) : -1)
+
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 #define GetR(color)	(( color >> 6) & 0x1Fu)
 #define GetG(color)	(( color >> 11) & 0x1Fu)
 #define GetB(color)	(( color >> 1) & 0x1Fu)
 
-#define SetBGcode(V,H,PAL,PCG)	((V << 15) + (H << 14) + (PAL << 8) + PCG)
+#define SetBGcode(V,H,PAL,PCG)	(0xCFFFU & (((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((PAL & 0xFU)<<8U) | (PCG & 0xFFU)))
 
 #endif	/* USR_MACRO_H */

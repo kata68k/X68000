@@ -7,6 +7,8 @@
 #include <iocslib.h>
 
 #include "inc/usr_macro.h"
+#include "Draw.h"
+#include "Graphic.h"
 #include "OutPut_Text.h"
 
 #define	TAB_SIZE	(4)
@@ -19,6 +21,7 @@ SS BG_TimeCounter(UI, US, US);
 SS BG_Number(UI, US, US);
 SS Text_To_Text(US, SS, SS, UC, UC *);
 SS PutTextInfo(ST_TEXTINFO);
+SS Put_Message_To_Graphic(UC *, UC);
 
 /* 関数 */
 
@@ -196,7 +199,7 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 			case 0x59:	/* Y */
 			case 0x5A:	/* X */
 			{
-				SS i, j, k;
+				UI i, j, k;
 				
 				if(*sString == 0x20)		/* SP(空白) */
 				{
@@ -209,7 +212,7 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 				}
 				else	/* アルファベット */
 				{
-					j = (SS)((SC)*sString - '@');
+					j = (UI)((SC)*sString - '@');
 					pStPAT = BG_TEXT_HEAD + (US)(0x10 * j);
 				}
 
@@ -519,10 +522,10 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 	UC	*T1_HEAD = (UC *)0xE20000;
 	UC	*T2_HEAD = (UC *)0xE40000;
 	UC	*T3_HEAD = (UC *)0xE60000;
-	UC	*pSrc0 = (UC *)0xE07800;//400
-	UC	*pSrc1 = (UC *)0xE27800;//400
-	UC	*pSrc2 = (UC *)0xE47800;//400
-	UC	*pSrc3 = (UC *)0xE67800;//400
+	UC	*pSrc0;
+	UC	*pSrc1;
+	UC	*pSrc2;
+	UC	*pSrc3;
 //	UC	*T3_END = (UC *)0xE7FFFF;
 	UC	*pDst0;
 	UC	*pDst1;
@@ -535,10 +538,15 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 	UC	data;
 	UC	ucDigit[10] = {0};
 	UC	*pString;
-	SS	i, k, size;
+	UI	i, k, size;
 	SS	ret = 0;
 	
 	if( (x < 0) || (y < 0) || (x > 1023) || (y > 1023) ) return -1;
+
+	pSrc0 = T0_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
+	pSrc1 = T1_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
+	pSrc2 = T2_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
+	pSrc3 = T3_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
 	
 	if(bLarge == TRUE)
 	{
@@ -653,18 +661,46 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 SS PutTextInfo(ST_TEXTINFO stTextInfo)
 {
 	SS	ret = 0;
+	
+	US	x, y;
+	x = stTextInfo.uPosX;
+	y = stTextInfo.uPosY;
 
 	/* Top Score */
-	Text_To_Text(stTextInfo.uScoreMax,		 40,  8, FALSE, "%7d");
+	Text_To_Text(stTextInfo.uScoreMax,		x +  40, y +  8, FALSE, "%7d");
 	/* Score */
-	Text_To_Text(stTextInfo.uScore,			192,  8, FALSE, "%7d");
+	Text_To_Text(stTextInfo.uScore,			x + 192, y +  8, FALSE, "%7d");
 	/* Time Count */
-	Text_To_Text(stTextInfo.uTimeCounter,	112, 24,  TRUE, "%3d");
+	Text_To_Text(stTextInfo.uTimeCounter,	x + 112, y + 24,  TRUE, "%3d");
 	/* Speed */
-	Text_To_Text(stTextInfo.uVs,			208, 24, FALSE, "%3d");
+	Text_To_Text(stTextInfo.uVs,			x + 208, y + 24, FALSE, "%3d");
 	/* Gear */
-	Text_To_Text(stTextInfo.uShiftPos,		224, 32, FALSE,  "%d");
+	Text_To_Text(stTextInfo.uShiftPos,		x + 224, y + 32, FALSE,  "%d");
 
+	return ret;
+}
+
+SS Put_Message_To_Graphic(UC *str, UC bMode)
+{
+	SS	ret = 0;
+	
+	SS	x, y;
+	ST_CRT	stCRT = {0};
+	
+	GetCRT(&stCRT, bMode);	/* 画面情報を取得 */
+	
+	/* 座標設定 */
+	x = stCRT.hide_offset_x;
+	y = stCRT.hide_offset_y + 224;
+	
+	/* メッセージエリア クリア */
+	WINDOW( x, y, x + WIDTH, y + 16);	/* 描画可能枠再設定 */
+//	G_CLR_AREA(x, WIDTH, y, 16, 0);		/* Screen0 消去 */
+	Draw_Fill( x, y, x + WIDTH, y + 16, 0x01);	/* Screen0 指定パレットで塗りつぶし */
+	
+	/* メッセージエリア 描画 */
+	PutGraphic_To_Symbol(str, x, y, 20);
+	
 	return ret;
 }
 

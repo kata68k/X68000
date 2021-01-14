@@ -3,6 +3,8 @@
 
 #include "inc/usr_define.h"
 
+extern SS	GetGameMode(UC *);
+extern SS	SetGameMode(UC);
 extern SS	GetDebugNum(US *);
 extern SS	SetDebugNum(US);
 extern SS	GetDebugMode(UC *);

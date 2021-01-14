@@ -64,7 +64,7 @@ _MoonPlay:
 	movea.l	8(a6),a1
 	moveq.l	#1,d3			* stop and play
 *	moveq.l	#0,d4			* normal play
-	moveq.l	#96,d4			* 特殊効果フラグ b0110 0000 
+	moveq.l	#4,d4			* 特殊効果フラグ b0000 0100 
 	moveq.l	#MOON_PLAY,d1
 	IOCS	_MOON
 	tst.l	d0
@@ -93,7 +93,7 @@ _MACS_Play:
 	moveq.l	#0,d1			* play
 	moveq.l	#-1,d2			* 
 	moveq.l	#1,d3			* stop and play
-	moveq.l	#96,d4			* 特殊効果フラグ b0110 0000 
+	moveq.l	#4,d4			* 特殊効果フラグ b0000 0100 
 	IOCS	_MACS
 	tst.l	d0
 	

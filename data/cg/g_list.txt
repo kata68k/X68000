@@ -1,9 +1,10 @@
-0= Over_A.pic 2 180
-1= Over_B.pic 1 180
-2= Over_C.pic 1 180
-3= Over_D.pic 1 180
+0= Over_A2.pic 3 154
+1= Over_B2.pic 1 74
+2= Over_C2.pic 1 189
+3= null.pic 1 180
 4= Over_E.pic 1 180
-5= enemy.pic 1 0
+5= null.pic 1 0
 6= GAROU_SP.pic 1 117
-7= enemy.pic 1 0
+7= null.pic 1 0
 8= OverKata_T.pic 0 0
+

@@ -170,10 +170,10 @@ void Raster_Main(UC bMode)
 
 		/* 水平線 */
 		col = 0x35;
-		Draw_Line(	view_offset_x + uRas_st,
-					view_offset_y + g_stRoadInfo.Horizon,
-					view_offset_x + uRas_ed, 
-					view_offset_y + g_stRoadInfo.Horizon,
+		Draw_Line(	hide_offset_x + uRas_st,
+					hide_offset_y + g_stRoadInfo.Horizon,
+					hide_offset_x + uRas_ed, 
+					hide_offset_y + g_stRoadInfo.Horizon,
 					col,
 					0xFFFF);
 	}
@@ -221,14 +221,14 @@ void Raster_Main(UC bMode)
 			{
 				point_x = ras_cal_x - 512;
 			}
-			Draw_Pset(	view_offset_x + (WIDTH >> 1) - point_x,
-						view_offset_y + g_stRoadInfo.Horizon + num,
+			Draw_Pset(	hide_offset_x + (WIDTH >> 1) - point_x,
+						hide_offset_y + g_stRoadInfo.Horizon + num,
 						col);
 
 			/* y */
 			col = (SS)bY_area;
-			Draw_Pset(	view_offset_x + uRas_y,
-						view_offset_y + ras_cal_y,
+			Draw_Pset(	hide_offset_x + uRas_y,
+						hide_offset_y + ras_cal_y,
 						col);
 		}
 #endif
@@ -530,7 +530,7 @@ static SS	Set_Road_Slope(void)
 	static SS	road_slope_old;
 
 	road_slope_old = g_stRoadInfo.slope;		/* 前回値更新 */
-//	road_slope = road_height * -1;
+	road_slope = g_stRoadInfo.height * -1;
 	
 #if 1
 	if(road_slope == 0)

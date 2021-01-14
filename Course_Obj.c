@@ -24,6 +24,7 @@ SS	Course_Obj_main(UC, UC, UC);
 SS	Put_CouseObject(SS, SS, US, UC, UC);
 SS	Sort_Course_Obj(void);
 SS	Load_Course_Data(UC);
+SS	Move_Course_BG(UC);
 
 /* ä÷êî */
 SS	InitCourseObj(void)
@@ -249,6 +250,68 @@ SS	Load_Course_Data(UC bCourseNum)
 
 	return ret;
 }
+
+SS	Move_Course_BG(UC bMode)
+{
+	SS	ret = 0;
+	
+	SS	Slope;
+	SS	Angle;
+	ST_ROAD_INFO	stRoadInfo;
+	ST_CARDATA	stMyCar = {0};
+	static SS	BG_x = X_OFFSET;
+	
+	GetRoadInfo(&stRoadInfo);
+	Slope = stRoadInfo.slope;
+	Angle = stRoadInfo.angle;
+
+	GetMyCar(&stMyCar);			/* é©é‘ÇÃèÓïÒÇéÊìæ */
+	
+	if(stMyCar.VehicleSpeed != 0u)
+	{
+		if(Angle != 0)
+		{
+			if(stMyCar.ubThrottle != 0u)
+			{
+				BG_x -= (Angle << 1);
+			}
+			else
+			{
+				BG_x -= Angle;
+			}
+		}
+		else
+		{
+			/* ï€éù */
+		}
+	}
+	
+	if(BG_x > X_MAX_DRAW)
+	{
+		BG_x -= X_MAX_DRAW;
+	}
+	else if(BG_x < 0)
+	{
+		BG_x += X_MAX_DRAW;
+	}
+	else
+	{
+		/* ï€éù */
+	}
+	
+	/* îwåiÇìÆÇ©Ç∑ */
+	if(bMode == 1)
+	{
+		G_Scroll(BG_x, Mmin(Y_MIN_DRAW + Slope, Y_MIN_DRAW), 1);
+	}
+	else
+	{
+		G_Scroll(BG_x, Mmin(Y_OFFSET + Slope, Y_OFFSET), 1);
+	}
+	
+	return ret;
+}
+
 
 #endif	/* COURSE_OBJ_C */
 

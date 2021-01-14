@@ -13,6 +13,7 @@ extern void T_Time(void);
 extern void T_Score(void);
 extern void T_Speed(void);
 extern void T_Gear(void);
-extern void T_Main(void);
+extern void T_Main(UC);
+extern SS T_Scroll(UI, UI);
 
 #endif	/* TEXT_H */

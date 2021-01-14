@@ -9,6 +9,7 @@
 #include "MyCar.h"
 #include "OverKata.h"
 #include "APL_Math.h"
+#include "APL_MACS.h"
 #include "Course_Obj.h"
 #include "Draw.h"
 #include "Input.h"
@@ -19,6 +20,8 @@
 #include "Music.h"
 #include "Output_Text.h"
 #include "PCG.h"
+#include "Raster.h"
+#include "Text.h"
 
 /* グローバル変数 */
 SS	g_speed = 0;
@@ -73,7 +76,7 @@ SS	MyCarInfo_Init(void)
 	g_stMyCar.VehicleSpeed	= 0;	/* 車速 */
 	g_stMyCar.Steering		= 0;	/* ステア */
 	g_stMyCar.ubShiftPos	= 0u;	/* ギア段 */
-	g_stMyCar.bThrottle		= 0;		/* スロットル開度 */
+	g_stMyCar.ubThrottle	= 0u;		/* スロットル開度 */
 	g_stMyCar.ubBrakeLights	= FALSE;	/* ブレーキライト */
 	g_stMyCar.ubHeadLights	= FALSE;	/* ヘッドライト */
 	g_stMyCar.ubWiper		= FALSE;	/* ワイパー */
@@ -87,29 +90,39 @@ SS	MyCarInfo_Update(SS input)
 {
 	SS	ret = 0;
 	SS	speed_min;
+	SS	Slope;
+	SS	Angle;
 	static UC bShiftPosFlag[3] = {FALSE};
+	UI	time;
 
 	US	uTM[6] = { 0, 2857, 1950, 1444, 1096, 761 };/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 */
 //	US	uTM_F[6] = { 0, 13390, 9140, 6768, 5137, 3567 };/* 総減速比 */
 //	US	uRPM[11] = { 500, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000 };	/* Eng回転数 */
 //	US	uTRQ[11] = { 120,  130,  150,  170,  210,  200,  180,  170,  140,  120,  100 };	/* トルク */
 	UC	bUpDown = 0;
+	UI	i;
+	ST_ENEMYCARDATA	stEnemyCar = {0};
+	ST_ROAD_INFO	stRoadInfo;
+	
+	GetRoadInfo(&stRoadInfo);
+	Slope = stRoadInfo.slope;
+	Angle = stRoadInfo.angle;
+
+	GetStartTime(&time);	/* 開始時刻を取得 */
 	
 	/* ステアリング操作 */
 	if((input & KEY_RIGHT) != 0u)	g_stMyCar.Steering += 1;	/* 右 */
 	if((input & KEY_LEFT) != 0u)	g_stMyCar.Steering -= 1;	/* 左 */
-	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 31), -31);
-#if	0
-	if( ((uFreeRunCount % 4) == 0)
-		&& (g_speed != 0u) )
+#if 0
+	if( g_speed != 0u )
 	{
-		g_stMyCar.Steering = g_stMyCar.Steering + ((SS)(road_angle * g_speed) >> 6);	/* バランス調整要 */
-		vx = g_stMyCar.Steering;
+		g_stMyCar.Steering += ((SS)(Angle + g_speed) >> 3);	/* バランス調整要 */
 	}
 	else{
 		/* 前回値保持 */
 	}
 #endif
+	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 31), -31);
 	
 	/* シフト操作 */
 	if( ((input & KEY_A) != 0u) && ((input & KEY_B) == 0u))	/* Aボタン(only) */
@@ -151,52 +164,70 @@ SS	MyCarInfo_Update(SS input)
 	/* アクセル */
 	if((input & KEY_A) != 0u)		/* Aボタン */
 	{
+		g_stMyCar.ubThrottle	= Minc(g_stMyCar.ubThrottle, 1);	/* スロットル開度 */
+		
 		switch(g_stMyCar.ubShiftPos)
 		{
 			case 0:
 			{
 				g_stMyCar.uEngineRPM += 200;
-//				SE_Play(1);	/* FM効果音再生 */
 			}
 			break;
 			case 1:
 			{
-				g_stMyCar.uEngineRPM += 20;
-//				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += Mmax(20 - Slope,10);
 			}
 			break;
 			case 2:
 			{
-				g_stMyCar.uEngineRPM += 15;
-//				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += Mmax(15 - Slope,7);
 			}
 			break;
 			case 3:
 			{
-				g_stMyCar.uEngineRPM += 10;
-//				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += Mmax(10 - Slope,5);
 			}
 			break;
 			case 4:
 			{
-				g_stMyCar.uEngineRPM += 6;
-//				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += Mmax(6 - Slope,3);
 			}
 			break;
 			case 5:
 			{
-				g_stMyCar.uEngineRPM += 3;
-//				SE_Play(1);	/* FM効果音再生 */
+				g_stMyCar.uEngineRPM += Mmax(3 - Slope,1);
 			}
 			break;
 			default:
 			{
-				g_stMyCar.uEngineRPM += 100;
+				g_stMyCar.uEngineRPM += Mmax(100 - Slope, 50);
 			}
 			break;
 		}
+
+		/* エンジンの音 */
+		{
+			static	UI	unExplosion_time = 0;
+			SS	rpm;
+
+			rpm	= Mmax(g_stMyCar.uEngineRPM, 1);
+			
+			if( (time - unExplosion_time) >  (60000 / rpm) )	/* 回転数のエンジン音 */
+			{
+				unExplosion_time = time;
+	//			ADPCM_Play(11);	/* 回転数のエンジン音 */
+	//			SE_Play(1);			/* FM効果音再生 */
+	//			SE_Play_Fast(1);	/* FM効果音再生 */
+			}
+			else
+			{
+				/* 何もしない */
+			}
+		}
 	}
 	else{
+		g_stMyCar.ubThrottle	= Mdec(g_stMyCar.ubThrottle, 1);	/* スロットル開度 */
+
 		/* 回転数 */
 		switch(g_stMyCar.ubShiftPos)
 		{
@@ -207,36 +238,37 @@ SS	MyCarInfo_Update(SS input)
 			break;
 			case 1:
 			{
-				g_stMyCar.uEngineRPM -= 40;
+				g_stMyCar.uEngineRPM -= Mmax(40 + Slope, 20);
 			}
 			break;
 			case 2:
 			{
-				g_stMyCar.uEngineRPM -= 30;
+				g_stMyCar.uEngineRPM -= Mmax(30 + Slope, 15);
 			}
 			break;
 			case 3:
 			{
-				g_stMyCar.uEngineRPM -= 20;
+				g_stMyCar.uEngineRPM -= Mmax(20 + Slope, 10);
 			}
 			break;
 			case 4:
 			{
-				g_stMyCar.uEngineRPM -= 12;
+				g_stMyCar.uEngineRPM -= Mmax(12 + Slope, 6);
 			}
 			break;
 			case 5:
 			{
-				g_stMyCar.uEngineRPM -= 6;
+				g_stMyCar.uEngineRPM -= Mmax(6 + Slope, 3);
 			}
 			break;
 			default:
 			{
-				g_stMyCar.uEngineRPM -= 200;
+				g_stMyCar.uEngineRPM -= Mmax(200 + Slope, 100);
 			}
 			break;
 		}
 	}
+
 	g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
 
 	/* 車速 */
@@ -267,7 +299,58 @@ SS	MyCarInfo_Update(SS input)
 	}
 	
 	/* 衝突判定 */
+	if(g_stMyCar.VehicleSpeed != 0)
+	{
+		UC bMode;
+		SS	myCarSx, myCarEx, myCarSy, myCarEy;
+		ST_CRT		stCRT;
+		
+		GetGameMode(&bMode);
+		GetCRT(&stCRT, bMode);
 
+		myCarSx = ((WIDTH>>1) + g_stMyCar.Steering - 8);
+		myCarEx = myCarSx + 16;
+		myCarSy = Y_MAX_WINDOW - 16;
+		myCarEy = myCarSy;
+
+		for(i = 0; i < ENEMYCAR_MAX; i++)
+		{
+			GetEnemyCAR(&stEnemyCar, i);
+			if( stEnemyCar.ubAlive == TRUE )
+			{
+				/* 当たり判定 */
+				UC bHit = FALSE;
+				
+				if(    (myCarSx > stEnemyCar.sx)
+					&& (myCarEx < stEnemyCar.ex)
+					&& (myCarSy > stEnemyCar.sy)
+					&& (myCarEy < stEnemyCar.ey))
+				{
+					bHit = TRUE;
+				}
+				
+				if( bHit == TRUE )
+				{
+					g_stMyCar.ubOBD = TRUE;	/* 故障 */
+					g_stMyCar.VehicleSpeed = g_stMyCar.VehicleSpeed >> 2;	/* 1/4 */
+					g_stMyCar.uEngineRPM = g_stMyCar.uEngineRPM >> 2;		/* 1/4 */
+					ret = (SS)bHit;
+				}
+			}
+		}
+		
+#ifdef DEBUG	/* デバッグコーナー */
+		{
+			Draw_Box(
+				stCRT.hide_offset_x + myCarSx,
+				stCRT.hide_offset_y + myCarSy,
+				stCRT.hide_offset_x + myCarEx,
+				stCRT.hide_offset_y + myCarEy, 0x13, 0xFFFF);
+		}
+#endif
+	}
+
+	/* 車速クリップ */
 	g_stMyCar.VehicleSpeed = Mmax(Mmin(310, g_stMyCar.VehicleSpeed), 0);
 	
 	if( (g_stMyCar.ubBrakeLights == TRUE)		/* ブレーキランプON */
@@ -291,11 +374,9 @@ SS	MyCar_Interior(UC bMode)
 {
 	SS	ret = 0;
 	SS	i;
-	UL	code = 0;
 	UC	patNum = 0;
 	UC	palNum = 0;
 	UC	V=0, H=0;
-	UC	bHit = FALSE;
 	UC	sp_num=0;
 	SS	x, y;
 #if 1
@@ -305,17 +386,13 @@ SS	MyCar_Interior(UC bMode)
 	static	SS	VibrationCT = 0;
 	static	US	rad = 180;
 	static	UC	ubRadFlag = TRUE;
+	static	UC	ubOBD_old = FALSE;
+	static	SS	CrashCount;
 	
 #if 1
 	volatile US *PCG_src  = (US *)0xEBA000;
 	volatile US *PCG_dst  = (US *)0xEBA180;
 #endif
-	ST_ENEMYCARDATA	stEnemyCar = {0};
-	ST_CRT			stCRT = {0};
-
-	GetCRT(&stCRT, bMode);
-	x = stCRT.view_offset_x;
-	y = stCRT.view_offset_y;
 	
 	/* 画面を揺らす */
 	VibrationCT++;
@@ -324,36 +401,30 @@ SS	MyCar_Interior(UC bMode)
 		VibrationCT = 0;
 	}
 	
-	if(g_stMyCar.VehicleSpeed != 0)
-	{
-		for(i = 0; i < ENEMYCAR_MAX; i++)
-		{
-			GetEnemyCAR(&stEnemyCar, i);
-
-			if( (stEnemyCar.ubAlive == TRUE) && (stEnemyCar.z == 0) )
-			{
-				if( ((stEnemyCar.x - 8) <= g_stMyCar.Steering) && (g_stMyCar.Steering <= (stEnemyCar.x + 8)) )
-				{
-					bHit = TRUE;
-				}
-			}
-		}
-	}
 	
-	if(bHit == TRUE)
+	if(g_stMyCar.ubOBD == TRUE)
 	{
-		ADPCM_Play(10);
-		Vibration = (VibrationCT - 3) * 5;	/* 画面の振動 */
+		if(ubOBD_old == FALSE)
+		{
+			ADPCM_Play(12);	/* SE：クラッシュ */
+			CrashCount = 5;
+		}
+		Vibration = (VibrationCT == 0)?1:-1;	/* 画面の振動 */
+		CrashCount = Mdec(CrashCount, 1);	/* カウンタデクリメント */
+		
+		if(CrashCount == 0)
+		{
+			/* 動画 */
+			//MOV_Play(3);	/* 嘘をつくな */
+			g_stMyCar.ubOBD = FALSE;	/* 正常 */
+		}
 	}
 	else
 	{
 		Vibration = (VibrationCT == 0)?1:0;	/* 画面の振動 */
 	}
-
-	/* 画面の位置 */
-	HOME(0b01, x, y + Vibration );	/* Screen 0(TPS/FPS) */
-	HOME(0b10, x, y );				/* Screen 1 */
-
+	ubOBD_old = g_stMyCar.ubOBD;	/* 前回値更新 */
+	
 	/* マスコットが揺れる */
 	if(g_stMyCar.VehicleSpeed == 0)
 	{
@@ -431,30 +502,25 @@ SS	MyCar_Interior(UC bMode)
 		H = 1;
 	}
 	
-	code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
-	SP_REGST( sp_num++, -1, x, y, code, 3);
+	SP_REGST( sp_num++, -1, x, y, SetBGcode(V, H, palNum, patNum), 3);
 
 	/* タコメーター */
 	x = 90+16;
 	y = 180+16 - Vibration;
 	V = 0;
 	H = 0;
-	patNum = 0x46;
 	palNum = 0x0D;
-	code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
-	SP_REGST( sp_num++, -1, x + 0, y + 0, code, 3);
 
+	patNum = 0x46;
+	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
 	patNum = 0x47;
-	code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
-	SP_REGST( sp_num++, -1, x + 16, y + 0, code, 3);
-
+	SP_REGST( sp_num++, -1, x + 16, y + 0, SetBGcode(V, H, palNum, patNum), 3);
 	patNum = 0x56;
-	code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
-	SP_REGST( sp_num++, -1, x + 0, y + 16, code, 3);
-
+	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
 	patNum = 0x57;
-	code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
-	SP_REGST( sp_num++, -1, x + 16, y + 16, code, 3);
+	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+	
+	/* ハンドル */
 	
 	return ret;
 }
@@ -462,31 +528,15 @@ SS	MyCar_Interior(UC bMode)
 
 SS	MyCar_CourseOut(void)
 {
-	static	UI	unExplosion_time = 0;
 	SS	ret = 0;
+
 	SS	vx;
-	SS	rpm;
-	
 	vx	= g_stMyCar.Steering;
-	rpm	= g_stMyCar.uEngineRPM;
 
 	if( Mabs(vx) > 25 )	/* コース外 */
 	{
-		UI	time;
-
-		GetStartTime(&time);	/* 開始時刻を取得 */
-		
-		if( (time - unExplosion_time) >  (60000 / rpm) )	/* 回転数のエンジン音 */
-		{
-			unExplosion_time = time;
-			ADPCM_Play(11);	/* 回転数のエンジン音 */
-		}
-		else
-		{
-			/* 何もしない */
-		}
-
-		g_stMyCar.uEngineRPM = (g_stMyCar.uEngineRPM>>1) + (g_stMyCar.uEngineRPM>>2)  + (g_stMyCar.uEngineRPM>>3);	/* 減速処理 */
+		SS	rpm	= g_stMyCar.uEngineRPM;
+		g_stMyCar.uEngineRPM = (rpm>>1) + (rpm>>2)  + (rpm>>3);	/* 減速処理 */
 	}
 	
 	return ret;
@@ -528,7 +578,7 @@ void MyCar_Image(void)
 	for(x = 0; x < 4; x++)
 	{
 		stTxFill.vram_page = x;
-		stTxFill.fill_patn = 0;
+		stTxFill.fill_patn = 0;	/* パレット設定 0 */
 
 //		stTxFill.x = 0;
 //		stTxFill.x1= MY_CAR_1_W;
@@ -542,6 +592,32 @@ void MyCar_Image(void)
 		stTxFill.y1= 31;	/* yから増加分 */
 		_iocs_txfill(&stTxFill);
 
+		stTxFill.x = 90;
+		stTxFill.x1= 32;	/* xから増加分 */
+		stTxFill.y = Y_OFFSET +180;	
+		stTxFill.y1= 31;	/* yから増加分 */
+		_iocs_txfill(&stTxFill);
+
+		/* パレット設定 1 */
+		if(x == 0)
+		{
+			stTxFill.fill_patn = 0xFFFF;	/* T0 */
+		}
+		else
+		{
+			stTxFill.fill_patn = 0x00;		/* T1,T2,T3 */
+		}
+		stTxFill.x = 0;
+		stTxFill.x1= 255;	/* xから増加分 */
+		stTxFill.y = 224;
+		stTxFill.y1= 2;		/* yから増加分 */
+		_iocs_txfill(&stTxFill);
+
+		stTxFill.x = 0;
+		stTxFill.x1= 255;	/* xから増加分 */
+		stTxFill.y = Y_OFFSET + 224;
+		stTxFill.y1= 2;		/* yから増加分 */
+		_iocs_txfill(&stTxFill);
 	}
 	
 //	Set_PicImagePallet(0);	/* パレット設定 */
@@ -605,8 +681,10 @@ void MyCar_Background(void)
 		}
 	}
 
-	G_Load_Mem( 6, X_OFFSET,	Y_OFFSET+8,	1);	/* 背景 */
-	G_Load_Mem( 6, X_OFFSET,	Y_MIN_DRAW+8,	1);	/* 背景 */
+	G_Load_Mem( 6, 		0,		Y_OFFSET+8,	1);	/* 背景 */
+	G_Load_Mem( 6, X_OFFSET+16,	Y_OFFSET+8,	1);	/* 背景 */
+	G_Load_Mem( 6, 		0,		Y_MIN_DRAW+8,	1);	/* 背景 */
+	G_Load_Mem( 6, X_OFFSET+16,	Y_MIN_DRAW+8,	1);	/* 背景 */
 #if 0
 	SS e;
 	

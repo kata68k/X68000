@@ -18,7 +18,7 @@ typedef struct
 	SS	VehicleSpeed;		/* 車速 */
 	SS	Steering;			/* ステア */
 	UC	ubShiftPos;			/* ギア段 */
-	SC	bThrottle;			/* スロットル開度 */
+	UC	ubThrottle;			/* スロットル開度 */
 	UC	ubBrakeLights;		/* ブレーキライト */
 	UC	ubHeadLights;		/* ヘッドライト */
 	UC	ubWiper;			/* ワイパー */

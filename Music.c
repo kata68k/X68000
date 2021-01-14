@@ -404,7 +404,11 @@ SI ADPCM_Play(UC bPlayNum)
 	if(bPlayNum > p_list_max)return ret;
 
 	/* 色々試したけどIOCSライブラリの方を使う */
-	_iocs_adpcmout(adpcm_dat[bPlayNum], 0x403, adpcm_dat_size[bPlayNum]);
+	if(_iocs_adpcmsns() != 0)	/* 何かしている */
+	{
+		_iocs_adpcmmod(0);	/* 停止 */
+	}
+	_iocs_adpcmout(adpcm_dat[bPlayNum], 0x403, adpcm_dat_size[bPlayNum]);	/* 再生 */
 #if 0
 #ifdef	ZM_V2
 	SI	adpcm_sns;

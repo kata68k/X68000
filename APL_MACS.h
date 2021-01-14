@@ -6,7 +6,7 @@
 /* \‘¢‘Ì’è‹` */
 /* externéŒ¾ */
 
-extern void MOV_INIT(void);
-extern SI MOV_Play(UC);
+extern void	MOV_INIT(void);
+extern SI	MOV_Play(UC);
 
 #endif	/* APL_MACS_H */

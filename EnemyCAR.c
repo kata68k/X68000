@@ -1,18 +1,22 @@
 #ifndef	ENEMYCAR_C
 #define	ENEMYCAR_C
 
+#include <stdlib.h>
+#include <iocslib.h>
+
 #include "inc/usr_macro.h"
 #include "EnemyCAR.h"
 
 #include "Draw.h"
 #include "Graphic.h"
 #include "MFP.h"
+#include "Music.h"
 #include "MyCar.h"
 #include "Raster.h"
 
 /* 構造体定義 */
 ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
-ST_ENEMYCARDATA	*pstEnemyCar[ENEMYCAR_MAX];
+ST_ENEMYCARDATA	*g_pStEnemyCar[ENEMYCAR_MAX];
 
 /* 関数のプロトタイプ宣言 */
 SS	InitEnemyCAR(void);
@@ -40,7 +44,7 @@ SS	InitEnemyCAR(void)
 		stEnemyCar[i].ubOBD = 0;
 		stEnemyCar[i].ubAlive = FALSE;
 		
-		pstEnemyCar[i] = &stEnemyCar[i];
+		g_pStEnemyCar[i] = &stEnemyCar[i];
 	}
 	
 	return ret;
@@ -51,7 +55,7 @@ SS	GetEnemyCAR(ST_ENEMYCARDATA *stDat, SS Num)
 	SS	ret = 0;
 	if(Num < ENEMYCAR_MAX)
 	{
-		stDat = pstEnemyCar[Num];
+		*stDat = *g_pStEnemyCar[Num];
 	}
 	else
 	{
@@ -66,7 +70,7 @@ SS	SetEnemyCAR(ST_ENEMYCARDATA stDat, SS Num)
 	
 	if(Num < ENEMYCAR_MAX)
 	{
-		*pstEnemyCar[Num] = stDat;
+		*g_pStEnemyCar[Num] = stDat;
 	}
 	else
 	{
@@ -81,13 +85,14 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 	
 	if(bNum < ENEMYCAR_MAX)
 	{
-		if(pstEnemyCar[bNum]->ubAlive == TRUE)
+		if(g_pStEnemyCar[bNum]->ubAlive == TRUE)
 		{
 			SS	x, y, z;
 			SS	dx, dy, dz;
-			SS	my;
+			SS	my, dist;
 			US	ras_x, ras_y, ras_pat, ras_num;
 			SS	Out_Of_Disp;
+			UI	rand = 0;
 			ST_CARDATA	stMyCar;
 			ST_CRT		stCRT;
 			ST_RAS_INFO	stRasInfo;
@@ -96,9 +101,9 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			ras_x = 0;
 			ras_y = 0;
 			
-			x = pstEnemyCar[bNum]->x;
-			y = pstEnemyCar[bNum]->y;
-			z = pstEnemyCar[bNum]->z;
+			x = g_pStEnemyCar[bNum]->x;
+			y = g_pStEnemyCar[bNum]->y;
+			z = g_pStEnemyCar[bNum]->z;
 
 			GetCRT(&stCRT, bMode);
 			GetMyCar(&stMyCar);
@@ -106,54 +111,76 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			GetRoadInfo(&stRoadInfo);
 
 			/* ライバル車との距離 */
-			if(stMyCar.VehicleSpeed >= pstEnemyCar[bNum]->VehicleSpeed)
+			if(stMyCar.VehicleSpeed >= g_pStEnemyCar[bNum]->VehicleSpeed)
 			{
-				y += (stMyCar.VehicleSpeed - pstEnemyCar[bNum]->VehicleSpeed);
+				dist = (stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed);
+				dist = Mmin(Mmax(dist, 0), 200);
+				y += dist;
 			}
 			else
 			{
-				y -= (pstEnemyCar[bNum]->VehicleSpeed - stMyCar.VehicleSpeed);
+				dist = (g_pStEnemyCar[bNum]->VehicleSpeed - stMyCar.VehicleSpeed);
+				dist = Mmin(Mmax(dist, 0), 200);
+				y -= dist;
 			}
-			y = Mmax(y, 2);
-			my = y >> 3;
+			my = Mmin( Mmax( y, 2 ), stRasInfo.size - 1 );
 			
-			if( (my > 0) && ((ROAD_SIZE-RASTER_NEXT)-48 > my) )
-			{
-				ras_num = (US)(stRasInfo.st + my);	/* ラスター情報の配列番号を算出 */
-				GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
-				
-				if(ras_x < 256)	/* 道の左側 */
-				{
-					x = (SS)ras_x;
-				}
-				else	/* 道の右側 */
-				{
-					x = (SS)ras_x - 512;
-				}
-				z =  3 - (((my<<8) / (my + (ROAD_SIZE-RASTER_NEXT)))>>5);
+			ras_num = (US)(stRasInfo.st + my);	/* ラスター情報の配列番号を算出 */
+			GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
 
-				dx = stCRT.hide_offset_x + (WIDTH>>1) - x;
-				dy = stCRT.hide_offset_y + stRoadInfo.Horizon + (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);
+			/* 左右の挙動 */
+			rand = random();
+			rand &= 0x0Fu;
+			
+			if(ras_x < 256)	/* 道の左側 */
+			{
+				x = (SS)ras_x + rand;
+			}
+			else	/* 道の右側 */
+			{
+				x = (SS)ras_x - 512 - rand;
+			}
+			y = my;
+			z =  3 - (((my<<8) / (my + (ROAD_SIZE-RASTER_NEXT)))>>5);
+
+			g_pStEnemyCar[bNum]->x = x;
+			g_pStEnemyCar[bNum]->y = y;
+			g_pStEnemyCar[bNum]->z = z;
+			
+			if( (2 < my) && ((stRasInfo.size-8) >= my) )
+			{
+				dx = (WIDTH>>1) - x;
+				dy = stRoadInfo.Horizon + (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);
 				dz = Mmin( Mmax(z, 0), 3 );
 				
-				pstEnemyCar[bNum]->x = x;
-				pstEnemyCar[bNum]->y = y;
-				pstEnemyCar[bNum]->z = z;
+				/* 当たり判定の設定 */
+				g_pStEnemyCar[bNum]->sx = dx - ((ENEMY_CAR_1_W >> dz)>>1);
+				g_pStEnemyCar[bNum]->ex = dx + ((ENEMY_CAR_1_W >> dz)>>1);
+				g_pStEnemyCar[bNum]->sy = dy - ((ENEMY_CAR_1_H >> dz)>>1);
+				g_pStEnemyCar[bNum]->ey = dy + ((ENEMY_CAR_1_H >> dz)>>1);
 				
-				Out_Of_Disp = Put_EnemyCAR(	dx,	dy, dz,	bMode_rev);
+				Out_Of_Disp = Put_EnemyCAR(	stCRT.hide_offset_x + dx, stCRT.hide_offset_y + dy, dz,	bMode_rev);
 				if(Out_Of_Disp < 0)	/* 描画領域外 */
 				{
-					pstEnemyCar[bNum]->ubAlive = FALSE;
+					g_pStEnemyCar[bNum]->ubAlive = FALSE;
 				}
 #ifdef DEBUG	/* デバッグコーナー */
 				{
-					Draw_Pset(	dx, dy,	0xBE);	/* デバッグ用 */
+					Draw_Box(
+						stCRT.hide_offset_x + dx - ((ENEMY_CAR_1_W >> dz)>>1),
+						stCRT.hide_offset_y + dy - ((ENEMY_CAR_1_H >> dz)>>1),
+						stCRT.hide_offset_x + dx + ((ENEMY_CAR_1_W >> dz)>>1),
+						stCRT.hide_offset_y + dy + ((ENEMY_CAR_1_H >> dz)>>1), 0x13, 0xFFFF);
 				}
 #endif
 			}
 			else
 			{
-				pstEnemyCar[bNum]->ubAlive = FALSE;
+				if((stRasInfo.size-8) < my)	/* 追い抜かした */
+				{
+					ADPCM_Play(14);	/* SE：自動車通過 */
+				}
+				g_pStEnemyCar[bNum]->ubAlive = FALSE;
 			}
 		}
 		else
@@ -179,16 +206,20 @@ SS	SetAlive_EnemyCAR(void)
 
 	for(i=0; i<ENEMYCAR_MAX; i++)
 	{
-		if(pstEnemyCar[i]->ubAlive == FALSE)
+		if(g_pStEnemyCar[i]->ubAlive == FALSE)
 		{
-			pstEnemyCar[i]->ubCarType = 0;
-			pstEnemyCar[i]->VehicleSpeed = Mmax((stMyCar.VehicleSpeed - 10), 80);
-			pstEnemyCar[i]->x = 0;
-			pstEnemyCar[i]->y = 0;
-			pstEnemyCar[i]->z = 4;
-			pstEnemyCar[i]->ubBrakeLights = 0;
-			pstEnemyCar[i]->ubOBD = 0;
-			pstEnemyCar[i]->ubAlive = TRUE;
+			g_pStEnemyCar[i]->ubCarType = 0;
+			g_pStEnemyCar[i]->VehicleSpeed = Mmax((stMyCar.VehicleSpeed - 10), 80);
+			g_pStEnemyCar[i]->x = 0;
+			g_pStEnemyCar[i]->y = 0;
+			g_pStEnemyCar[i]->z = 4;
+			g_pStEnemyCar[i]->sx = 0;
+			g_pStEnemyCar[i]->ex = 0;
+			g_pStEnemyCar[i]->sy = 0;
+			g_pStEnemyCar[i]->ey = 0;
+			g_pStEnemyCar[i]->ubBrakeLights = 0;
+			g_pStEnemyCar[i]->ubOBD = 0;
+			g_pStEnemyCar[i]->ubAlive = TRUE;
 			break;
 		}
 	}
@@ -224,17 +255,17 @@ SS	Sort_EnemyCAR(void)
 	SS	ret = 0;
 	SS	i;
 	SS	count = 0;
-	ST_ENEMYCARDATA	*pstEnemyCar_Tmp;
+	ST_ENEMYCARDATA	*pStEnemyCar_Tmp;
 	
 	while(1)
 	{
 		for(i=0; i<ENEMYCAR_MAX-1; i++)
 		{
-			if(pstEnemyCar[i]->y > pstEnemyCar[i+1]->y)
+			if(g_pStEnemyCar[i]->y > g_pStEnemyCar[i+1]->y)
 			{
-				pstEnemyCar_Tmp = pstEnemyCar[i+1];
-				pstEnemyCar[i+1] = pstEnemyCar[i];
-				pstEnemyCar[i] = pstEnemyCar_Tmp;
+				pStEnemyCar_Tmp = g_pStEnemyCar[i+1];
+				g_pStEnemyCar[i+1] = g_pStEnemyCar[i];
+				g_pStEnemyCar[i] = pStEnemyCar_Tmp;
 				count = 0;
 			}
 			else

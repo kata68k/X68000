@@ -36,6 +36,7 @@
 #define Y_MAX_DRAW	(511)
 #define Y_HORIZON_0	(128)
 #define Y_HORIZON_1	(64)
+#define Y_MAX_WINDOW	(152)
 
 /* Ｘ，Ｙ座標（仮想座標） */
 #define X_OFFSET	(224)

@@ -39,6 +39,8 @@ UC	g_mode = 0;
 UC	g_mode_rev = 1;
 US	g_uDebugNum = 0; 
 UC	g_bDebugMode = FALSE;
+UI	g_unTime_cal = 0u;
+UI	g_unTime_cal_PH = 0u;
 
 /* グローバル構造体 */
 
@@ -47,6 +49,8 @@ SS main(void);
 static void App_Init(void);
 static void App_exit(void);
 SS	BG_main(UC*);
+SS	GetGameMode(UC *);
+SS	SetGameMode(UC);
 SS	GetDebugNum(US *);
 SS	SetDebugNum(US);
 SS	GetDebugMode(UC *);
@@ -252,6 +256,7 @@ SS main(void)
 		}
 		if(loop == 0)	/* 終了処理 */
 		{
+			Music_Play(0);	/* 停止 */
 			/* 動画 */
 			MOV_Play(2);	/* バイバイ */
 			break;
@@ -304,11 +309,10 @@ SS main(void)
 			{
 				if(input == KEY_A)	/* Aボタン */
 				{
+					Music_Play(0);	/* 停止 */
+					
 					ADPCM_Play(10);	/* SE:決定 */
 				
-					Music_Play(1);	/* ローディング中 */
-					//Music_Play(3);	/* ゲーム曲 */
-					
 					SetTaskInfo(SCENE_TITLE_E);	/* タイトルシーン(開始処理)へ設定 */
 				}
 			}
@@ -352,7 +356,7 @@ SS main(void)
 			{
 				/* スプライト＆ＢＧ表示 */
 				PCG_INIT();		/* スプライト／ＢＧの初期化 */
-				PCG_VIEW(TRUE);	
+				PCG_VIEW(TRUE);	/* スプライト＆ＢＧ表示 */
 
 				/* テキスト表示 */
 				T_Clear();			/* テキストクリア */
@@ -384,6 +388,8 @@ SS main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
+				Music_Play(5);	/* メインBGM */
+				
 				SetTaskInfo(SCENE_GAME);	/* ゲームタスクへ設定 */
 			}
 			break;
@@ -391,6 +397,8 @@ SS main(void)
 			{
 				if((input & KEY_b_Q) != 0u)	/* Ｑ */
 				{
+					Music_Play(0);	/* 停止 */
+
 					/* 動画 */
 					MOV_Play(1);	/* うふふ */
 
@@ -403,24 +411,11 @@ SS main(void)
 				/* ラスター処理 */
 				Raster_Main(g_mode);
 				
-				if(stTask.b96ms == TRUE)
-				{
-					/* コースアウト時の処理 */
-					MyCar_CourseOut();	/* コースアウト時のエフェクト */
-
-					/* グラフィック画面の処理 */
-					MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
-				}
-				
-				/* テキスト画面の処理 */
-				if(stTask.b496ms == TRUE)
-				{
-					T_Main();
-				}
+				/* コースアウト時の処理 */
+				MyCar_CourseOut();	/* コースアウト時のエフェクト */
 
 				/* 余った時間で処理 */
 				BG_main(&bFlip);	/* バックグランド処理 */
-				
 			}
 			break;
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
@@ -477,45 +472,6 @@ SS main(void)
 			}
 		}
 
-#ifdef DEBUG	/* デバッグコーナー */
-//		BG_TextPut("OverKata", 4, 10);
-//		BG_TextPut("OverKata", 128, 128);
-//		BG_TextPut("OVER KATA", 128, 128);
-
-		if(bDebugMode == TRUE)
-		{
-			if(stTask.b496ms == TRUE)
-			{
-				/* モニタ */
-//				Message_Num(&	,				 0,  9, 2, MONI_Type_SS, "%3d");
-//				Message_Num(&, 				 6,  9, 2, MONI_Type_SS, "%2d");
-//				Message_Num(&, 				12,  9, 2, MONI_Type_SS, "%2d");
-//				Message_Num(&,		 			20,  9, 2, MONI_Type_SS, "%3d");
-				
-//				ST_RAS_INFO	stRasInfo;
-//				GetRasterInfo(&stRasInfo);
-//				Message_Num(&stRasInfo.st,			 0, 10, 2, MONI_Type_US, "%3d");
-//				Message_Num(&stRasInfo.mid,			 7, 10, 2, MONI_Type_US, "%3d");
-//				Message_Num(&stRasInfo.ed,			13, 10, 2, MONI_Type_US, "%3d");
-//				Message_Num(&stRasInfo.size,		20, 10, 2, MONI_Type_US, "%3d");
-				
-//				Message_Num(&uPal_tmp[uRas_st],	 0, 11, 2, MONI_Type_US, "%3d");
-//				Message_Num(&uRas_tmp[uRas_st],	 6, 11, 2, MONI_Type_US, "%3d");
-//				Message_Num(&cal_tan,			12, 11, 2, MONI_Type_SS, "%3d");
-//				Message_Num(&rad,				12, 11, 2, MONI_Type_FL, "%f");
-				
-//				Message_Num(&road_height,		 0, 12, 2, MONI_Type_SS, "%3d");
-//				Message_Num(&road_slope,	 	 6, 12, 2, MONI_Type_SS, "%3d");
-//				Message_Num(&road_distance,		12, 12, 2, MONI_Type_SS, "%3d");
-//				Message_Num(&road_angle,		20, 12, 2, MONI_Type_SS, "%3d");
-				
-				Message_Num(&unTime_cal,	 	 0, 8, 2, MONI_Type_UI, "%3d");
-				Message_Num(&unTime_cal_PH,		 6, 8, 2, MONI_Type_UI, "%3d");
-				Message_Num(&g_uDebugNum,		12, 8, 2, MONI_Type_US, "%3d");
-				
-			}
-		}
-#endif
 		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
 
 		/* 処理時間計測 */
@@ -524,6 +480,9 @@ SS main(void)
 		{
 			unTime_cal = time_now - time_st;	/* LSB:1 UNIT:ms */
 			unTime_cal_PH = Mmax(unTime_cal, unTime_cal_PH);
+			
+			g_unTime_cal = unTime_cal;
+			g_unTime_cal_PH = unTime_cal_PH;
 		}
 
 		/* 同期待ち */
@@ -540,6 +499,7 @@ SS main(void)
 		GetRasterInfo(&stRasInfo);
 		
 		printf("stRasInfo st,mid,ed,size=(%4d,%4d,%4d,%4d)\n", stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size);
+		printf("GetRasterIntPos[i]=(x,y,pat)=(H_pos)\n");
 		
 		for(i=stRasInfo.st; i < stRasInfo.ed; i+=RASTER_NEXT)
 		{
@@ -642,16 +602,18 @@ SS BG_main(UC* bFlip)
 	US	BGprocces_ct = 0;
 	UC	bNum;
 	UC	bFlipStateOld;
+	ST_TASK		stTask = {0}; 
 
 	static UC	bFlipState = Clear_G;
 	
 	GetStartTime(&time_st);	/* 開始時刻を取得 */
+	GetTaskInfo(&stTask);	/* タスクの情報を得る */
 
 	bFlipStateOld = bFlipState;
 
 	/* 描画順をソートする */
-	Sort_EnemyCAR();		/* ライバル車 */
 	Sort_Course_Obj();		/* コースオブジェクト */
+	Sort_EnemyCAR();		/* ライバル車 */
 	
 	do
 	{
@@ -669,6 +631,7 @@ SS BG_main(UC* bFlip)
 			/* 描画のクリア処理 */
 			case Clear_G:
 			{
+				/* グラフィックを消去 */
 				G_CLR_ALL_OFFSC(g_mode);
 
 //				bFlipState = Object1_G;
@@ -679,17 +642,8 @@ SS BG_main(UC* bFlip)
 			/* 背景 */
 			case BackGround_G:
 			{
-				/* FPS */
-				if(g_mode == 2)
-				{
-					PutGraphic_To_Symbol("test2", X_OFFSET + 128, Y_OFFSET + 48, 20);
-					//G_Load_Mem( 6, X_OFFSET,	Y_OFFSET,	1);	/* 背景 */
-				}
-				else
-				{
-					PutGraphic_To_Symbol("test1", X_OFFSET + 128, Y_MIN_DRAW + 48, 20);
-					//G_Load_Mem( 6, X_OFFSET,	Y_MIN_DRAW,	1);	/* 背景 */
-				}
+				Move_Course_BG(g_mode);	/* コースの動きにあわせて背景を動かす */
+				
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
@@ -704,6 +658,7 @@ SS BG_main(UC* bFlip)
 			{
 				bNum = bFlipState - Object1_G;
 				Course_Obj_main(bNum, g_mode, g_mode_rev);
+
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
@@ -716,12 +671,82 @@ SS BG_main(UC* bFlip)
 			{
 				bNum = bFlipState - Enemy1_G;
 				EnemyCAR_main(bNum, g_mode, g_mode_rev);
+				
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
 			}
+			case MyCar_G:
+			{
+				
+				T_Main(g_mode);	/* テキスト画面の処理 */
+
+				MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
+				
+				bFlipState++;
+				*bFlip = FALSE;
+				break;
+			}
+#ifdef DEBUG	/* デバッグコーナー */
+			case Debug_View_G:
+			{
+				if(g_bDebugMode == TRUE)
+				{
+//					if(stTask.b496ms == TRUE)	/* モニタ */
+					{
+						UC	str[256] = {0};
+
+#if 1	/* ラスター情報 */
+						US x, y;
+						SS pat;
+						SS pos;
+						ST_RAS_INFO	stRasInfo;
+						ST_ROAD_INFO	stRoadInfo;
+						GetRasterInfo(&stRasInfo);
+						GetRoadInfo(&stRoadInfo);
+
+						pos = Mmax(Mmin( (g_uDebugNum - 0x80), stRasInfo.size ), 0);
+						GetRasterIntPos( &x, &y, &pat, stRasInfo.st + pos );
+						
+						sprintf(str, "[%d]s(%d,%d,%d,%d)i(%d,%d,%d)o(%d,%d)",
+							pos, 
+							stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size,
+							x, y, pat, 
+							stRoadInfo.Horizon, stRoadInfo.Horizon_tmp );	/* ラスター情報 */
+#endif						
+#if 0	/* 敵車情報 */
+						UI	i = 0;
+						ST_ENEMYCARDATA	stEnemyCar = {0};
+						i = g_uDebugNum - 128;
+						i = Mmin(Mmax(i, 0), ENEMYCAR_MAX-1);
+						GetEnemyCAR(&stEnemyCar, i);	/* ライバル車の情報 */
+						sprintf(str, "Enemy %d (%3d,%3d,%3d),Debug(%3d)", i, stEnemyCar.x, stEnemyCar.y, stEnemyCar.z, g_uDebugNum);	/* ライバル車の情報 */
+#endif						
+#if 0	/* CPU情報 */
+						sprintf(str, "CPU Time%2d[ms](MAX%2d[ms]),Debug(%3d)", g_unTime_cal, g_unTime_cal_PH, g_uDebugNum);	/* 処理負荷 */
+#endif						
+						/* 表示 */
+						Put_Message_To_Graphic(str, g_mode);	/* グラフィックのデバッグエリアにメッセージ描画 */
+					}
+				}
+				
+				bFlipState++;
+				*bFlip = FALSE;
+				break;
+			}
+#endif
 			case Flip_G:
 			{
+				SS	x, y;
+				ST_CRT	stCRT = {0};
+				/* 画面をフリップする */
+				GetCRT(&stCRT, g_mode);
+				x = stCRT.hide_offset_x;
+				y = stCRT.hide_offset_y;
+				/* 画面の位置 */
+				HOME(0b01, x, y );	/* Screen 0(TPS/FPS) */
+				T_Scroll( 0, y  );	/* テキスト画面 */
+				
 				bFlipState = Clear_G;
 				*bFlip = TRUE;
 				break;
@@ -751,6 +776,20 @@ SS BG_main(UC* bFlip)
 	return	ret;
 }
 
+SS	GetGameMode(UC *bMode)
+{
+	SS	ret = 0;
+	*bMode = g_mode;
+	return ret;
+}
+
+SS	SetGameMode(UC bMode)
+{
+	SS	ret = 0;
+	g_mode = bMode;
+	return ret;
+}
+
 SS	GetDebugNum(US *uNum)
 {
 	SS	ret = 0;
@@ -778,6 +817,5 @@ SS	SetDebugMode(UC bMode)
 	g_bDebugMode = bMode;
 	return ret;
 }
-
 
 #endif	/* OVERKATA_C */

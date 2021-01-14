@@ -33,6 +33,8 @@ typedef struct
 	US	uScoreMax;
 	US	uVs;
 	US	uShiftPos;
+	US	uPosX;
+	US	uPosY;
 }	ST_TEXTINFO;
 
 extern SS moni;
@@ -45,5 +47,6 @@ extern SS BG_TimeCounter(UI, US, US);
 extern SS BG_Number(UI, US, US);
 extern SS Text_To_Text(US, SS, SS, UC, UC *);
 extern SS PutTextInfo(ST_TEXTINFO);
+extern SS Put_Message_To_Graphic(UC *, UC);
 
 #endif	/* OUTPUT_TEXT_H */

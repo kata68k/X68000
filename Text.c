@@ -6,6 +6,7 @@
 #include "inc/usr_macro.h"
 #include "Text.h"
 
+#include "Graphic.h"
 #include "MFP.h"
 #include "MyCar.h"
 #include "OutPut_Text.h"
@@ -24,7 +25,8 @@ void T_Time(void);
 void T_Score(void);
 void T_Speed(void);
 void T_Gear(void);
-void T_Main(void);
+void T_Main(UC);
+SS T_Scroll(UI, UI);
 
 /* 関数 */
 void T_INIT(void)
@@ -76,7 +78,10 @@ void T_PALET(void)
 	TPALET2( 5, SetRGB(30,  8,  0));	/* Orenge */
 	TPALET2( 6, SetRGB(30, 30,  0));	/* Yellow */
 	TPALET2( 7, SetRGB( 0, 31,  0));	/* Green */
-	TPALET2( 8, SetRGB( 8,  8,  8));	/* Glay */
+//	TPALET2( 8, SetRGB( 8,  8,  8));	/* Glay */
+	/* 8～15グラフィックをテキスト化した画像で使用 */
+	TPALET2( 8, SetRGB( 4,  4,  4));	/* Glay */
+	TPALET2(15, SetRGB(31, 31, 31));	/* White */
 }
 
 void T_SetBG_to_Text(void)
@@ -85,12 +90,12 @@ void T_SetBG_to_Text(void)
 	US	x, y;
 
 	/* テキストエリアに作業データ展開1 */
-	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 0, 240);//232
+	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 256, 0);//232
 	/* テキストエリアに作業データ展開2 */
 	for(i=0; i < 10; i++)
 	{
-		x = 0;
-		y = 248;//240	248+8=256以降はNG
+		x = 256;
+		y = 8;//240	248+8=256以降はNG
 		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
 		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
 	}
@@ -98,98 +103,117 @@ void T_SetBG_to_Text(void)
 
 void T_TopScore(void)
 {
-	UI	e;
-	/* TOP */
-	BG_PutToText(  1, (BG_WIDTH * 0),  0, BG_Normal, FALSE);	/* 左上 */
-	BG_PutToText(  2, (BG_WIDTH * 1),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 2),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 3),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  3, (BG_WIDTH * 4),  0, BG_Normal, FALSE);	/* 右上 */
-	for(e = 0; e < 5; e++)
+	UI	i,e;
+	for(i=0; i<2; i++)
 	{
-		BG_PutToText(e+4, (BG_WIDTH * e),  8, BG_Normal, FALSE);
+		/* TOP */
+		BG_PutToText(  1, (BG_WIDTH * 0),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左上 */
+		BG_PutToText(  2, (BG_WIDTH * 1),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 2),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 3),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  3, (BG_WIDTH * 4),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 右上 */
+		for(e = 0; e < 5; e++)
+		{
+			BG_PutToText(e+4, (BG_WIDTH * e),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);
+		}
+		BG_PutToText(  1, (BG_WIDTH * 0),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 左下 */
+		BG_PutToText(  2, (BG_WIDTH * 1),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 2),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 3),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  3, (BG_WIDTH * 4),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 右下 */
 	}
-	BG_PutToText(  1, (BG_WIDTH * 0),  16, BG_H_rev, FALSE);	/* 左下 */
-	BG_PutToText(  2, (BG_WIDTH * 1),  16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 2),  16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 3),  16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  3, (BG_WIDTH * 4),  16, BG_H_rev, FALSE);	/* 右下 */
 }
 
 void T_Time(void)
 {
-	UI	e;
-	/* TIME */
-	BG_PutToText(  1, (BG_WIDTH * 12),  0, BG_Normal, FALSE);	/* 左上 */
-	BG_PutToText(  2, (BG_WIDTH * 13),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 14),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 15),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 16),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  3, (BG_WIDTH * 17),  0, BG_Normal, FALSE);	/* 右上 */
-	BG_PutToText(  4, (BG_WIDTH * 12),  8, BG_Normal, FALSE);	/* 左 */
-	for(e = 0; e < 5; e++)
+	UI	i,e;
+	for(i=0; i<2; i++)
 	{
-		BG_PutToText(e+10, (BG_WIDTH * (13 + e)),  8, BG_Normal, FALSE);
+		/* TIME */
+		BG_PutToText(  1, (BG_WIDTH * 12),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左上 */
+		BG_PutToText(  2, (BG_WIDTH * 13),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 14),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 15),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 16),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  3, (BG_WIDTH * 17),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 右上 */
+		BG_PutToText(  4, (BG_WIDTH * 12),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左 */
+		for(e = 0; e < 5; e++)
+		{
+			BG_PutToText(e+10, (BG_WIDTH * (13 + e)),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);
+		}
+		BG_PutToText(  1, (BG_WIDTH * 12), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 左下 */
+		BG_PutToText(  2, (BG_WIDTH * 13), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 14), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 15), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 16), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  3, (BG_WIDTH * 17), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 右下 */
 	}
-	BG_PutToText(  1, (BG_WIDTH * 12), 16, BG_H_rev, FALSE);	/* 左下 */
-	BG_PutToText(  2, (BG_WIDTH * 13), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 14), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 15), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 16), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  3, (BG_WIDTH * 17), 16, BG_H_rev, FALSE);	/* 右下 */
-
 }
 
 void T_Score(void)
 {
-	UI	e;
-	/* SCORE */
-	BG_PutToText(  1, (BG_WIDTH * 17),  0, BG_Normal, FALSE);	/* 左上 */
-	BG_PutToText(  2, (BG_WIDTH * 18),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 19),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 20),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 21),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText(  2, (BG_WIDTH * 22),  0, BG_Normal, FALSE);	/* 上 */
-	BG_PutToText( 15, (BG_WIDTH * 23),  0, BG_Normal, FALSE);	/* 右上 */
-	BG_PutToText(  4, (BG_WIDTH * 17),  8, BG_Normal, FALSE);	/* 左 */
-	for(e = 0; e < 6; e++)
+	UI	i,e;
+	for(i=0; i<2; i++)
 	{
-		BG_PutToText(e+16, (BG_WIDTH * (18 + e)),  8, BG_Normal, FALSE);
+		/* SCORE */
+		BG_PutToText(  1, (BG_WIDTH * 17),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左上 */
+		BG_PutToText(  2, (BG_WIDTH * 18),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 19),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 20),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 21),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 22),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText( 15, (BG_WIDTH * 23),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 右上 */
+		BG_PutToText(  4, (BG_WIDTH * 17),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左 */
+		for(e = 0; e < 6; e++)
+		{
+			BG_PutToText(e+16, (BG_WIDTH * (18 + e)),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);
+		}
+		BG_PutToText(  1, (BG_WIDTH * 17), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 左下 */
+		BG_PutToText(  2, (BG_WIDTH * 18), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 19), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 20), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 21), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 22), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText( 15, (BG_WIDTH * 23), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 右下 */
 	}
-	BG_PutToText(  1, (BG_WIDTH * 17), 16, BG_H_rev, FALSE);	/* 左下 */
-	BG_PutToText(  2, (BG_WIDTH * 18), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 19), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 20), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 21), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText(  2, (BG_WIDTH * 22), 16, BG_H_rev, FALSE);	/* 下 */
-	BG_PutToText( 15, (BG_WIDTH * 23), 16, BG_H_rev, FALSE);	/* 右下 */
-
 }
 
 void T_Speed(void)
 {
-	/* SPEED */
-	BG_TextPut("SPEED", 164, 24);
-	/* KM */
-	BG_TextPut("KM", 232, 24);
+	UI	i;
+	for(i=0; i<2; i++)
+	{
+		/* SPEED */
+		BG_TextPut("SPEED", 164, 24 + (Y_OFFSET * i) );
+		/* KM */
+		BG_TextPut("KM", 232, 24 + (Y_OFFSET * i) );
+	}
 }
 
 void T_Gear(void)
 {
-	/* GEAR */
-	BG_TextPut("GEAR", 172, 32);
+	UI	i;
+	for(i=0; i<2; i++)
+	{
+		/* GEAR */
+		BG_TextPut("GEAR", 172, 32 + (Y_OFFSET * i) );
+	}
 }
 
-void T_Main(void)
+void T_Main(UC bMode)
 {
 	UI time_now;
 	static UI time_old = 0;
 	UI unStart_time, unTimer;
 	US uTimeCounter;
 	static UI unPassTime = 0;
-
+	ST_CRT		stCRT = {0};
 	ST_CARDATA	stMyCar = {0};
+
 	GetMyCar(&stMyCar);			/* 自車の情報を取得 */
+
+	/* モード切替による設定値の変更 */
+	GetCRT(&stCRT, bMode);
 
 	/* 現在時間 */
 	GetNowTime(&time_now);
@@ -225,8 +249,24 @@ void T_Main(void)
 	/* Gear */
 	g_stTextInfo.uShiftPos = (US)stMyCar.ubShiftPos;
 
+	/* 座標 */
+	g_stTextInfo.uPosX = 0u;	/* X座標 */
+	g_stTextInfo.uPosY = stCRT.view_offset_y;	/* Y座標 */
+	
 	/* 描画 */
 	PutTextInfo(g_stTextInfo);
+}
+
+SS T_Scroll(UI uPosX, UI uPosY)
+{
+	SS	ret = 0;
+	volatile US *CRTC_R10 = (US *)0xE80014u;	/* テキストX方向スクロール */
+	volatile US *CRTC_R11 = (US *)0xE80016u;	/* テキストY方向スクロール */
+
+	*CRTC_R10 = Mbset(*CRTC_R10, 0x03FF, uPosX);	/* CRTC R10 */
+	*CRTC_R11 = Mbset(*CRTC_R11, 0x03FF, uPosY);	/* CRTC R11 */
+	
+	return ret;
 }
 
 #endif	/* TEXT_C */
