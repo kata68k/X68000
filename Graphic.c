@@ -35,6 +35,7 @@ UI	g_CG_List_Max	=	0u;
 UC	*g_pCG_FileBuf[CG_MAX];
 US	g_CG_ColorCode[CG_MAX][256]	=	{0};
 UC	g_CG_MaxColor[CG_MAX][3]	=	{0};
+SC	g_CRT_Contrast = -1;
 
 /* グローバル構造体 */
 ST_CRT		g_stCRT[CRT_MAX] = {0};
@@ -71,6 +72,8 @@ SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 SS	PutGraphic_To_Text(UC , US , US );
 SS	PutGraphic_To_Symbol(const UC *, US , US , US );
 SS	G_Scroll(US, US, UC);
+SS	Get_CRT_Contrast(SC *);
+SS	Set_CRT_Contrast(SC);
 
 /* 関数 */
 SS	GetCRT(ST_CRT *stDat, SS Num)
@@ -150,6 +153,8 @@ SS CRT_INIT(void)
 	g_stCRT[2].BG_offset_x		= 0;
 	g_stCRT[2].BG_offset_y		= 64;
 	g_stCRT[2].BG_under			= BG_1_UNDER;
+	
+	Set_CRT_Contrast(-1);	/* コントラスト初期化 */
 	
 	return ret;
 }
@@ -1707,5 +1712,36 @@ SS	G_Scroll(US x, US y, UC bSCNum)
 
 	return ret;
 }
+
+SS Get_CRT_Contrast(SC *pbContrast)
+{
+	SS	ret = 0;
+	
+	*pbContrast = _iocs_contrast(-1);
+	
+	return ret;
+}
+
+SS Set_CRT_Contrast(SC bContrast)
+{
+	SS ret = 0;
+	
+	if(g_CRT_Contrast < 0)
+	{
+		Get_CRT_Contrast(&g_CRT_Contrast);
+	}
+
+	if( (bContrast >= 0) && (bContrast <= 15) )
+	{
+		_iocs_contrast(bContrast);		/* 設定値 */
+	}
+	else
+	{
+		_iocs_contrast(g_CRT_Contrast);	/* 初期値 */
+	}
+	
+	return ret;
+}
+
 
 #endif	/* GRAPHIC_C */

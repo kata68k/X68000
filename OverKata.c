@@ -73,7 +73,7 @@ SS main(void)
 	UC	bMode_flag = FALSE;
 	UC	bDebugMode = TRUE;
 	UC	bDebugMode_flag;
-	UC	bFlip = TRUE;
+	UC	bFlip = FALSE;
 	
 	ST_TASK		stTask = {0}; 
 	
@@ -354,6 +354,8 @@ SS main(void)
 			break;
 			case SCENE_START_E:	/* ゲーム開始シーン(終了処理) */
 			{
+				Set_CRT_Contrast(0);	/* コントラスト暗 */
+				
 				/* スプライト＆ＢＧ表示 */
 				PCG_INIT();		/* スプライト／ＢＧの初期化 */
 				PCG_VIEW(TRUE);	/* スプライト＆ＢＧ表示 */
@@ -389,6 +391,8 @@ SS main(void)
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
 				Music_Play(5);	/* メインBGM */
+
+				Set_CRT_Contrast(-1);	/* コントラストdef */
 				
 				SetTaskInfo(SCENE_GAME);	/* ゲームタスクへ設定 */
 			}
@@ -403,6 +407,13 @@ SS main(void)
 					MOV_Play(1);	/* うふふ */
 
 					SetTaskInfo(SCENE_GAME_E);	/* ゲームシーン(終了処理)へ設定 */
+				}
+				
+				/* 画面消去 */
+				if(bFlip == TRUE)
+				{
+					/* グラフィックを消去 */
+					G_CLR_ALL_OFFSC(g_mode);
 				}
 				
 				/* 自車の情報を取得 */
@@ -460,6 +471,9 @@ SS main(void)
 
 		if( (ChatCancelSW((input & KEY_b_M)!=0u, &bMode_flag) == TRUE) || (bFlip == TRUE) )	/* Ｍでモード切替 */
 		{
+			SS	x, y;
+			ST_CRT	stCRT = {0};
+			/* モードチェンジ */
 			if(g_mode == 1u)
 			{
 				g_mode = 2u;
@@ -470,6 +484,13 @@ SS main(void)
 				g_mode = 1u;
 				g_mode_rev = 2u;
 			}
+			/* 画面をフリップする */
+			GetCRT(&stCRT, g_mode);
+			x = stCRT.view_offset_x;
+			y = stCRT.view_offset_y;
+			/* 画面の位置 */
+			HOME(0b01, x, y );	/* Screen 0(TPS/FPS) */
+			T_Scroll( 0, y  );	/* テキスト画面 */
 		}
 
 		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
@@ -611,10 +632,6 @@ SS BG_main(UC* bFlip)
 
 	bFlipStateOld = bFlipState;
 
-	/* 描画順をソートする */
-	Sort_Course_Obj();		/* コースオブジェクト */
-	Sort_EnemyCAR();		/* ライバル車 */
-	
 	do
 	{
 		GetNowTime(&time_now);	/* 現在時刻を取得 */
@@ -631,10 +648,6 @@ SS BG_main(UC* bFlip)
 			/* 描画のクリア処理 */
 			case Clear_G:
 			{
-				/* グラフィックを消去 */
-				G_CLR_ALL_OFFSC(g_mode);
-
-//				bFlipState = Object1_G;
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
@@ -657,6 +670,12 @@ SS BG_main(UC* bFlip)
 			case Object6_G:
 			{
 				bNum = bFlipState - Object1_G;
+				/* 描画順をソートする */
+				if(bNum == 0)
+				{
+					Sort_Course_Obj();		/* コースオブジェクト */
+				}
+				
 				Course_Obj_main(bNum, g_mode, g_mode_rev);
 
 				bFlipState++;
@@ -670,6 +689,12 @@ SS BG_main(UC* bFlip)
 			case Enemy4_G:
 			{
 				bNum = bFlipState - Enemy1_G;
+				/* 描画順をソートする */
+				if(bNum == 0)
+				{
+					Sort_EnemyCAR();		/* ライバル車 */
+				}
+				
 				EnemyCAR_main(bNum, g_mode, g_mode_rev);
 				
 				bFlipState++;
@@ -696,7 +721,7 @@ SS BG_main(UC* bFlip)
 					{
 						UC	str[256] = {0};
 
-#if 1	/* ラスター情報 */
+#if 0	/* ラスター情報 */
 						US x, y;
 						SS pat;
 						SS pos;
@@ -722,7 +747,7 @@ SS BG_main(UC* bFlip)
 						GetEnemyCAR(&stEnemyCar, i);	/* ライバル車の情報 */
 						sprintf(str, "Enemy %d (%3d,%3d,%3d),Debug(%3d)", i, stEnemyCar.x, stEnemyCar.y, stEnemyCar.z, g_uDebugNum);	/* ライバル車の情報 */
 #endif						
-#if 0	/* CPU情報 */
+#if 1	/* CPU情報 */
 						sprintf(str, "CPU Time%2d[ms](MAX%2d[ms]),Debug(%3d)", g_unTime_cal, g_unTime_cal_PH, g_uDebugNum);	/* 処理負荷 */
 #endif						
 						/* 表示 */
@@ -737,16 +762,7 @@ SS BG_main(UC* bFlip)
 #endif
 			case Flip_G:
 			{
-				SS	x, y;
-				ST_CRT	stCRT = {0};
 				/* 画面をフリップする */
-				GetCRT(&stCRT, g_mode);
-				x = stCRT.hide_offset_x;
-				y = stCRT.hide_offset_y;
-				/* 画面の位置 */
-				HOME(0b01, x, y );	/* Screen 0(TPS/FPS) */
-				T_Scroll( 0, y  );	/* テキスト画面 */
-				
 				bFlipState = Clear_G;
 				*bFlip = TRUE;
 				break;

@@ -2,6 +2,7 @@
 #define	APL_MATH_C
 
 #include <math.h>
+#include <limits.h>
 
 #include "inc/usr_macro.h"
 #include "APL_Math.h"
@@ -174,6 +175,8 @@ FLOAT APL_Atan2(FLOAT , FLOAT );
 SS APL_Cos(SS);
 SS APL_Sin(SS);
 SS APL_Tan256(SS);
+UI APL_uDiv(UI, UI);
+SI APL_sDiv(SI, SI);
 
 /* ä÷êî */
 
@@ -321,6 +324,45 @@ SS APL_Tan256(SS deg)
 	{
 		cal = (APL_Sin(deg) << 8) / APL_Cos(deg);
 	}
+	return cal;
+}
+
+UI APL_uDiv(UI uDenominator, UI uNumerator)
+{
+	UI	cal = 0;
+
+	if(uNumerator == 0u)
+	{
+		cal = ~0;
+	}
+	else
+	{
+		cal = ((uDenominator << 8u) / uNumerator) >> 8u;
+	}
+	
+	return cal;
+}
+
+SI APL_sDiv(SI Denominator, SI Numerator)
+{
+	SI	cal = 0;
+	
+	if(Numerator == 0)
+	{
+		if(Denominator >= 0)
+		{
+			cal = INT_MAX;
+		}
+		else
+		{
+			cal = INT_MIN;
+		}
+	}
+	else
+	{
+		cal = ((Denominator << 7u) / Numerator) >> 7u;
+	}
+	
 	return cal;
 }
 

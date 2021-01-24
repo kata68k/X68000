@@ -114,7 +114,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 			/* 位置 */
 			x = 4 * (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);	/* 縦位置から横移動量を計算 */
 
-			dx = stCRT.hide_offset_x + (WIDTH>>1) - 8 - x_ofst;
+			dx = (WIDTH>>1) - 8 - x_ofst;
 			if(bEven == TRUE)	/* 左 */
 			{
 				dx += x;
@@ -124,11 +124,15 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 				dx -= x;
 			}
 			/* 水平線 */
-			dy = stCRT.hide_offset_y + stRoadInfo.Horizon;
+			dy = stRoadInfo.Horizon;
 			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った */
 			dz = Mmin( Mmax( 3 - (((x<<8) / (x + 224))>>5) , 0), 3 );
 			/* 描画 */
-			Out_Of_Disp = Put_CouseObject(	dx,	dy,	dz,	bMode_rev,	bEven);
+			Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
+											stCRT.hide_offset_y + dy,
+											dz,
+											bMode_rev,
+											bEven);
 
 			if(Out_Of_Disp < 0)	/* 描画領域外 */
 			{
@@ -163,9 +167,10 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 	//		Message_Num(&ras_num,			 6, 11, 2, MONI_Type_US, "%4d");
 	//		Message_Num(&bNum,				12, 11, 2, MONI_Type_UC, "%d");
 	//		if(bDebugMode == TRUE)	/* デバッグモード */
-	//		{
-	//			Draw_Pset(x, dy, 0xC2);	/* デバッグ用座標位置 */
-	//		}
+			{
+				Draw_Pset(	stCRT.hide_offset_x + dx,
+							stCRT.hide_offset_y + 128, 0xC2);	/* デバッグ用座標位置 */
+			}
 		}
 #endif
 	}

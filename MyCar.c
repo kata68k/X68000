@@ -40,6 +40,9 @@ SS	MyCar_CourseOut(void);
 SS	GetMyCarSpeed(SS *);
 void MyCar_Image(void);
 void MyCar_Background(void);
+static SS	MyCar_Vibration(void);
+static SS	MyCar_Mascot(SS);
+static SS	MyCar_Tachometer(SS);
 
 /* 関数 */
 SS	MyCar_G_Load(void)
@@ -92,17 +95,24 @@ SS	MyCarInfo_Update(SS input)
 	SS	speed_min;
 	SS	Slope;
 	SS	Angle;
-	static UC bShiftPosFlag[3] = {FALSE};
-	UI	time;
 
 	US	uTM[6] = { 0, 2857, 1950, 1444, 1096, 761 };/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 */
 //	US	uTM_F[6] = { 0, 13390, 9140, 6768, 5137, 3567 };/* 総減速比 */
-//	US	uRPM[11] = { 500, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000 };	/* Eng回転数 */
-//	US	uTRQ[11] = { 120,  130,  150,  170,  210,  200,  180,  170,  140,  120,  100 };	/* トルク */
+	US	uRPM[11] = { 500, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000 };	/* Eng回転数 */
+	US	uTRQ[11] = { 120,  130,  150,  170,  210,  200,  180,  170,  140,  120,  100 };	/* トルク */
+
+	UC	bAxis;
 	UC	bUpDown = 0;
+	UC	bHit = FALSE;
+	UI	time;
 	UI	i;
+	UI	uEnemyNum = 0;
+	
 	ST_ENEMYCARDATA	stEnemyCar = {0};
 	ST_ROAD_INFO	stRoadInfo;
+
+	static UC bShiftPosFlag[3] = {FALSE};
+	static UC bSpin = 0;
 	
 	GetRoadInfo(&stRoadInfo);
 	Slope = stRoadInfo.slope;
@@ -111,18 +121,49 @@ SS	MyCarInfo_Update(SS input)
 	GetStartTime(&time);	/* 開始時刻を取得 */
 	
 	/* ステアリング操作 */
-	if((input & KEY_RIGHT) != 0u)	g_stMyCar.Steering += 1;	/* 右 */
-	if((input & KEY_LEFT) != 0u)	g_stMyCar.Steering -= 1;	/* 左 */
-#if 0
-	if( g_speed != 0u )
+	if((input & KEY_RIGHT) != 0u)
 	{
-		g_stMyCar.Steering += ((SS)(Angle + g_speed) >> 3);	/* バランス調整要 */
+		g_stMyCar.Steering += 1;	/* 右 */
+		g_stMyCar.uEngineRPM -= 3;	/* パワステ駆動減 */
+
+		if(bSpin == 1)	/* 右スピン */
+		{
+			bSpin = 0;	/* スピンキャンセル */
+			ADPCM_Play(4);	/* ブレーキ音 */
+		}
 	}
-	else{
-		/* 前回値保持 */
+	else if((input & KEY_LEFT) != 0u)
+	{
+		g_stMyCar.Steering -= 1;	/* 左 */
+		g_stMyCar.uEngineRPM -= 3;	/* パワステ駆動減 */
+
+		if(bSpin == 2)	/* 左スピン */
+		{
+			bSpin = 0;	/* スピンキャンセル */
+			ADPCM_Play(4);	/* ブレーキ音 */
+		}
 	}
-#endif
-	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 31), -31);
+	else
+	{
+		
+	}
+	
+	if(g_stMyCar.ubOBD == TRUE)	/* 故障中 */
+	{
+		/* スピン発生 */
+		if(bSpin == 1)		
+		{
+			g_stMyCar.Steering += 1;	/* 右 */
+		}
+		else if(bSpin == 2)
+		{
+			g_stMyCar.Steering -= 1;	/* 左 */
+		}
+		else
+		{
+			/* 保持 */
+		}
+	}
 	
 	/* シフト操作 */
 	if( ((input & KEY_A) != 0u) && ((input & KEY_B) == 0u))	/* Aボタン(only) */
@@ -161,49 +202,22 @@ SS	MyCarInfo_Update(SS input)
 		g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
 	}
 	
+	/* 回転数軸算出 */
+	bAxis = 10;
+	for( i=0; i<10; i++ )
+	{
+		if( g_stMyCar.uEngineRPM <= (uRPM[i] + ((uRPM[i+1] - uRPM[i]) >> 1)) )
+		{
+			bAxis = i;
+			break;
+		}
+	}
+	
 	/* アクセル */
 	if((input & KEY_A) != 0u)		/* Aボタン */
 	{
 		g_stMyCar.ubThrottle	= Minc(g_stMyCar.ubThrottle, 1);	/* スロットル開度 */
-		
-		switch(g_stMyCar.ubShiftPos)
-		{
-			case 0:
-			{
-				g_stMyCar.uEngineRPM += 200;
-			}
-			break;
-			case 1:
-			{
-				g_stMyCar.uEngineRPM += Mmax(20 - Slope,10);
-			}
-			break;
-			case 2:
-			{
-				g_stMyCar.uEngineRPM += Mmax(15 - Slope,7);
-			}
-			break;
-			case 3:
-			{
-				g_stMyCar.uEngineRPM += Mmax(10 - Slope,5);
-			}
-			break;
-			case 4:
-			{
-				g_stMyCar.uEngineRPM += Mmax(6 - Slope,3);
-			}
-			break;
-			case 5:
-			{
-				g_stMyCar.uEngineRPM += Mmax(3 - Slope,1);
-			}
-			break;
-			default:
-			{
-				g_stMyCar.uEngineRPM += Mmax(100 - Slope, 50);
-			}
-			break;
-		}
+		g_stMyCar.uEngineRPM += (uTM[g_stMyCar.ubShiftPos] + uTRQ[bAxis]) >> 7;		/* 回転数 */
 
 		/* エンジンの音 */
 		{
@@ -227,60 +241,11 @@ SS	MyCarInfo_Update(SS input)
 	}
 	else{
 		g_stMyCar.ubThrottle	= Mdec(g_stMyCar.ubThrottle, 1);	/* スロットル開度 */
-
-		/* 回転数 */
-		switch(g_stMyCar.ubShiftPos)
+		g_stMyCar.uEngineRPM -= uTM[g_stMyCar.ubShiftPos] >> 8;		/* 回転数 */
+		
+		/* エンジンの音(燃料カット) */
 		{
-			case 0:
-			{
-				g_stMyCar.uEngineRPM -= 200;
-			}
-			break;
-			case 1:
-			{
-				g_stMyCar.uEngineRPM -= Mmax(40 + Slope, 20);
-			}
-			break;
-			case 2:
-			{
-				g_stMyCar.uEngineRPM -= Mmax(30 + Slope, 15);
-			}
-			break;
-			case 3:
-			{
-				g_stMyCar.uEngineRPM -= Mmax(20 + Slope, 10);
-			}
-			break;
-			case 4:
-			{
-				g_stMyCar.uEngineRPM -= Mmax(12 + Slope, 6);
-			}
-			break;
-			case 5:
-			{
-				g_stMyCar.uEngineRPM -= Mmax(6 + Slope, 3);
-			}
-			break;
-			default:
-			{
-				g_stMyCar.uEngineRPM -= Mmax(200 + Slope, 100);
-			}
-			break;
 		}
-	}
-
-	g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
-
-	/* 車速 */
-	if(g_stMyCar.ubShiftPos == 0u)		/* ニュートラル */
-	{
-		g_stMyCar.VehicleSpeed -= 1;
-	}
-	else
-	{
-		/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 減速比 4.687 タイヤ周長2052.1mm */
-		/* タイヤ周長×６０×回転数／（１０００×変速比×減速比） */
-		g_stMyCar.VehicleSpeed = (SS)(((UI)26 * g_stMyCar.uEngineRPM) / uTM[g_stMyCar.ubShiftPos]);	
 	}
 	
 	/* ブレーキ */
@@ -299,7 +264,8 @@ SS	MyCarInfo_Update(SS input)
 	}
 	
 	/* 衝突判定 */
-	if(g_stMyCar.VehicleSpeed != 0)
+	if(		(g_stMyCar.VehicleSpeed != 0) 	/* 車速あり */
+		&&  (g_stMyCar.ubOBD == FALSE) )	/* 故障していない */
 	{
 		UC bMode;
 		SS	myCarSx, myCarEx, myCarSy, myCarEy;
@@ -311,30 +277,35 @@ SS	MyCarInfo_Update(SS input)
 		myCarSx = ((WIDTH>>1) + g_stMyCar.Steering - 8);
 		myCarEx = myCarSx + 16;
 		myCarSy = Y_MAX_WINDOW - 16;
-		myCarEy = myCarSy;
+		myCarEy = myCarSy + 8;
 
 		for(i = 0; i < ENEMYCAR_MAX; i++)
 		{
 			GetEnemyCAR(&stEnemyCar, i);
 			if( stEnemyCar.ubAlive == TRUE )
 			{
-				/* 当たり判定 */
-				UC bHit = FALSE;
-				
 				if(    (myCarSx > stEnemyCar.sx)
 					&& (myCarEx < stEnemyCar.ex)
 					&& (myCarSy > stEnemyCar.sy)
 					&& (myCarEy < stEnemyCar.ey))
 				{
+					/* 衝突判定 */
 					bHit = TRUE;
-				}
-				
-				if( bHit == TRUE )
-				{
-					g_stMyCar.ubOBD = TRUE;	/* 故障 */
-					g_stMyCar.VehicleSpeed = g_stMyCar.VehicleSpeed >> 2;	/* 1/4 */
-					g_stMyCar.uEngineRPM = g_stMyCar.uEngineRPM >> 2;		/* 1/4 */
-					ret = (SS)bHit;
+					uEnemyNum = i;
+
+					/* ステアリングの状態でスピン */
+					if((input & KEY_RIGHT) != 0u)
+					{
+						bSpin = 1;	/* 右スピン */
+					}
+					else if((input & KEY_LEFT) != 0u)
+					{
+						bSpin = 2;	/* 左スピン */
+					}
+					else
+					{
+						bSpin = 1;	/* 右スピン */
+					}
 				}
 			}
 		}
@@ -349,10 +320,54 @@ SS	MyCarInfo_Update(SS input)
 		}
 #endif
 	}
+	
+	/* 衝突判定 */
+	if( bHit == TRUE )
+	{
+		g_stMyCar.ubOBD = TRUE;	/* 故障 */
+		g_stMyCar.uEngineRPM = g_stMyCar.uEngineRPM >> 1;		/* 1/2 */
+	}
+	
+	/* 回転数クリップ */
+	g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
 
+	/* コーナリング */
+#if 0
+	if( g_speed != 0u )
+	{
+		g_stMyCar.Steering += ((SS)(Angle + g_speed) >> 3);	/* バランス調整要 */
+	}
+	else{
+		/* 前回値保持 */
+	}
+#endif
+	
+	/* ステアリングクリップ */
+	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 31), -31);
+
+	/* 車速 */
+	if(g_stMyCar.ubShiftPos == 0u)		/* ニュートラル */
+	{
+		g_stMyCar.VehicleSpeed -= 1;
+	}
+	else
+	{
+		/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 減速比 4.687 タイヤ周長2052.1mm */
+		/* タイヤ周長×６０×回転数／（１０００×変速比×減速比） */
+		g_stMyCar.VehicleSpeed = (SS)(((UI)26 * g_stMyCar.uEngineRPM) / uTM[g_stMyCar.ubShiftPos]);	
+	}
 	/* 車速クリップ */
 	g_stMyCar.VehicleSpeed = Mmax(Mmin(310, g_stMyCar.VehicleSpeed), 0);
+
+	/* 衝突判定 */
+	if( bHit == TRUE )
+	{
+		GetEnemyCAR(&stEnemyCar, uEnemyNum);
+		stEnemyCar.VehicleSpeed = g_stMyCar.VehicleSpeed + 5;
+		SetEnemyCAR(stEnemyCar, uEnemyNum);	/* 敵車の更新 */
+	}
 	
+	/* 車速（ゲーム内） */
 	if( (g_stMyCar.ubBrakeLights == TRUE)		/* ブレーキランプON */
 	||  (g_stMyCar.ubShiftPos == 0u)		)	/* ニュートラル */
 	{
@@ -367,160 +382,28 @@ SS	MyCarInfo_Update(SS input)
 	g_speed = g_stMyCar.VehicleSpeed >> 3;	/* 1LSB 10km/h */
 	g_speed = Mmax(Mmin(g_speed, 31), speed_min);
 
+	ret = (SS)bHit;
+	
 	return ret;
 }
 
 SS	MyCar_Interior(UC bMode)
 {
 	SS	ret = 0;
-	SS	i;
-	UC	patNum = 0;
-	UC	palNum = 0;
-	UC	V=0, H=0;
-	UC	sp_num=0;
-	SS	x, y;
-#if 1
-	US	nRatio;
-#endif
-	static	SS	Vibration = 0;
-	static	SS	VibrationCT = 0;
-	static	US	rad = 180;
-	static	UC	ubRadFlag = TRUE;
-	static	UC	ubOBD_old = FALSE;
-	static	SS	CrashCount;
-	
-#if 1
-	volatile US *PCG_src  = (US *)0xEBA000;
-	volatile US *PCG_dst  = (US *)0xEBA180;
-#endif
-	
-	/* 画面を揺らす */
-	VibrationCT++;
-	if(VibrationCT > 5)
-	{
-		VibrationCT = 0;
-	}
-	
-	
-	if(g_stMyCar.ubOBD == TRUE)
-	{
-		if(ubOBD_old == FALSE)
-		{
-			ADPCM_Play(12);	/* SE：クラッシュ */
-			CrashCount = 5;
-		}
-		Vibration = (VibrationCT == 0)?1:-1;	/* 画面の振動 */
-		CrashCount = Mdec(CrashCount, 1);	/* カウンタデクリメント */
-		
-		if(CrashCount == 0)
-		{
-			/* 動画 */
-			//MOV_Play(3);	/* 嘘をつくな */
-			g_stMyCar.ubOBD = FALSE;	/* 正常 */
-		}
-	}
-	else
-	{
-		Vibration = (VibrationCT == 0)?1:0;	/* 画面の振動 */
-	}
-	ubOBD_old = g_stMyCar.ubOBD;	/* 前回値更新 */
-	
-	/* マスコットが揺れる */
-	if(g_stMyCar.VehicleSpeed == 0)
-	{
-		if(rad == 180)
-		{
-			rad = 180;
-		}
-		else if(rad < 180)
-		{
-			rad++;
-		}
-		else
-		{
-			rad--;
-		}
-	}
-	else
-	{
-		US	width;
-		
-		width = 15 + (g_stMyCar.VehicleSpeed / 10);
-		
-		if(ubRadFlag == TRUE)
-		{
-			rad+=Mmax(g_stMyCar.VehicleSpeed/30, 1);
-			if(rad > 180 + width)ubRadFlag = FALSE;
-		}
-		else
-		{
-			rad-=Mmax(g_stMyCar.VehicleSpeed/30, 1);
-			if(rad < 180 - width)ubRadFlag = TRUE;
-		}
-	}
-	
 
-	x = 16 + (( 32 * APL_Sin(rad)) >> 8);
-	y =  0 + ((-32 * APL_Cos(rad)) >> 8) - Vibration;
+	SS	Vibration = 0;
 
-	palNum = 9;
-#if 1
-	GetDebugNum(&nRatio);
-#endif	
-	PCG_Rotation((US *)PCG_dst, (US *)PCG_src, 3, 3, x, y, &sp_num, palNum, (nRatio-0x80), 180-rad);
-
+	/* 車体を振動させる */
+	Vibration = MyCar_Vibration();
+	
+	/* マスコット *//* 処理負荷 大 */
+//	MyCar_Mascot(Vibration);
+	
 	/* タコメーター針 */
-	for( i = 0; i < 18; i++ )
-	{
-		if( ((i*500) <= g_stMyCar.uEngineRPM) && (g_stMyCar.uEngineRPM < ((i*500)+500)) )
-		{
-			/* 回転数でスプライトのパターンを決める */
-			break;
-		}
-	}
-	palNum = 0x0D;
-	x = 90+16;
-	y = 180+16 - Vibration;
-	if(i <= 6)
-	{
-		y += 16;
-		patNum = 0x70+i;
-		V = 1;
-		H = 0;
-	}
-	else if(i <= 12)
-	{
-		patNum = 0x70+12-i;
-		V = 0;
-		H = 0;
-	}
-	else
-	{
-		x += 16;
-		patNum = 0x70+i-12;
-		V = 0;
-		H = 1;
-	}
-	
-	SP_REGST( sp_num++, -1, x, y, SetBGcode(V, H, palNum, patNum), 3);
-
-	/* タコメーター */
-	x = 90+16;
-	y = 180+16 - Vibration;
-	V = 0;
-	H = 0;
-	palNum = 0x0D;
-
-	patNum = 0x46;
-	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x47;
-	SP_REGST( sp_num++, -1, x + 16, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x56;
-	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x57;
-	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+	MyCar_Tachometer(Vibration);
 	
 	/* ハンドル */
+	/* 未実装 */
 	
 	return ret;
 }
@@ -699,6 +582,180 @@ void MyCar_Background(void)
 		Draw_Fill((e << 6), Y_HORIZON-16-1 + Y_OFFSET, (e << 6) + 10, Y_HORIZON-1 + Y_OFFSET, 0xFF);
 	}
 #endif
+}
+
+static SS	MyCar_Vibration(void)
+{
+	SS ret = 0;
+
+	static	SS	Vibration = 0;
+	static	SS	VibrationCT = 0;
+	static	UC	ubOBD_old = FALSE;
+	static	SS	CrashCount;
+	
+	/* 画面を揺らす */
+	VibrationCT++;
+	if(VibrationCT > 5)
+	{
+		VibrationCT = 0;
+	}
+	
+	if(g_stMyCar.ubOBD == TRUE)
+	{
+		if(ubOBD_old == FALSE)
+		{
+			ADPCM_Play(12);	/* SE：クラッシュ */
+			CrashCount = 50;
+		}
+		Vibration = (VibrationCT == 0)?1:-1;	/* 画面の振動 */
+		CrashCount = Mdec(CrashCount, 1);	/* カウンタデクリメント */
+		
+		if(CrashCount == 0)
+		{
+			/* 動画 */
+			//MOV_Play(3);	/* 嘘をつくな */
+			g_stMyCar.ubOBD = FALSE;	/* 正常 */
+		}
+	}
+	else
+	{
+		Vibration = (VibrationCT == 0)?1:0;	/* 画面の振動 */
+	}
+	ubOBD_old = g_stMyCar.ubOBD;	/* 前回値更新 */
+	
+	ret = Vibration;
+	
+	return ret;
+}
+
+static SS	MyCar_Mascot(SS Vibration)
+{
+	SS ret = 0;
+	
+	SS	x, y;
+	US	nRatio = 0x80;
+	UC	palNum = 0;
+	UC	sp_num=0;
+	
+	volatile US *PCG_src  = (US *)0xEBA000;
+	volatile US *PCG_dst  = (US *)0xEBA180;
+
+	static	US	rad = 180;
+	static	UC	ubRadFlag = TRUE;
+
+#ifdef	DEBUG
+	GetDebugNum(&nRatio);
+#endif
+
+	/* マスコットが揺れる */
+	if(g_stMyCar.VehicleSpeed == 0)
+	{
+		if(rad == 180)
+		{
+			rad = 180;
+		}
+		else if(rad < 180)
+		{
+			rad++;
+		}
+		else
+		{
+			rad--;
+		}
+	}
+	else
+	{
+		US	width;
+		
+		width = 15 + (g_stMyCar.VehicleSpeed / 10);
+		
+		if(ubRadFlag == TRUE)
+		{
+			rad+=Mmax(g_stMyCar.VehicleSpeed/30, 1);
+			if(rad > 180 + width)ubRadFlag = FALSE;
+		}
+		else
+		{
+			rad-=Mmax(g_stMyCar.VehicleSpeed/30, 1);
+			if(rad < 180 - width)ubRadFlag = TRUE;
+		}
+	}
+	
+
+	x = 16 + (( 32 * APL_Sin(rad)) >> 8);
+	y =  0 + ((-32 * APL_Cos(rad)) >> 8) - Vibration;
+
+	palNum = 9;
+
+	PCG_Rotation((US *)PCG_dst, (US *)PCG_src, 3, 3, x, y, &sp_num, palNum, (nRatio-0x80), 180-rad);
+
+	return ret;
+}
+
+
+static SS	MyCar_Tachometer(SS Vibration)
+{
+	SS ret = 0;
+	
+	SS	i;
+	UC	patNum = 0;
+	UC	palNum = 0;
+	UC	V=0, H=0;
+	UC	sp_num=0;
+	SS	x, y;
+
+	/* タコメーター針 */
+	for( i = 0; i < 18; i++ )
+	{
+		if( ((i*500) <= g_stMyCar.uEngineRPM) && (g_stMyCar.uEngineRPM < ((i*500)+500)) )
+		{
+			/* 回転数でスプライトのパターンを決める */
+			break;
+		}
+	}
+	palNum = 0x0D;
+	x = 90+16;
+	y = 180+16 - Vibration;
+	if(i <= 6)
+	{
+		y += 16;
+		patNum = 0x70+i;
+		V = 1;
+		H = 0;
+	}
+	else if(i <= 12)
+	{
+		patNum = 0x70+12-i;
+		V = 0;
+		H = 0;
+	}
+	else
+	{
+		x += 16;
+		patNum = 0x70+i-12;
+		V = 0;
+		H = 1;
+	}
+	
+	SP_REGST( sp_num++, -1, x, y, SetBGcode(V, H, palNum, patNum), 3);
+
+	/* タコメーター */
+	x = 90+16;
+	y = 180+16 - Vibration;
+	V = 0;
+	H = 0;
+	palNum = 0x0D;
+
+	patNum = 0x46;
+	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
+	patNum = 0x47;
+	SP_REGST( sp_num++, -1, x + 16, y + 0, SetBGcode(V, H, palNum, patNum), 3);
+	patNum = 0x56;
+	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+	patNum = 0x57;
+	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+
+	return ret;
 }
 
 #endif	/* MyCar_C */

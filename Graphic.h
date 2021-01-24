@@ -115,5 +115,7 @@ extern	SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 extern	SS	PutGraphic_To_Text(UC , US , US );
 extern	SS	PutGraphic_To_Symbol(const UC *, US , US , US );
 extern	SS	G_Scroll(US, US, UC);
+extern	SS	Get_CRT_Contrast(SC *);
+extern	SS	Set_CRT_Contrast(SC);
 
 #endif	/* GRAPHIC_H */

@@ -11,5 +11,6 @@ extern	FLOAT APL_Atan2(FLOAT , FLOAT );
 extern	SS APL_Cos(SS);
 extern	SS APL_Sin(SS);
 extern	SS APL_Tan256(SS);
-
+extern	UI APL_uDiv(UI, UI);
+extern	SI APL_sDiv(SI, SI);
 #endif	/* APL_MATH_H */

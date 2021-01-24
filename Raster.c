@@ -176,6 +176,38 @@ void Raster_Main(UC bMode)
 					hide_offset_y + g_stRoadInfo.Horizon,
 					col,
 					0xFFFF);
+		/* ラスター開始位置 */
+		col = 0x38;
+		Draw_Line(	hide_offset_x + 0,
+					hide_offset_y + uRas_st,
+					hide_offset_x + WIDTH, 
+					hide_offset_y + uRas_st,
+					col,
+					0xFFFF);
+		/* ラスター中間位置 */
+		col = 0x3B;
+		Draw_Line(	hide_offset_x + 0,
+					hide_offset_y + uRas_mid,
+					hide_offset_x + WIDTH, 
+					hide_offset_y + uRas_mid,
+					col,
+					0xFFFF);
+		/* 表示終了位置 */
+		col = 0x3D;
+		Draw_Line(	hide_offset_x + 0,
+					hide_offset_y + Y_MAX_WINDOW,
+					hide_offset_x + WIDTH, 
+					hide_offset_y + Y_MAX_WINDOW,
+					col,
+					0xFFFF);
+		/* ラスター終了位置 */
+		col = 0x43;
+		Draw_Line(	hide_offset_x + 0,
+					hide_offset_y + uRas_ed,
+					hide_offset_x + WIDTH, 
+					hide_offset_y + uRas_ed,
+					col,
+					0xFFFF);
 	}
 #endif
 	
@@ -264,15 +296,18 @@ static UC Raster_Calc_H(SS *x, SS Num, SS RevNum)
 	else
 	{
 		SS	Point_x = 0;
+		SS	Point_x2 = 0;
 		SS	Speed = 0;
 		ST_CARDATA stMyCar = {0};
 
 		GetMyCar(&stMyCar);			/* 自車の情報を取得 */
 		GetMyCarSpeed(&Speed);
 
+		/* スクロールする幅×計算する高さ÷ラスタースクロールさせる高さ */
 		Point_x = stMyCar.Steering + ((SS)(g_stRoadInfo.angle * Speed) >> 6);	/* バランス調整要 */
+		Point_x2 = ((Num * Point_x) >> 4) + ((g_stRoadInfo.angle * g_stRasInfo.size) / Num);	
 		
-		*x = Mmax( Mmin( (((Num * Point_x) >> 4) + ((g_stRoadInfo.angle * g_stRasInfo.size) / Num)), 256), -256);
+		*x = Mmax( Mmin( (Point_x2), 256), -256);
 	}
 	
 	/* 上下限クリップ */
@@ -311,8 +346,10 @@ static UC Raster_Calc_V(SS *y, SS Num, SS RevNum)
 		if( g_stRasInfo.st < g_stRasInfo.mid )	/* 水平線の位置が通常より上側の処理 */
 		{
 			SS	Road_strch = 0;
+			UI	uCal;
 			
-			Road_strch = g_stRoadInfo.Horizon_tmp + (g_stRoadInfo.height / Mmax((Num / g_stRasInfo.size), 1));
+			uCal = Mmax(APL_uDiv(Num, g_stRasInfo.size), 1);
+			Road_strch = g_stRoadInfo.Horizon_tmp + APL_sDiv(g_stRoadInfo.height, uCal);
 
 			RoadPoint_y = Mmax(g_stRoadInfo.Horizon_tmp, Road_strch);
 			bRet = 0xFF;
@@ -326,12 +363,14 @@ static UC Raster_Calc_V(SS *y, SS Num, SS RevNum)
 		{
 			SS	Road_strch = 0;
 
-			Road_strch = g_stRasInfo.size / Num;
+			Road_strch = APL_uDiv(g_stRasInfo.size, Num);
 			RoadPoint_y = g_stRoadInfo.Horizon - Road_strch;
 
 			bRet = 0xb7;
 		}
+		
 		Point_y = (RoadPoint_y - RASTER_MIN + (g_stRasInfo.st + Num) - ROAD_ST_POINT - RASTER_NEXT);
+		
 		if(Point_y < 0)
 		{
 			MinClip = Mmax( Mmin( (RoadPoint_y + (0 - Point_y)), (ROAD_SIZE-1) ), 0);

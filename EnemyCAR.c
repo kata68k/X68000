@@ -150,7 +150,8 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			if( (2 < my) && ((stRasInfo.size-8) >= my) )
 			{
 				dx = (WIDTH>>1) - x;
-				dy = stRoadInfo.Horizon + (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);
+				//dy = stRoadInfo.Horizon + (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);
+				dy = stRoadInfo.Horizon + y;
 				dz = Mmin( Mmax(z, 0), 3 );
 				
 				/* ìñÇΩÇËîªíËÇÃê›íË */
