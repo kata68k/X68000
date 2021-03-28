@@ -107,7 +107,44 @@
  * @retval 減算された値
  * @attention 引数は複数回評価される.
  */
-#define Minc(x,y) ((x < (x + y)) ? (x + y) : -1)
+#define Minc(x,y) ((0 < (x + y)) ? (x + y) : -1)
+
+/* シフト割り算 */
+#define Mdiv2(x)		(x>>1)
+#define Mdiv4(x)		(x>>2)
+#define Mdiv8(x)		(x>>3)
+#define Mdiv10(x)		((x * 0xCCCDu)>>19)
+#define Mdiv16(x)		(x>>4)
+#define Mdiv32(x)		(x>>5)
+#define Mdiv64(x)		(x>>6)
+#define Mdiv128(x)		(x>>7)
+#define Mdiv256(x)		(x>>8)
+#define Mdiv512(x)		(x>>9)
+#define Mdiv1024(x)		(x>>10)
+#define Mdiv2048(x)		(x>>11)
+#define Mdiv4096(x)		(x>>12)
+#define Mdiv8192(x)		(x>>13)
+#define Mdiv16384(x)	(x>>14)
+#define Mdiv32768(x)	(x>>15)
+/* シフト掛け算 */
+#define Mmul2(x)		(x<<1)
+#define Mmul4(x)		(x<<2)
+#define Mmul8(x)		(x<<3)
+#define Mmul16(x)		(x<<4)
+#define Mmul32(x)		(x<<5)
+#define Mmul64(x)		(x<<6)
+#define Mmul128(x)		(x<<7)
+#define Mmul256(x)		(x<<8)
+#define Mmul512(x)		(x<<9)
+#define Mmul1024(x)		(x<<10)
+#define Mmul2048(x)		(x<<11)
+#define Mmul4096(x)		(x<<12)
+#define Mmul8192(x)		(x<<13)
+#define Mmul16384(x)	(x<<14)
+#define Mmul32768(x)	(x<<15)
+
+#define Mmul_p1(x)		((x>>3)-(x>>5)+(x>>6)-(x>>7))	/* x / 10 */
+#define Mmul_1p25(x)	(x+(x>>2))	/* x * 1.25 */
 
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 #define GetR(color)	(( color >> 6) & 0x1Fu)

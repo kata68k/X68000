@@ -35,9 +35,9 @@
 #define ZM_NUM_V2	(0x02)
 #define ZM_NUM_V3	(0x03)
 
-#define	MUSIC_MAX	(16)
-#define	SOUND_MAX	(16)
-#define	ADPCM_MAX	(16)
+#define	MUSIC_MAX	(32)
+#define	SOUND_MAX	(32)
+#define	ADPCM_MAX	(32)
 
 /* グローバル変数 */
 static SC	music_list[MUSIC_MAX][256]	=	{0};
@@ -191,19 +191,19 @@ void Init_Music(void)
 	Music_Stop();	/* 音楽停止 */
 
 #ifdef	ZM_V2
-	Load_Music_List("data\\music\\m_list.txt", music_list, &m_list_max);
+	Load_Music_List("data\\music\\", "m_list.txt", music_list, &m_list_max);
 	printf("%s\n", music_list[i]);
 #else
 	#ifdef	ZM_V3
 	/* BGM */
-	Load_Music_List("data\\music\\m_list_V3.txt", music_list, &m_list_max);
+	Load_Music_List("data\\music\\", "m_list_V3.txt", music_list, &m_list_max);
 	for(i = 0; i < m_list_max; i++)
 	{
 		music_dat_size[i] = File_Load(music_list[i], music_dat[i], sizeof(UC), 0);
 		printf("Music File %2d = %s = size(%d[byte])\n", i, music_list[i], music_dat_size[i]);
 	}
 	/* 効果音(FM) */
-	Load_SE_List("data\\se\\s_list_V3.txt", se_list, &s_list_max);
+	Load_SE_List("data\\seFM\\", "s_list_V3.txt", se_list, &s_list_max);
 	for(i = 0; i < s_list_max; i++)
 	{
 		se_dat_size[i] = File_Load(se_list[i], se_dat[i], sizeof(UC), 0);
@@ -211,7 +211,7 @@ void Init_Music(void)
 		printf("Sound Effect File %2d = %s = size(%d[byte](Head[0x%x]))\n", i, se_list[i], se_dat_size[i], se_dat_addr[i]);
 	}
 	/* 効果音(ADPCM) */
-	Load_SE_List("data\\se\\p_list_V3.txt", adpcm_list, &p_list_max);
+	Load_SE_List("data\\se\\", "p_list_V3.txt", adpcm_list, &p_list_max);
 	for(i = 0; i < p_list_max; i++)
 	{
 #if 1

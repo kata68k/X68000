@@ -7,4 +7,5 @@
 6= GAROU_SP.pic 1 117
 7= null.pic 1 0
 8= OverKata_T.pic 0 0
+9= nami.pic 1 44
 

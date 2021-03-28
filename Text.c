@@ -6,6 +6,7 @@
 #include "inc/usr_macro.h"
 #include "Text.h"
 
+#include "CRTC.h"
 #include "Graphic.h"
 #include "MFP.h"
 #include "MyCar.h"
@@ -27,6 +28,10 @@ void T_Speed(void);
 void T_Gear(void);
 void T_Main(UC);
 SS T_Scroll(UI, UI);
+SI T_Box(SS, SS, SS, SS, US, UC);
+SI T_Fill(SS, SS, SS, SS, US, UC);
+SI T_xLine(SS, SS, SS w, US, UC);
+SI T_yLine(SS, SS, SS h, US, UC);
 
 /* ä÷êî */
 void T_INIT(void)
@@ -268,6 +273,161 @@ SS T_Scroll(UI uPosX, UI uPosY)
 	
 	return ret;
 }
+
+SI T_Box(SS x1, SS y1, SS x2, SS y2, US line_style, UC color)
+{
+	SI	ret = 0;
+	struct _tboxptr stTxBox;
+	
+	stTxBox.x = x1;
+	stTxBox.y = y1;
+	stTxBox.x1= x2;
+	stTxBox.y1= y2;
+	stTxBox.line_style = line_style;
+	
+	if((color == 0) && (line_style == 0))
+	{
+		color = 0x0F;
+	}
+
+	if((color & 0x01) != 0u)
+	{
+		stTxBox.vram_page = 0;
+		_iocs_txbox(&stTxBox);
+	}
+	if((color & 0x02) != 0u)
+	{
+		stTxBox.vram_page = 1;
+		_iocs_txbox(&stTxBox);
+	}
+	if((color & 0x04) != 0u)
+	{
+		stTxBox.vram_page = 2;
+		_iocs_txbox(&stTxBox);
+	}
+	if((color & 0x08) != 0u)
+	{
+		stTxBox.vram_page = 3;
+		_iocs_txbox(&stTxBox);
+	}
+	return ret;
+}
+
+SI T_Fill(SS x1, SS y1, SS x2, SS y2, US line_style, UC color)
+{
+	SI	ret = 0;
+	struct _txfillptr stTxFill;
+	
+	stTxFill.x = x1;
+	stTxFill.y = y1;
+	stTxFill.x1= x2;
+	stTxFill.y1= y2;
+	stTxFill.fill_patn = line_style;
+	
+	if((color == 0) && (line_style == 0))
+	{
+		color = 0x0F;
+	}
+	
+	if((color & 0x01) != 0u)
+	{
+		stTxFill.vram_page = 0;
+		_iocs_txfill(&stTxFill);
+	}
+	if((color & 0x02) != 0u)
+	{
+		stTxFill.vram_page = 1;
+		_iocs_txfill(&stTxFill);
+	}
+	if((color & 0x04) != 0u)
+	{
+		stTxFill.vram_page = 2;
+		_iocs_txfill(&stTxFill);
+	}
+	if((color & 0x08) != 0u)
+	{
+		stTxFill.vram_page = 3;
+		_iocs_txfill(&stTxFill);
+	}
+	return ret;
+}
+
+SI T_xLine(SS x1, SS y1, SS w, US line_style, UC color)
+{
+	SI	ret = 0;
+	struct _xlineptr stTxLine;
+	
+	stTxLine.x = x1;
+	stTxLine.y = y1;
+	stTxLine.x1= w;
+	stTxLine.line_style = line_style;
+	
+	if((color == 0) && (line_style == 0))
+	{
+		color = 0x0F;
+	}
+
+	if((color & 0x01) != 0u)
+	{
+		stTxLine.vram_page = 0;
+		_iocs_txxline(&stTxLine);
+	}
+	if((color & 0x02) != 0u)
+	{
+		stTxLine.vram_page = 1;
+		_iocs_txxline(&stTxLine);
+	}
+	if((color & 0x04) != 0u)
+	{
+		stTxLine.vram_page = 2;
+		_iocs_txxline(&stTxLine);
+	}
+	if((color & 0x08) != 0u)
+	{
+		stTxLine.vram_page = 3;
+		_iocs_txxline(&stTxLine);
+	}
+	return ret;
+}
+
+SI T_yLine(SS x1, SS y1, SS h, US line_style, UC color)
+{
+	SI	ret = 0;
+	struct _ylineptr stTyLine;
+	
+	stTyLine.x = x1;
+	stTyLine.y = y1;
+	stTyLine.y1= h;
+	stTyLine.line_style = line_style;
+	
+	if((color == 0) && (line_style == 0))
+	{
+		color = 0x0F;
+	}
+
+	if((color & 0x01) != 0u)
+	{
+		stTyLine.vram_page = 0;
+		_iocs_txyline(&stTyLine);
+	}
+	if((color & 0x02) != 0u)
+	{
+		stTyLine.vram_page = 1;
+		_iocs_txyline(&stTyLine);
+	}
+	if((color & 0x04) != 0u)
+	{
+		stTyLine.vram_page = 2;
+		_iocs_txyline(&stTyLine);
+	}
+	if((color & 0x08) != 0u)
+	{
+		stTyLine.vram_page = 3;
+		_iocs_txyline(&stTyLine);
+	}
+	return ret;
+}
+
 
 #endif	/* TEXT_C */
 

@@ -26,17 +26,17 @@
 #define Bit_15		(0x8000)
 
 /* Ｘ，Ｙ座標（表示座標） */
-#define V_SYNC_MAX	(240)
-#define WIDTH		(256)
-#define HEIGHT		(256)
-#define X_MIN_DRAW	(0)
-#define X_MAX_DRAW	(511)
+#define V_SYNC_MAX		(240)
+#define WIDTH			(256)
+#define HEIGHT			(256)
+#define X_MIN_DRAW		(0)
+#define X_MAX_DRAW		(512)
 #define X_MAX_DRAW_OF	(32)
-#define Y_MIN_DRAW	(0)
-#define Y_MAX_DRAW	(511)
-#define Y_HORIZON_0	(128)
-#define Y_HORIZON_1	(64)
-#define Y_MAX_WINDOW	(152)
+#define Y_MIN_DRAW		(0)
+#define Y_MAX_DRAW		(512)
+#define Y_HORIZON_0		(128)
+#define Y_HORIZON_1		(64)
+#define Y_MAX_WINDOW	(160)	/* Y_HORIZON_1+ROAD_SIZE */
 
 /* Ｘ，Ｙ座標（仮想座標） */
 #define X_OFFSET	(224)
@@ -51,27 +51,33 @@
 
 /* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
 #define RASTER_NEXT	(2)
-#define RASTER_MIN	(16)		//表示開始位置(40,16)
+#define RASTER_MIN	(16)		//表示開始位置(40,16)	/* ラスタ開始位置は、CRTCのR6と同じ */
 #define RASTER_MAX	(256)		//表示終了位置(552,256)
-#define RASTER_SIZE	(RASTER_MAX-RASTER_MIN)
-#define ROAD_SIZE	(96)		/* BGの道のサイズ */
+
 #define ROAD_ST_POINT	(128)	/* BGの道の開始位置 */
-#define ROAD_ED_POINT	(190)	/* BGの道の開始位置 */
-#define ROAD_0_MIN		(32)	/* BGの道の最小(mode0)未定 */
-#define ROAD_0_MAX		(72)	/* BGの道の最大(mode0)未定 */
-#define ROAD_1_MIN		(32)	/* BGの道の最小(mode1) */
-#define ROAD_1_MAX		(72)	/* BGの道の最大(mode1) */
+#define ROAD_ED_POINT	(224)	/* BGの道の終了位置 */
+#define ROAD_CT_POINT	(124)	/* BGの道の中心位置 */
+#define ROAD_SIZE		(ROAD_ED_POINT-ROAD_ST_POINT)	/* BGの道のサイズ(96) */
+#define ROAD_0_MIN		(RASTER_MIN)	/* BGの道の最小(mode0)未定 */
+#define ROAD_0_MAX		(V_SYNC_MAX)	/* BGの道の最大(mode0)未定 */
+#define ROAD_1_MIN		(RASTER_MIN)	/* BGの道の最小(mode1) */
+#define ROAD_1_MAX		(Y_MAX_WINDOW)	/* BGの道の最大(mode1) */
 
 /* スプライトＰＣＧパターン最大数 */
-#define	PCG_MAX	(256)
+#define	PCG_MAX		(256)
 #define	BG_WIDTH	(8)
 #define	BG_HEIGHT	(8)
-#define BG_0_W	(280)
-#define BG_0_H	(63)
-#define BG_1_W	(280)
-#define BG_1_H	(63)
-#define BG_0_UNDER	(280)	/* 未決 */
-#define BG_1_UNDER	(64)
+#define BG_0_W		(280)
+#define BG_0_H		(63)
+#define BG_1_W		(280)
+#define BG_1_H		(63)
+#define SP_X_OFFSET	(16)
+#define SP_Y_OFFSET	(16)
+
+/* グラフィックパターン */
+#define ENEMYCAR_CG		(2)
+#define COURSE_OBJ_CG	(4)
+#define BG_CG			(6)
 
 /* 構造体 */
 
@@ -96,7 +102,6 @@ typedef struct
 	SS	hide_offset_y;		/* 非表示画面のY座標オフセット */
 	SS	BG_offset_x;		/* BG画面のX座標オフセット */
 	SS	BG_offset_y;		/* BG画面のY座標オフセット */
-	SS	BG_under;			/* BG画面の最終 */
 }	ST_CRT;
 
 /* データテーブル */

@@ -8,6 +8,14 @@
 #define MY_CAR_1_W	(256)
 #define MY_CAR_1_H	(224)
 
+enum{
+	OBD_NORMAL,
+	OBD_DAMAGE,
+	OBD_SPIN,
+	OBD_COURSEOUT,
+	OBD_MAX
+};
+
 /* ç\ë¢ëÃíËã` */
 
 /* é‘ÇÃç\ë¢ëÃ */

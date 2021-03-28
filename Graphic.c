@@ -11,8 +11,9 @@
 #include "inc/apicglib.h"
 #include "Graphic.h"
 
-#include "EnemyCAR.h"
+#include "CRTC.h"
 #include "Draw.h"
+#include "EnemyCAR.h"
 #include "FileManager.h"
 #include "Input.h"
 #include "MyCar.h"
@@ -35,18 +36,13 @@ UI	g_CG_List_Max	=	0u;
 UC	*g_pCG_FileBuf[CG_MAX];
 US	g_CG_ColorCode[CG_MAX][256]	=	{0};
 UC	g_CG_MaxColor[CG_MAX][3]	=	{0};
-SC	g_CRT_Contrast = -1;
 
 /* グローバル構造体 */
-ST_CRT		g_stCRT[CRT_MAX] = {0};
 PICIMAGE	g_stPicImage[CG_MAX];
 CG_LIST		g_stCG_LIST[CG_MAX];
 struct APICGINFO	g_CGInfo[CG_MAX];
 
 /* 関数のプロトタイプ宣言 */
-SS	GetCRT(ST_CRT *, SS);
-SS	SetCRT(ST_CRT, SS);
-SS	CRT_INIT(void);
 SS	Get_CG_FileList_MaxNum(UI *);
 UC	*Get_CG_FileBuf(UC);
 SS	Get_PicImageInfo(UC , UI *, UI *, UI *);
@@ -70,95 +66,10 @@ SS	APICG_DataLoad2G(SC *, UL, UL, US);
 SS	APICG_DataLoad2M(UC , UL, UL, US, US *);
 SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 SS	PutGraphic_To_Text(UC , US , US );
-SS	PutGraphic_To_Symbol(const UC *, US , US , US );
-SS	G_Scroll(US, US, UC);
-SS	Get_CRT_Contrast(SC *);
-SS	Set_CRT_Contrast(SC);
+SS	PutGraphic_To_Symbol(UC *, US , US , US );
+SS	G_Scroll(SS, SS, UC);
 
 /* 関数 */
-SS	GetCRT(ST_CRT *stDat, SS Num)
-{
-	SS	ret = 0;
-	
-	if(Num < CRT_MAX)
-	{
-		*stDat = g_stCRT[Num];
-	}
-	else
-	{
-		ret = -1;
-	}
-	
-	return ret;
-}
-
-SS	SetCRT(ST_CRT stDat, SS Num)
-{
-	SS	ret = 0;
-	
-	if(Num < CRT_MAX)
-	{
-		g_stCRT[Num] = stDat;
-	}
-	else
-	{
-		ret = -1;
-	}
-	
-	return ret;
-}
-
-SS CRT_INIT(void)
-{
-	SS	ret = 0;
-	volatile US *CRTC_R21 = (US *)0xE8002Au;
-	
-	ret = CRTMOD(-1);	/* 現在のモードを返す */
-	CRTMOD(11);			/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
-
-//										   FEDCBA9876543210
-	*CRTC_R21 = Mbset(*CRTC_R21, 0x03FF, 0b0000000000000000);	/* CRTC R21 */
-//										   |||||||||||||||+-bit0 CP0	
-//										   ||||||||||||||+--bit1 CP1	
-//										   |||||||||||||+---bit2 CP2	
-//										   ||||||||||||+----bit3 CP3	
-//										   |||||||||||+-----bit4 AP0	同時アクセス
-//										   ||||||||||+------bit5 AP1	同時アクセス
-//										   |||||||||+-------bit6 AP2	同時アクセス
-//										   ||||||||+--------bit7 AP3	同時アクセス
-//										   |||||||+---------bit8 SA		同時アクセス
-//										   ||||||+----------bit9 MEN	同時アクセスマスク
-
-	/* CRTの設定 */
-	g_stCRT[0].view_offset_x	= X_OFFSET;
-	g_stCRT[0].view_offset_y	= Y_MIN_DRAW;
-	g_stCRT[0].hide_offset_x	= X_OFFSET;
-	g_stCRT[0].hide_offset_y	= Y_OFFSET;
-	g_stCRT[0].BG_offset_x		= 0;
-	g_stCRT[0].BG_offset_y		= 0;
-	g_stCRT[0].BG_under			= BG_0_UNDER;
-	
-	g_stCRT[1].view_offset_x	= X_OFFSET;
-	g_stCRT[1].view_offset_y	= Y_OFFSET;
-	g_stCRT[1].hide_offset_x	= X_OFFSET;
-	g_stCRT[1].hide_offset_y	= Y_MIN_DRAW;
-	g_stCRT[1].BG_offset_x		= 0;
-	g_stCRT[1].BG_offset_y		= 64;
-	g_stCRT[1].BG_under			= BG_1_UNDER;
-
-	g_stCRT[2].view_offset_x	= X_OFFSET;
-	g_stCRT[2].view_offset_y	= Y_MIN_DRAW;
-	g_stCRT[2].hide_offset_x	= X_OFFSET;
-	g_stCRT[2].hide_offset_y	= Y_OFFSET;
-	g_stCRT[2].BG_offset_x		= 0;
-	g_stCRT[2].BG_offset_y		= 64;
-	g_stCRT[2].BG_under			= BG_1_UNDER;
-	
-	Set_CRT_Contrast(-1);	/* コントラスト初期化 */
-	
-	return ret;
-}
-
 SS Get_CG_FileList_MaxNum(UI *uMaxNum)
 {
 	SS	ret = 0;
@@ -277,7 +188,7 @@ void CG_File_Load(void)
 	SI	FileSize;
 
 	/* グラフィックリスト */
-	Load_CG_List("data\\cg\\g_list.txt", g_stCG_LIST, &g_CG_List_Max);
+	Load_CG_List("data\\cg\\", "g_list.txt", g_stCG_LIST, &g_CG_List_Max);
 	
 	for(i = 0; i < g_CG_List_Max; i++)
 	{
@@ -366,13 +277,13 @@ void CG_File_Load(void)
 		pInfo = g_stPicImage[i].pBMi;
 		uWidth	= pInfo->biWidth;
 		uHeight	= pInfo->biHeight;
-		uSize8x = (((uWidth+7)/8) * 8);	/* 8の倍数 */
+		uSize8x = Mmul8((Mdiv8(uWidth+7)));	/* 8の倍数 */
 #ifdef DEBUG
 //		printf("Load1(%d,0x%p)=(%d,%d)(%d)\n", i, g_stPicImage[i].pBMi, pInfo->biWidth, pInfo->biHeight, uSize8x );
 #endif
 		
 		/* メモリ確保(画面を模擬) */
-		uAPICG_work_Size = PIC_WORK_BUF_SIZE / 2;
+		uAPICG_work_Size = Mdiv2(PIC_WORK_BUF_SIZE);
 		pSrcBuf = (US*)MyMalloc( uAPICG_work_Size );
 		if( pSrcBuf == NULL )	/* メモリの確保 */
 		{
@@ -560,7 +471,7 @@ void G_INIT(void)
 
 void G_HOME(void)
 {
-	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW, Y_MAX_DRAW);
+	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);
 	HOME(0b0000, X_OFFSET, Y_OFFSET);
 //	HOME(1, X_OFFSET, Y_OFFSET);
 //	HOME(2, X_OFFSET, 416);
@@ -609,35 +520,6 @@ void G_VIEW(UC bSW)
 void G_Palette(void)
 {
 	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
-//	GPALET( 1, SetRGB( 1,  1,  1));	/* Black */
-#if 0
-	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
-	GPALET( 1, SetRGB(16, 16, 16));	/* Glay1 */
-	GPALET( 2, SetRGB(15, 15, 15));	/* D-Glay */
-	GPALET( 3, SetRGB( 0,  0, 31));	/* Blue */
-	GPALET( 5, SetRGB(31,  0,  0));	/* Red */
-	GPALET( 8, SetRGB( 0, 31,  0));	/* Green */
-	GPALET( 9, SetRGB( 0, 30,  0));	/* Green */
-	GPALET(10, SetRGB( 0, 29,  0));	/* Green */
-	GPALET(11, SetRGB( 0, 28,  0));	/* Green */
-	GPALET(12, SetRGB( 0, 27,  0));	/* Green */
-	GPALET(13, SetRGB( 0, 26,  0));	/* Green */
-	GPALET(14, SetRGB(16, 16, 16));	/* Glay2 */
-	GPALET(15, SetRGB(31, 31, 31));	/* White */
-#endif
-
-#if 0
-	Draw_Line(  0, 0, 255, 255, 15, 0xFFFF);	
-	Draw_Line(255, 0,   0, 255, 15, 0xFFFF);	
-	Draw_Box(   0, 0, 255, 255, 15, 0xFFFF);	
-	Draw_Box( 127, 0, 255, 255, 15, 0xFFFF);	
-	Draw_Fill(  0, 0, 127, 127, 3);	
-	Draw_Fill(255, 0, 255, 127, 5);	
-	Draw_Fill(  0, 128, 255, 255, 9);	
-	Draw_Fill(255, 128, 255, 255, 15);	
-	Draw_Circle(768/2,512/2,512/2,15,0,360,256);
-#endif
-
 }
 
 SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
@@ -645,20 +527,16 @@ SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 {
 	SS	ret = 0;
 	US	*pDstGR,	*pSrcGR;
+	US	*pSrcGR_tmp;
 	UI	DstGR_H,	SrcGR_H;
 	SS	dst_ex,	dst_ey;
 	SS	src_ex,	src_ey;
 	SS	x, y;
-	US	rate_x, rate_y;
 
 	dst_ex	= dst_x + dst_w;
 	dst_ey	= dst_y + dst_h;
 	src_ex	= src_x + src_w;
 	src_ey	= src_y + src_h;
-
-	/* 倍率演算 */
-	rate_x = src_w / dst_w;
-	rate_y = src_h / dst_h;
 
 	/* アドレス算出 */
 	if(ubDstScrn != 0)
@@ -682,14 +560,14 @@ SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 		/* アドレス算出 */
 		pDstGR = (US *)(DstGR_H + ((y << 10) + (dst_x << 1)));
 
-		pSrcGR = (US *)(SrcGR_H + ((((src_y + (y - dst_y)) * rate_y) << 10) + (src_x << 1)));
+		pSrcGR = (US *)(SrcGR_H + ((((src_y + Mmul_1p25(y - dst_y))) << 10) + (src_x << 1)));
+		pSrcGR_tmp = pSrcGR;
 	
 		for(x = dst_x; x < dst_ex; x++)
 		{
+			pSrcGR = pSrcGR_tmp + Mmul_1p25(x-dst_x);
 			*pDstGR = *pSrcGR;
-			
 			pDstGR++;
-			pSrcGR+=rate_x;
 		}
 	}
 #else
@@ -713,8 +591,12 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 	SS	x, y;
 	SS	x_min, y_min;
 	SS	x_max, y_max;
-//	US	rate_x, rate_y;
 
+	if(dst_x < X_MIN_DRAW)return -1;
+	if(dst_x >= X_MAX_DRAW)return -1;
+	if(dst_y < Y_MIN_DRAW)return -1;
+	if(dst_y >= Y_MAX_DRAW)return -1;
+	
 	switch(ubV)
 	{
 		case POS_TOP:
@@ -809,21 +691,21 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 		}
 	}
 
-	if(dst_ex < x_min)		/* 画面外 */
+	if(dst_ex < x_min)		/* 画像の右側が画面外 */
 	{
 		return -1;
 	}
-	else if((dst_x < x_min) && (dst_ex >= x_min))
+	else if((dst_x <= x_min) && (dst_ex >= x_min))		/* 画像の左側が画面外だが、画像の右側は画面内 */
 	{
 		src_x += x_min - dst_x;
 		dst_x = x_min;
 	}
-	else if((dst_x >= x_min) && (dst_ex > x_max))
+	else if((dst_x < x_max) && (dst_ex >= x_max))		/* 画像の左側が画面内だが、画像の右側は画面外 */
 	{
-		src_ex -= dst_ex - X_MAX_DRAW - X_MAX_DRAW_OF;
-		dst_ex = X_MAX_DRAW - X_MAX_DRAW_OF;
+		src_ex -= dst_ex - x_max;
+		dst_ex = x_max;
 	}
-	else if(dst_x > x_max)	/* 画面外 */
+	else if(dst_x >= x_max)	/*  画像の左側が画面外 */
 	{
 		return -1;
 	}
@@ -836,12 +718,12 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 	{
 		return -1;
 	}
-	else if((dst_y < y_min) && (dst_ey >= y_min))
+	else if((dst_y <= y_min) && (dst_ey >= y_min))
 	{
 		src_y += y_min - dst_y;
 		dst_y = y_min;
 	}
-	else if((dst_y < y_max) && (dst_ey > y_max))
+	else if((dst_y < y_max) && (dst_ey >= y_max))
 	{
 		src_ey -= dst_ey - y_max;
 		dst_ey = y_max;
@@ -981,13 +863,16 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 {
 	SS	ret = 0;
 	
+	ST_CRT	stCRT = {0};
+	GetCRT(&stCRT, bMode);
+	
 	/* 描画可能枠再設定 */
-	WINDOW( g_stCRT[bMode].hide_offset_x, 
-			g_stCRT[bMode].hide_offset_y,
-			g_stCRT[bMode].hide_offset_x + WIDTH,
-			g_stCRT[bMode].hide_offset_y + Y_MAX_WINDOW);	
+	WINDOW( stCRT.hide_offset_x, 
+			stCRT.hide_offset_y,
+			stCRT.hide_offset_x + WIDTH,
+			stCRT.hide_offset_y + Y_MAX_WINDOW);	
 	/* 消去 */
-	ret = G_CLR_AREA(g_stCRT[bMode].hide_offset_x, WIDTH, g_stCRT[bMode].hide_offset_y, Y_MAX_WINDOW, 0);	/* Screen0 消去 */
+	ret = G_CLR_AREA(stCRT.hide_offset_x, WIDTH, stCRT.hide_offset_y, Y_MAX_WINDOW, 0);	/* Screen0 消去 */
 
 	return	ret;
 }
@@ -1287,7 +1172,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	UC	ubGen8_B[8];
 
 	pBuf = pSrcBuf;
-	uAPICG_work_Size = PIC_WORK_BUF_SIZE / 2;
+	uAPICG_work_Size = Mdiv2(PIC_WORK_BUF_SIZE);
 	uSize8x = uWidthEx;
 	ubConvPal = g_stCG_LIST[uNum].ubTransPal;
 	ubType    = g_stCG_LIST[uNum].ubType;
@@ -1353,7 +1238,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 		m = 0;
 		for(i=0; i<z; i++)
 		{
-			ubGen8_R[i] = 4 * i;
+			ubGen8_R[i] = Mmul4(i);
 			ubGen8_G[i] = ubGen8_R[i];
 			ubGen8_B[i] = ubGen8_R[i];
 			
@@ -1363,8 +1248,9 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	}
 	else
 	{
+		UI uHalfSize = Mdiv2(uAPICG_work_Size);
 		/* 減色カラーの対象を抽出 */
-		for(j=0; j < (uAPICG_work_Size / 2); j++)
+		for(j=0; j < uHalfSize; j++)
 		{
 			col = GPALET( *pBuf, -1 );	/* 現在の設置を抽出 */
 			
@@ -1451,10 +1337,10 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 					if(ubType == 3u)	/* グレイスケール */
 					{
 						UI	uGlay;
-						uGlay =  ((UI)ubR * 3);
-						uGlay += ((UI)ubG * 6);
-						uGlay += ((UI)ubB * 1);
-						uGlay /= 10;
+						uGlay =  ((UI)(Mmul2(ubR) + ubR));
+						uGlay += ((UI)(Mmul4(ubG) + Mmul2(ubG)));
+						uGlay += ((UI)ubB);
+						uGlay = Mdiv10(uGlay);
 						
 						col = SetRGB(uGlay, uGlay, uGlay);	/* ３色を合成 */
 
@@ -1649,7 +1535,7 @@ SS PutGraphic_To_Text(UC bCGNum, US dx, US dy)
 	return ret;
 }
 
-SS PutGraphic_To_Symbol(const UC *sString, US dx, US dy, US uPal)
+SS PutGraphic_To_Symbol(UC *sString, US dx, US dy, US uPal)
 {
 	SS	ret = 0;
 	
@@ -1669,7 +1555,7 @@ SS PutGraphic_To_Symbol(const UC *sString, US dx, US dy, US uPal)
 	return ret;
 }
 
-SS	G_Scroll(US x, US y, UC bSCNum)
+SS	G_Scroll(SS x, SS y, UC bSCNum)
 {
 	SS	ret = 0;
 	
@@ -1712,36 +1598,5 @@ SS	G_Scroll(US x, US y, UC bSCNum)
 
 	return ret;
 }
-
-SS Get_CRT_Contrast(SC *pbContrast)
-{
-	SS	ret = 0;
-	
-	*pbContrast = _iocs_contrast(-1);
-	
-	return ret;
-}
-
-SS Set_CRT_Contrast(SC bContrast)
-{
-	SS ret = 0;
-	
-	if(g_CRT_Contrast < 0)
-	{
-		Get_CRT_Contrast(&g_CRT_Contrast);
-	}
-
-	if( (bContrast >= 0) && (bContrast <= 15) )
-	{
-		_iocs_contrast(bContrast);		/* 設定値 */
-	}
-	else
-	{
-		_iocs_contrast(g_CRT_Contrast);	/* 初期値 */
-	}
-	
-	return ret;
-}
-
 
 #endif	/* GRAPHIC_C */

@@ -12,6 +12,7 @@
 
 #include "APL_Math.h"
 #include "Course_Obj.h"
+#include "CRTC.h"
 #include "Draw.h"
 #include "EnemyCAR.h"
 #include "Graphic.h"
@@ -96,7 +97,6 @@ void Raster_Main(UC bMode)
 	SS	view_offset_x, view_offset_y;
 	SS	hide_offset_x, hide_offset_y;
 	SS	BG_offset_x, BG_offset_y;
-	SS	BG_under;
 	
 	US	uRas_y;
 	US	uRas_st, uRas_mid, uRas_ed, uRas_size;
@@ -120,7 +120,6 @@ void Raster_Main(UC bMode)
 	hide_offset_y	= stCRT.hide_offset_y;
 	BG_offset_x		= stCRT.BG_offset_x;
 	BG_offset_y		= stCRT.BG_offset_y;
-	BG_under		= stCRT.BG_under;
 
 	/* ロードパターン */
 	Road_Pat_Main();
@@ -135,30 +134,22 @@ void Raster_Main(UC bMode)
 	uRas_size = 0xFFFF;
 
 	/* ラスター位置 */
+	g_stRasInfo.st	= g_stRoadInfo.Horizon;					/* ラスター開始位置 */
+	g_stRasInfo.mid = g_stRoadInfo.Horizon_Base;			/* ラスター固定位置 *//* 水平線の位置が変化しないポイント *//* ハイウェイスターなら 64 = ROAD_SIZE*2/3 */
 	if(bMode == 0)		/* TPS */
 	{
-		uRas_ed  = Mmin(RASTER_MAX, V_SYNC_MAX);	/* ラスター終了位置 */
-		uRas_mid = Y_HORIZON_0 + RASTER_MIN;		/* 水平線の位置が変化しないポイント *//* ハイウェイスターなら 64 = ROAD_SIZE*2/3 */
+		g_stRasInfo.ed = Mmin(RASTER_MAX, V_SYNC_MAX);		/* ラスター終了位置 */
 	}
-	else
+	else				/* FPS */
 	{
-		uRas_ed  = Mmin(ROAD_ED_POINT - RASTER_MIN, V_SYNC_MAX);	/* ラスター終了位置 */
-		uRas_mid = Y_HORIZON_1 + RASTER_MIN;		/* 水平線の位置が変化しないポイント *//* ハイウェイスターなら 64 = ROAD_SIZE*2/3 */
+		g_stRasInfo.ed = Mmin(Y_MAX_WINDOW, V_SYNC_MAX);	/* ラスター終了位置 */
 	}
-//	uRas_st = RASTER_MIN;	/* ラスター開始位置 */	
-	uRas_st = Mmax(Mmin(g_stRoadInfo.Horizon + RASTER_MIN, RASTER_MAX), RASTER_MIN);	/* ラスター開始位置 */
-	if((uRas_st & 0x01) != 0)
-	{
-		uRas_st += 1;	/* 奇数なら無理矢理偶数にする */
-	}
-//	uRas_st -= (uRas_st % 2);	/* 偶数にする(for分がRASTER_NEXT分インクリメントするので) */
-//	uRas_ed -= (uRas_ed % 2);	/* 偶数にする */
-	uRas_size = uRas_ed - uRas_st;			/* ラスターの範囲 */
-	
-	g_stRasInfo.st			= uRas_st;
-	g_stRasInfo.mid			= uRas_mid;
-	g_stRasInfo.ed			= uRas_ed;
-	g_stRasInfo.size		= uRas_size;
+
+	uRas_st		= g_stRasInfo.st;	/* 開始位置 */
+	uRas_mid	= g_stRasInfo.mid;	/* 中間位置 */
+	uRas_ed		= g_stRasInfo.ed;	/* 終了位置 */
+	uRas_size	= uRas_ed - uRas_st;				/* ラスターの範囲 */
+	g_stRasInfo.size	= uRas_size;				/* ラスターの範囲 */
 	SetRasterInfo(g_stRasInfo);
 	
 #ifdef DEBUG	/* デバッグコーナー */
@@ -168,74 +159,61 @@ void Raster_Main(UC bMode)
 		
 		APAGE(0);				/* グラフィックの書き込み */
 
-		/* 水平線 */
-		col = 0x35;
-		Draw_Line(	hide_offset_x + uRas_st,
-					hide_offset_y + g_stRoadInfo.Horizon,
-					hide_offset_x + uRas_ed, 
-					hide_offset_y + g_stRoadInfo.Horizon,
-					col,
-					0xFFFF);
 		/* ラスター開始位置 */
 		col = 0x38;
 		Draw_Line(	hide_offset_x + 0,
-					hide_offset_y + uRas_st,
+					hide_offset_y + g_stRasInfo.st,
 					hide_offset_x + WIDTH, 
-					hide_offset_y + uRas_st,
+					hide_offset_y + g_stRasInfo.st,
 					col,
 					0xFFFF);
 		/* ラスター中間位置 */
 		col = 0x3B;
 		Draw_Line(	hide_offset_x + 0,
-					hide_offset_y + uRas_mid,
+					hide_offset_y + g_stRasInfo.mid,
 					hide_offset_x + WIDTH, 
-					hide_offset_y + uRas_mid,
-					col,
-					0xFFFF);
-		/* 表示終了位置 */
-		col = 0x3D;
-		Draw_Line(	hide_offset_x + 0,
-					hide_offset_y + Y_MAX_WINDOW,
-					hide_offset_x + WIDTH, 
-					hide_offset_y + Y_MAX_WINDOW,
+					hide_offset_y + g_stRasInfo.mid,
 					col,
 					0xFFFF);
 		/* ラスター終了位置 */
 		col = 0x43;
 		Draw_Line(	hide_offset_x + 0,
-					hide_offset_y + uRas_ed,
+					hide_offset_y + g_stRasInfo.ed,
 					hide_offset_x + WIDTH, 
-					hide_offset_y + uRas_ed,
+					hide_offset_y + g_stRasInfo.ed,
 					col,
 					0xFFFF);
 	}
 #endif
 	
-	for(uRas_y=uRas_st; uRas_y < uRas_ed; uRas_y+=RASTER_NEXT)
+	Road_Pat_Start();	/* 初回は道のパレットの開始設定を行う */
+	
+	for(uRas_y=0; uRas_y < uRas_size; uRas_y+=RASTER_NEXT)
 	{
-		SS	num;
-		SS	rev;
+		US	uRev_uRas_y;
 		SS	ras_cal_x=0;
 		SS	ras_cal_y=0;
 		US	ras_pat=0;
+		US	ras_offset;
 		UC	bRoad_pat = FALSE;
 		
-		num = uRas_y - uRas_st;			/* 0 -> uRas_size */
-		rev = uRas_ed - uRas_y;			/* uRas_size -> 0 */
+		uRev_uRas_y = uRas_size - uRas_y;	/* uRas_size -> 0 */
 		
 		/* X座標 */
-		Raster_Calc_H( &ras_cal_x, num, rev );
+		Raster_Calc_H( &ras_cal_x, uRas_y, uRev_uRas_y );
 
 		/* Y座標 */
-		bY_area = Raster_Calc_V( &ras_cal_y, num, rev );
-		
+		bY_area = Raster_Calc_V( &ras_cal_y, uRas_y, uRev_uRas_y );
+
 		/* ロードパターン */
-		if(num == 0)
+		if(uRas_y == 0)
 		{
 			bRoad_pat = TRUE;
 		}
 		Get_Road_Pat(&ras_pat, bRoad_pat);	/* ロードのパターン情報を取得 */
-		Set_Road_Pat_offset(num);			/* ロードパターン閾値の更新 */
+		Set_Road_Pat_offset(uRas_y);		/* ロードパターン閾値の更新 */
+
+		ras_offset = uRas_st + uRas_y;
 
 #ifdef DEBUG	/* デバッグコーナー */
 		if(bDebugMode == TRUE)	/* デバッグモード */
@@ -245,77 +223,97 @@ void Raster_Main(UC bMode)
 			
 			/* x */
 			col = 0xB4;
-			if(ras_cal_x < 256)
+			/* センター */
+			if( ras_cal_x < 256 )	/* 左カーブ */
 			{
-				point_x = ras_cal_x;
+				point_x = ROAD_CT_POINT + (  0 - ras_cal_x);
 			}
-			else
+			else	/* 右カーブ */
 			{
-				point_x = ras_cal_x - 512;
+				point_x = ROAD_CT_POINT + (512 - ras_cal_x);
 			}
-			Draw_Pset(	hide_offset_x + (WIDTH >> 1) - point_x,
-						hide_offset_y + g_stRoadInfo.Horizon + num,
+			Draw_Pset(	hide_offset_x + point_x,
+						hide_offset_y + g_stRoadInfo.Horizon + uRas_y,
 						col);
 
 			/* y */
 			col = (SS)bY_area;
-			Draw_Pset(	hide_offset_x + uRas_y,
+			Draw_Pset(	hide_offset_x + ras_offset,
 						hide_offset_y + ras_cal_y,
 						col);
 		}
 #endif
-		stRasterInt[uRas_y].x = (US)ras_cal_x;
-		stRasterInt[uRas_y].y = (US)ras_cal_y;
-		stRasterInt[uRas_y].pat = ras_pat;
+		stRasterInt[ras_offset].x = (US)ras_cal_x;
+		stRasterInt[ras_offset].y = (US)ras_cal_y;
+		stRasterInt[ras_offset].pat = ras_pat;
 
-		stRasterInt[uRas_y+1].x = (US)ras_cal_x;	/* 隙間の複製 */
-		stRasterInt[uRas_y+1].y = (US)ras_cal_y;	/* 隙間の複製 */
-		stRasterInt[uRas_y+1].pat = ras_pat;		/* 隙間の複製 */
+		stRasterInt[ras_offset+1].x = (US)ras_cal_x;	/* 隙間の複製 */
+		stRasterInt[ras_offset+1].y = (US)ras_cal_y;	/* 隙間の複製 */
+		stRasterInt[ras_offset+1].pat = ras_pat;		/* 隙間の複製 */
 	}
 	
-	stRasterInt[0].y = uRas_st;		/* 割り込み位置の設定 */
-	stRasterInt[1].y = BG_offset_y;	/* 空のコントロール */
+	stRasterInt[0].y = g_stRasInfo.st;		/* 割り込み位置の設定 */
+	/* BGのY座標を選ぶラスタの割り込み位置に対して表示したいBGのY座標から */
+	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
+	stRasterInt[1].y = ROAD_ST_POINT - g_stRasInfo.st;	/* 割り込みがかかるまでの表示位置(ラスタ割り込み位置によるずれの考慮は不要)	*/
 	
 	SetRasterIntData(stRasterInt, sizeof(ST_RASTER_INT) * RASTER_MAX);
 }
 
 static UC Raster_Calc_H(SS *x, SS Num, SS RevNum)
 {
-	UC bRet = FALSE;
+	UC bRet = 0;
 
 	if(Num == 0u)
 	{
-		*x = 0;	/* 最初 */
+		bRet = 0;
 	}
-#if 0
-	else if( uRas_y < uRas_mid )				/* 水平線の位置が変化 *//* 64 = ROAD_SIZE*2/3 */
+	/* X座標 */
 	{
-		ras_cal_x = ((num * stMyCar.Steering) >> 4) + (g_stRoadInfo.angle * (uRas_mid - uRas_st) / num);
-	}
-#endif
-	else
-	{
+		SS	Steer = 0;
+		SS	Scroll_w = 0;
+		SS	Scroll_ofst = 0;
 		SS	Point_x = 0;
-		SS	Point_x2 = 0;
-		SS	Speed = 0;
 		ST_CARDATA stMyCar = {0};
 
 		GetMyCar(&stMyCar);			/* 自車の情報を取得 */
-		GetMyCarSpeed(&Speed);
 
-		/* スクロールする幅×計算する高さ÷ラスタースクロールさせる高さ */
-		Point_x = stMyCar.Steering + ((SS)(g_stRoadInfo.angle * Speed) >> 6);	/* バランス調整要 */
-		Point_x2 = ((Num * Point_x) >> 4) + ((g_stRoadInfo.angle * g_stRasInfo.size) / Num);	
+		Steer = (stMyCar.Steering >> 4);
 		
-		*x = Mmax( Mmin( (Point_x2), 256), -256);
+		/* スクロールする幅×計算する高さ÷ラスタースクロールさせる高さ */
+		if((Steer == 0) || (Num == 0))
+		{
+			Scroll_ofst	= 0;
+		}
+		else
+		{
+			Scroll_ofst	= APL_sDiv( Steer * Num, g_stRasInfo.size );	/* 車体の移動(高い位置ほど移動量が少ない) */
+		}
+		
+		/* スクロールする幅×計算する高さ÷ラスタースクロールさせる高さ */
+		if(g_stRoadInfo.angle == 0)
+		{
+			Scroll_w	= 0;
+		}
+		else
+		{
+			SS Scroll_w_clp;
+			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 511 ), -512 );
+			
+			if(Num == 0)
+			{
+				Scroll_w	= Scroll_w_clp;	/* カーブ(低い位置ほど移動量が少ない) */
+			}
+			else
+			{
+				Scroll_w	= APL_sDiv( Scroll_w_clp, Num);	/* カーブ(低い位置ほど移動量が少ない) */
+			}
+		}
+		Point_x		= Scroll_ofst + Scroll_w;	/* ラスタースクロール位置 */
+
+		*x = Point_x & 0x1FFu;	/* 9bitマスク *//* Max224ぐらい */
 	}
-	
-	/* 上下限クリップ */
-	if(*x < 0)
-	{
-		*x = 512 + *x;
-	}
-	
+
 	return bRet;
 }
 
@@ -331,51 +329,59 @@ static UC Raster_Calc_V(SS *y, SS Num, SS RevNum)
 	GetDebugNum(&uDebugNum);
 #endif
 
-	if(Num == 0u)	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
+	if(Num == 0u)	
 	{
-		*y = 0;
-		Road_Pat_Start();
 		bRet = 0x00;
 	}
-	else
+	/* Y座標 */
 	{
-		SS	Point_y;
-		SS	MinClip = 0;
-		SS	MaxClip = Mmax( Mmin((RASTER_MAX - RASTER_MIN - RASTER_NEXT - g_stRasInfo.st - Num), (ROAD_SIZE-1)), 0);
+		SS	Point_y, Point_y_def;
+		SS	MinClip, MaxClip;
+		SS	uRasStart;
 		
-		if( g_stRasInfo.st < g_stRasInfo.mid )	/* 水平線の位置が通常より上側の処理 */
+		uRasStart = Mmin(g_stRasInfo.st, g_stRasInfo.mid);
+		MinClip = ROAD_ST_POINT - (uRasStart + Num);
+		MaxClip = ROAD_ED_POINT - (uRasStart + Num);
+		Point_y_def = ROAD_ST_POINT - g_stRasInfo.mid;	/* 標準位置 */
+		
+		if(g_stRasInfo.mid == g_stRoadInfo.Horizon)	/* 水平線の位置が通常より下側の処理 */
 		{
-			SS	Road_strch = 0;
-			UI	uCal;
-			
-			uCal = Mmax(APL_uDiv(Num, g_stRasInfo.size), 1);
-			Road_strch = g_stRoadInfo.Horizon_tmp + APL_sDiv(g_stRoadInfo.height, uCal);
+			RoadPoint_y = Point_y_def;
 
-			RoadPoint_y = Mmax(g_stRoadInfo.Horizon_tmp, Road_strch);
 			bRet = 0xFF;
 		}
-		else if( g_stRasInfo.st == g_stRasInfo.mid )	/* 水平線の位置 */
+		else if( g_stRasInfo.mid > g_stRoadInfo.Horizon )	/* 水平線の位置が通常より上側の処理 */
 		{
-			RoadPoint_y = g_stRoadInfo.Horizon;
+			SS	Road_strch = 0;
+			
+			US	uSize;
+
+			uSize = g_stRasInfo.mid - g_stRoadInfo.Horizon;
+			Road_strch = APL_uDiv( uSize * RevNum, g_stRasInfo.size );
+
+			RoadPoint_y = Mmax(Point_y_def + Road_strch, Point_y_def);
+
 			bRet = 0xFF;
 		}
 		else	/* 水平線の位置が通常より下側の処理 */
 		{
 			SS	Road_strch = 0;
+			US	uSize;
 
-			Road_strch = APL_uDiv(g_stRasInfo.size, Num);
-			RoadPoint_y = g_stRoadInfo.Horizon - Road_strch;
+			uSize = g_stRoadInfo.Horizon - g_stRasInfo.mid;
+			Road_strch = APL_uDiv( uSize * RevNum, g_stRasInfo.size );
+
+			RoadPoint_y = Mmax(Point_y_def - Road_strch, Point_y_def);
 
 			bRet = 0xb7;
 		}
 		
-		Point_y = (RoadPoint_y - RASTER_MIN + (g_stRasInfo.st + Num) - ROAD_ST_POINT - RASTER_NEXT);
-		
-		if(Point_y < 0)
+		Point_y = Mmax(Mmin(RoadPoint_y, MaxClip), MinClip);	/* 上下限クリップ */
+		if(RoadPoint_y == MaxClip)
 		{
-			MinClip = Mmax( Mmin( (RoadPoint_y + (0 - Point_y)), (ROAD_SIZE-1) ), 0);
+			bRet = TRUE;	/* MaxClip */
 		}
-		*y = Mmax(Mmin(RoadPoint_y, MaxClip), MinClip);	/* 上下限クリップ */
+		*y = Point_y & 0x1FFu;	/* 9bitマスク */
 	}
 		
 	return bRet;
@@ -412,7 +418,7 @@ void Road_Init(US uCourseNum)
 	g_uRoadCycleCount = 0u;
 
 	g_stRoadInfo.Horizon		= 0x00;	/* 水平位置 */
-	g_stRoadInfo.Horizon_tmp	= 0x00;	/* 仮水平位置 */
+	g_stRoadInfo.Horizon_Base	= 0x00;	/* 仮水平位置 */
 	g_stRoadInfo.offset_x		= 0x00;	/*  */
 	g_stRoadInfo.offset_y		= 0x00;	/*  */
 	g_stRoadInfo.offset_val		= 0x00;	/*  */
@@ -471,7 +477,8 @@ static void Set_Road_Pat_offset(SS Num)
 	}
 	else
 	{
-		g_stRoadInfo.offset_y = (Num * g_stRoadInfo.offset_val) / Mmax((g_stRoadInfo.offset_val + 96), 1);
+		//g_stRoadInfo.offset_y = (Num * g_stRoadInfo.offset_val) / Mmax((g_stRoadInfo.offset_val + 96), 1);
+		g_stRoadInfo.offset_y = APL_uDiv((Num * g_stRoadInfo.offset_val), (g_stRoadInfo.offset_val + g_stRasInfo.size ));
 	}
 	if(Road_Pat_Update(g_stRoadInfo.offset_y) != 0u)
 	{
@@ -569,7 +576,7 @@ static SS	Set_Road_Slope(void)
 	static SS	road_slope_old;
 
 	road_slope_old = g_stRoadInfo.slope;		/* 前回値更新 */
-	road_slope = g_stRoadInfo.height * -1;
+	road_slope = g_stRoadInfo.height;
 	
 #if 1
 	if(road_slope == 0)
@@ -581,8 +588,10 @@ static SS	Set_Road_Slope(void)
 	{
 		if(road_slope != road_slope_old)
 		{
-			cal_tan = APL_Tan256(road_slope);	/* tanθ */
-			cal_cos = APL_Cos(cal_tan);			/* cosθ */
+			cal_tan = 0;
+			cal_cos = 0;
+//			cal_tan = APL_Tan256(road_slope);	/* tanθ */
+//			cal_cos = APL_Cos(cal_tan);			/* cosθ */
 		}
 	}
 #else
@@ -745,15 +754,16 @@ SS	SetHorizon(UC bMode)
 	{
 		case 0:		/* TPS */
 		{
+			g_stRoadInfo.Horizon_Base = Y_HORIZON_0;
 			Horizon = Mmax(Mmin(Y_HORIZON_0 - Height, ROAD_0_MAX), ROAD_0_MIN);	/* 水平位置決定（クリップ） */
-			g_stRoadInfo.Horizon_tmp = Y_HORIZON_0;
 			break;
 		}
 		case 1:		/* FPS */
+		case 2:		/* FPS */
 		default:	/* FPS */
 		{
+			g_stRoadInfo.Horizon_Base = Y_HORIZON_1;
 			Horizon = Mmax(Mmin(Y_HORIZON_1 - Height, ROAD_1_MAX), ROAD_1_MIN);	/* 水平位置決定（クリップ） */
-			g_stRoadInfo.Horizon_tmp = Y_HORIZON_1;
 			break;
 		}
 	}

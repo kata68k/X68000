@@ -11,8 +11,8 @@ int Draw_Pset(short x, short y, unsigned short color)
 {
 	struct _psetptr stPset;
 
-	stPset.x = Mmin(x, X_MAX_DRAW);
-	stPset.y = Mmin(y, Y_MAX_DRAW);
+	stPset.x = Mmin(x, X_MAX_DRAW-1);
+	stPset.y = Mmin(y, Y_MAX_DRAW-1);
 	stPset.color = color;
 	
 	return PSET(&stPset);
@@ -37,10 +37,10 @@ int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsi
 {
 	struct _lineptr stLine;
 
-	stLine.x1 = Mmin(x1, X_MAX_DRAW);
-	stLine.y1 = Mmin(y1, Y_MAX_DRAW);
-	stLine.x2 = Mmin(x2, X_MAX_DRAW);
-	stLine.y2 = Mmin(y2, Y_MAX_DRAW);
+	stLine.x1 = Mmin(x1, X_MAX_DRAW-1);
+	stLine.y1 = Mmin(y1, Y_MAX_DRAW-1);
+	stLine.x2 = Mmin(x2, X_MAX_DRAW-1);
+	stLine.y2 = Mmin(y2, Y_MAX_DRAW-1);
 	stLine.color = color;
 	stLine.linestyle = style;
 	
@@ -51,10 +51,10 @@ int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsig
 {
 	struct _boxptr stBox;
 
-	stBox.x1 = Mmin(x1, X_MAX_DRAW);
-	stBox.y1 = Mmin(y1, Y_MAX_DRAW);
-	stBox.x2 = Mmin(x2, X_MAX_DRAW);
-	stBox.y2 = Mmin(y2, Y_MAX_DRAW);
+	stBox.x1 = Mmin(x1, X_MAX_DRAW-1);
+	stBox.y1 = Mmin(y1, Y_MAX_DRAW-1);
+	stBox.x2 = Mmin(x2, X_MAX_DRAW-1);
+	stBox.y2 = Mmin(y2, Y_MAX_DRAW-1);
 	stBox.color = color;
 	stBox.linestyle = style;
 	
@@ -65,10 +65,10 @@ int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
 {
 	struct _fillptr stFill;
 
-	stFill.x1 = Mmin(x1, X_MAX_DRAW);
-	stFill.y1 = Mmin(y1, Y_MAX_DRAW);
-	stFill.x2 = Mmin(x2, X_MAX_DRAW);
-	stFill.y2 = Mmin(y2, Y_MAX_DRAW);
+	stFill.x1 = Mmin(x1, X_MAX_DRAW-1);
+	stFill.y1 = Mmin(y1, Y_MAX_DRAW-1);
+	stFill.x2 = Mmin(x2, X_MAX_DRAW-1);
+	stFill.y2 = Mmin(y2, Y_MAX_DRAW-1);
 	stFill.color = color;
 	
 	return FILL(&stFill);

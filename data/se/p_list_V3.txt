@@ -13,4 +13,7 @@
 12=explosion1.PCM
 13=explosion2.PCM
 14=car_pass.PCM
+15=Squeal.PCM
+16=WAKAME.PCM
+17=GMSE_008.pcm
 

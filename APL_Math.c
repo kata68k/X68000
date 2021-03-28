@@ -335,6 +335,10 @@ UI APL_uDiv(UI uDenominator, UI uNumerator)
 	{
 		cal = ~0;
 	}
+	else if(uDenominator == 0u)
+	{
+		cal = 0;
+	}
 	else
 	{
 		cal = ((uDenominator << 8u) / uNumerator) >> 8u;
@@ -349,7 +353,11 @@ SI APL_sDiv(SI Denominator, SI Numerator)
 	
 	if(Numerator == 0)
 	{
-		if(Denominator >= 0)
+		if(Denominator == 0)
+		{
+			cal = 0;
+		}
+		else if(Denominator > 0)
 		{
 			cal = INT_MAX;
 		}

@@ -15,5 +15,9 @@ extern void T_Speed(void);
 extern void T_Gear(void);
 extern void T_Main(UC);
 extern SS T_Scroll(UI, UI);
+extern SI T_Box(SS, SS, SS, SS, US, UC);
+extern SI T_Fill(SS, SS, SS, SS, US, UC);
+extern SI T_xLine(SS, SS, SS w, US, UC);
+extern SI T_yLine(SS, SS, SS h, US, UC);
 
 #endif	/* TEXT_H */

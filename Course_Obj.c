@@ -5,6 +5,9 @@
 
 #include "inc/usr_macro.h"
 #include "Course_Obj.h"
+#include "OverKata.h"
+
+#include "CRTC.h"
 #include "Draw.h"
 #include "FileManager.h"
 #include "Graphic.h"
@@ -20,6 +23,8 @@ static ST_COURSE_OBJ	g_stCourse_Obj[COURSE_OBJ_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 SS	InitCourseObj(void);
+SS	GetCourseObj(ST_COURSE_OBJ *, SS);
+SS	SetCourseObj(ST_COURSE_OBJ, SS);
 SS	Course_Obj_main(UC, UC, UC);
 SS	Put_CouseObject(SS, SS, US, UC, UC);
 SS	Sort_Course_Obj(void);
@@ -36,12 +41,41 @@ SS	InitCourseObj(void)
 	{
 		g_stCourse_Obj[i].ubType = 0;
 		g_stCourse_Obj[i].x = 0;
-		g_stCourse_Obj[i].y = 4*(i/2);
+		g_stCourse_Obj[i].y = (3 * i);
 		g_stCourse_Obj[i].z = 0;
 		g_stCourse_Obj[i].uTime = 0xFFFF;
 		g_stCourse_Obj[i].ubAlive = TRUE;
 	}
 	
+	return ret;
+}
+
+SS	GetCourseObj(ST_COURSE_OBJ *stDat, SS Num)
+{
+	SS	ret = 0;
+	if(Num < COURSE_OBJ_MAX)
+	{
+		*stDat = g_stCourse_Obj[Num];
+	}
+	else
+	{
+		ret = -1;
+	}
+	return ret;
+}
+
+SS	SetCourseObj(ST_COURSE_OBJ stDat, SS Num)
+{
+	SS	ret = 0;
+	
+	if(Num < COURSE_OBJ_MAX)
+	{
+		g_stCourse_Obj[Num] = stDat;
+	}
+	else
+	{
+		ret = -1;
+	}
 	return ret;
 }
 
@@ -56,8 +90,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 	{
 		SS	x, y, z;
 		SS	dx, dy, dz;
-		SS	my;
-		SS	x_ofst = 0;
+		SS	mx, my;
 		US	ras_x, ras_y, ras_pat, ras_num;
 		UC	bEven;
 		SS	Out_Of_Disp;
@@ -66,6 +99,11 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		ST_CRT	stCRT;
 		ST_RAS_INFO	stRasInfo;
 		ST_ROAD_INFO	stRoadInfo;
+		
+#ifdef DEBUG	/* デバッグコーナー */
+		UC	bDebugMode;
+		GetDebugMode(&bDebugMode);
+#endif
 		
 		GetCRT(&stCRT, bMode);
 		GetRasterInfo(&stRasInfo);
@@ -94,47 +132,81 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		{
 			y += (uCount - uTime);	/* 変化量 */
 		}
-		y = Mmax(y, 2);
 		
-		my = (y * y) >> 3;
+		ras_num = Mmax(Mmin((y*y)>>4, stRasInfo.ed), RASTER_NEXT);	/* ラスター情報の配列番号を算出 */
+		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, stRasInfo.st + ras_num);	/* 配列番号のラスター情報取得 */
 		
-		if((ROAD_SIZE-RASTER_NEXT) > my)
+		/* センター */
+		if( ras_x < 256 )	/* 左カーブ */
 		{
-			ras_num = (US)(stRasInfo.st + my);	/* ラスター情報の配列番号を算出 */
-			GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
+			mx = ROAD_CT_POINT + (  0 - ras_x);
+		}
+		else	/* 右カーブ */
+		{
+			mx = ROAD_CT_POINT + (512 - ras_x);
+		}
+		
+		/* 位置 */
+		if( stRasInfo.st > stRasInfo.mid )
+		{
+			my = ras_num + ((stRasInfo.st - stRasInfo.mid) << 1);
+		}
+		else
+		{
+			my = ras_num;
+		}
+		
+		x = Mmul2(my);	/* 96に対して200なのでおよそ２倍 */
+		
+		/* 差分 */
+		if(bEven == TRUE)	/* 左 */
+		{
+			dx = mx - x - 16;	/* 16は道の最小幅 */
+		}
+		else				/* 右 */
+		{
+			dx = mx + x + 16;	/* 16は道の最小幅 */
+		}
+		
+		z = x;
+		
+		if( (my > 0) && (ret >= 0) && (dx < 256))
+		{
 			
-			if(ras_x < 256)	/* 道の左側 */
-			{
-				x_ofst = (SS)ras_x;
-			}
-			else	/* 道の右側 */
-			{
-				x_ofst = (SS)ras_x - 512;
-			}
-			/* 位置 */
-			x = 4 * (((ras_y - RASTER_MIN) + ras_num) - ROAD_ST_POINT);	/* 縦位置から横移動量を計算 */
-
-			dx = (WIDTH>>1) - 8 - x_ofst;
-			if(bEven == TRUE)	/* 左 */
-			{
-				dx += x;
-			}
-			else				/* 右 */
-			{
-				dx -= x;
-			}
 			/* 水平線 */
-			dy = stRoadInfo.Horizon;
-			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った */
-			dz = Mmin( Mmax( 3 - (((x<<8) / (x + 224))>>5) , 0), 3 );
+			dy = stRasInfo.st;
+			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
+			//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
+			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して32で割った(=7pat) */
+			dz = Mmin( Mmax( 7 - (((z<<8) / (z + ROAD_ED_POINT))>>4) , 0), 7 );
 			/* 描画 */
 			Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
 											stCRT.hide_offset_y + dy,
 											dz,
 											bMode_rev,
 											bEven);
+			x = dx;
+			z = dz;
 
 			if(Out_Of_Disp < 0)	/* 描画領域外 */
+			{
+				/* 出現ポイントで描画領域外となるので要検討 */
+//				x = 0;
+//				y = 0;
+//				z = 0;
+//				g_stCourse_Obj[bNum].ubAlive = FALSE;
+			}
+#ifdef DEBUG	/* デバッグコーナー */
+			if( bDebugMode == TRUE )
+			{
+				Draw_Pset(	stCRT.hide_offset_x + dx,
+							stCRT.hide_offset_y + ras_y, 0xC2);	/* デバッグ用座標位置 */
+			}
+#endif
+		}
+		else
+		{
+			if(dx >= 448)	/* 512から64引いた値（64より小さいと消えにくい） */
 			{
 				x = 0;
 				y = 0;
@@ -142,37 +214,11 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 				g_stCourse_Obj[bNum].ubAlive = FALSE;
 			}
 		}
-		else
-		{
-			x = 0;
-			y = 0;
-			z = 0;
-			g_stCourse_Obj[bNum].ubAlive = FALSE;
-		}
 
 		g_stCourse_Obj[bNum].x = x;
 		g_stCourse_Obj[bNum].y = y;
 		g_stCourse_Obj[bNum].z = z;
 		g_stCourse_Obj[bNum].uTime = uCount;
-		
-#ifdef DEBUG	/* デバッグコーナー */
-		if( bNum == 0 )
-		{
-	//		Message_Num(&dx,	 0,  9, 2, MONI_Type_SS, "%4d");
-	//		Message_Num(&dy, 	 6,  9, 2, MONI_Type_SS, "%4d");
-	//		Message_Num(&dz, 	12,  9, 2, MONI_Type_SS, "%4d");
-	//		Message_Num(&ras_x, 			 0, 10, 2, MONI_Type_US, "%4d");
-	//		Message_Num(&ras_y, 			 6, 10, 2, MONI_Type_US, "%4d");
-	//		Message_Num(&x_ofst, 			 0, 11, 2, MONI_Type_SS, "%4d");
-	//		Message_Num(&ras_num,			 6, 11, 2, MONI_Type_US, "%4d");
-	//		Message_Num(&bNum,				12, 11, 2, MONI_Type_UC, "%d");
-	//		if(bDebugMode == TRUE)	/* デバッグモード */
-			{
-				Draw_Pset(	stCRT.hide_offset_x + dx,
-							stCRT.hide_offset_y + 128, 0xC2);	/* デバッグ用座標位置 */
-			}
-		}
-#endif
 	}
 	else
 	{
@@ -192,19 +238,72 @@ SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
 	SS	ret = 0;
 	SS	i;
 	US	w, h;
+	UC	ubType;
+	UC	ubPos_H;
+	UI	uWidth, uHeight, uFileSize;
+	UI	uWidth_o, uHeight_o;
+	UI	uW_tmp, uH_tmp;
 	US	height_sum = 0u;
+	US	height_sum_o = 0u;
 	
-	w = PINETREE_1_W >> Size;
-	h = PINETREE_1_H >> Size;
+	ubType = g_stCourse_Obj[0].ubType;
 	
-	for(i = 1; i <= Size; i++)
+	switch(ubType)
 	{
-		height_sum += (PINETREE_1_H >> (i-1));
+	case 0:
+		{
+			/* COURSE_OBJ_CG(4) */
+			Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+			/* 9 */
+			//Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+		}
+		break;
+	case 1:
+		{
+			/* COURSE_OBJ_CG(4) */
+			Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+		}
+		break;
+	default:
+		{
+			/* COURSE_OBJ_CG(4) */
+			Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+		}
+		break;
+	}
+	uWidth_o = uWidth;
+	uHeight_o = uHeight;
+	
+	for(i=1; i<=Size; i++)
+	{
+		/* 縮小先のサイズ */
+		height_sum_o += uHeight_o;
+		uW_tmp = uWidth_o << 3;
+		uWidth_o = Mmul_p1(uW_tmp);
+		uH_tmp = uHeight_o << 3;
+		uHeight_o = Mmul_p1(uH_tmp);
+		
+		/* 次の縮小元 */
+		height_sum += uHeight;
+		uWidth = uWidth_o;
+		uHeight = uHeight_o;
+	}
+	
+	w = uWidth;
+	h = uHeight;
+	
+	if(ubPos == TRUE)	/* 左 */
+	{
+		ubPos_H = POS_RIGHT;
+	}
+	else				/* 右 */
+	{
+		ubPos_H = POS_LEFT;
 	}
 	
 	ret = G_BitBlt(	x,		w,			y,	h,	0,
 					140,	w,	height_sum,	h,	0,
-					ubMode, POS_MID, POS_CENTER);
+					ubMode, ubPos_H, POS_CENTER);
 	
 	return	ret;
 }
@@ -262,10 +361,13 @@ SS	Move_Course_BG(UC bMode)
 	
 	SS	Slope;
 	SS	Angle;
+	SS	Move;
+	ST_RAS_INFO	stRasInfo;
 	ST_ROAD_INFO	stRoadInfo;
 	ST_CARDATA	stMyCar = {0};
 	static SS	BG_x = X_OFFSET;
 	
+	GetRasterInfo(&stRasInfo);
 	GetRoadInfo(&stRoadInfo);
 	Slope = stRoadInfo.slope;
 	Angle = stRoadInfo.angle;
@@ -278,11 +380,11 @@ SS	Move_Course_BG(UC bMode)
 		{
 			if(stMyCar.ubThrottle != 0u)
 			{
-				BG_x -= (Angle << 1);
+				BG_x += 0 - (Angle << 1);
 			}
 			else
 			{
-				BG_x -= Angle;
+				BG_x += 0 - (Angle << 0);
 			}
 		}
 		else
@@ -290,28 +392,21 @@ SS	Move_Course_BG(UC bMode)
 			/* 保持 */
 		}
 	}
-	
-	if(BG_x > X_MAX_DRAW)
-	{
-		BG_x -= X_MAX_DRAW;
-	}
-	else if(BG_x < 0)
-	{
-		BG_x += X_MAX_DRAW;
-	}
-	else
-	{
-		/* 保持 */
-	}
+	BG_x = BG_x & 0x3FF;
 	
 	/* 背景を動かす */
+	Move = 65 + 8 - stRasInfo.st;	/* 背景の高さ + オフセット - 水平位置 */
+	if(Move < 0)
+	{
+		Move = Move << 2;
+	}
 	if(bMode == 1)
 	{
-		G_Scroll(BG_x, Mmin(Y_MIN_DRAW + Slope, Y_MIN_DRAW), 1);
+		G_Scroll(BG_x, Y_MIN_DRAW +        0 + Move, 1);
 	}
 	else
 	{
-		G_Scroll(BG_x, Mmin(Y_OFFSET + Slope, Y_OFFSET), 1);
+		G_Scroll(BG_x, Y_MIN_DRAW + Y_OFFSET + Move, 1);
 	}
 	
 	return ret;

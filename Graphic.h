@@ -3,8 +3,6 @@
 
 #include "inc/usr_define.h"
 
-#define	CRT_MAX		(3)
-
 enum
 {
 	POS_TOP,
@@ -19,12 +17,22 @@ enum
 {
 	Clear_G=0,
 	BackGround_G,
+	Object0_G,
 	Object1_G,
 	Object2_G,
 	Object3_G,
 	Object4_G,
 	Object5_G,
 	Object6_G,
+	Object7_G,
+	Object8_G,
+	Object9_G,
+	ObjectA_G,
+	ObjectB_G,
+	ObjectC_G,
+	ObjectD_G,
+	ObjectE_G,
+	ObjectF_G,
 	Enemy1_G,
 	Enemy2_G,
 	Enemy3_G,
@@ -87,9 +95,6 @@ typedef struct tagCG_LIST {
 	UC	ubTransPal;			/* 透過色パレット番号 */
 } CG_LIST;
 
-extern	SS	GetCRT(ST_CRT *, SS);
-extern	SS	SetCRT(ST_CRT, SS);
-extern	SS	CRT_INIT(void);
 extern	SS	Get_CG_FileList_MaxNum(UI *);
 extern	UC	*Get_CG_FileBuf(UC);
 extern	SS	Get_PicImageInfo(UC , UI *, UI *, UI *);
@@ -113,9 +118,7 @@ extern	SS	APICG_DataLoad2G(SC *, UL, UL, US);
 extern	SS	APICG_DataLoad2M(UC, UL, UL, US, US *);
 extern	SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
 extern	SS	PutGraphic_To_Text(UC , US , US );
-extern	SS	PutGraphic_To_Symbol(const UC *, US , US , US );
-extern	SS	G_Scroll(US, US, UC);
-extern	SS	Get_CRT_Contrast(SC *);
-extern	SS	Set_CRT_Contrast(SC);
+extern	SS	PutGraphic_To_Symbol(UC *, US , US , US );
+extern	SS	G_Scroll(SS, SS, UC);
 
 #endif	/* GRAPHIC_H */

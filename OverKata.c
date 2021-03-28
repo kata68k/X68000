@@ -15,6 +15,7 @@
 
 #include "APL_MACS.h"
 #include "APL_Math.h"
+#include "CRTC.h"
 #include "Course_Obj.h"
 #include "DMAC.h"
 #include "Draw.h"
@@ -39,8 +40,23 @@ UC	g_mode = 0;
 UC	g_mode_rev = 1;
 US	g_uDebugNum = 0; 
 UC	g_bDebugMode = FALSE;
+SS	g_CpuTime = 0;
 UI	g_unTime_cal = 0u;
 UI	g_unTime_cal_PH = 0u;
+#ifdef DEBUG	/* デバッグコーナー */
+UI	g_unTime_Pass[6] = {0u};
+#endif
+SS	g_Input;
+
+enum{
+	DEBUG_NONE,
+	DEBUG_COURSE_OBJ,
+	DEBUG_ENEMYCAR,
+	DEBUG_MYCAR,
+	DEBUG_RASTER,
+	DEBUG_CPUTIME,
+	DEBUG_MAX,
+};
 
 /* グローバル構造体 */
 
@@ -92,51 +108,10 @@ SS main(void)
 	puts("デバッグコーナー 開始");
 	/* ↓自由にコードを書いてね */
 	{
-		US	uOld;
-		UI	x = 0, y = 0;
-		UI	dx = 0, dy = 0;
-		US	count = 0;
-		US	*pBuf = NULL;
-		US	*pDstGR = NULL;
-		US	*pSrcGR = NULL;
-
-		g_uDebugNum = 0x1;
-		uOld = !g_uDebugNum;
 		/* スーパーバイザーモード開始 */
 		g_nSuperchk = SUPER(0);
 
-		/* 画面 */
-		g_nCrtmod = CRT_INIT();
-
-		/* グラフィック */
-		G_INIT();			/* 画面の初期設定 */
-		G_Palette_INIT();	/* グラフィックパレットの初期化 */
-		/* データの読み込み */
-		CG_File_Load();		/* グラフィックデータ読み込み */
-
-		/* テキスト */
-		T_INIT();	/* テキストＶＲＡＭ初期化 */
-		
-//		pBuf = (US*)MyMalloc( Mmax((52*512*2), 512*2) );
-//		APICG_DataLoad2M( 1, x, y, 0, pBuf);
-//		dx = 128;
-//		dy = 128;
-//		for(y=0; y < 52; y++)
-//		{
-//			pDstGR = (US *)(0xC00000 + ((dy + y) << 10) + (dx << 1));
-//			pSrcGR = pBuf + (y << 9);
-//			
-//			for(x=0; x < 64; x++)
-//			{
-//				if(*pSrcGR == 0xB4)
-//				{
-//					*pSrcGR = 0x00;
-//				}
-//				*pDstGR = *pSrcGR & 0x00FF;
-//				pDstGR++;
-//				pSrcGR++;
-//			}
-//		}
+		CRTC_INIT();
 		
 		puts("ＥＳＣキーで終了");
 		loop = 1;
@@ -144,48 +119,8 @@ SS main(void)
 		{
 			if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
 			if(loop == 0)break;
-
-			DirectInputKeyNum(&g_uDebugNum, 1);	/* キーボードから数字を入力 */
-			
-			if(g_uDebugNum != uOld)
-			{
-//				pDstGR = (US*)0xC00000;
-//				memset(pDstGR, 0x42, 0x80000);
-				
-				uOld = g_uDebugNum;
-				//G_Load_Mem(g_uDebugNum, dx, dy, 0);
-				G_Load_Mem( 0, X_OFFSET,	0,			0);	/* インテリア */
-				G_Load_Mem( 0, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
-			}
-
-			if(count == 0)
-			{
-				x = 0;
-				y = 128;
-			}
-			else
-			{
-//				UI uWidth, uHeight, uFileSize;
-//				Get_PicImageInfo(1, &uWidth, &uHeight, &uFileSize);
-//				G_CLR_AREA(x, uWidth, y, uHeight, 0);
-//				x = count % 256;
-//				y = 64 + ((64 * APL_Cos((x<<1)%360)) >> 8);
-//				G_Load_Mem(2, 64, 64, 0);
-//				G_Load_Mem(1, x, y, 0);
-			}
-			//printf("%5d = (%4d, %4d)\n", count, x, y );
-			
-			count++;
-
-			/* 同期待ち */
-			vwait(1);
 		}
 		while( loop );
-		
-		MyMfree(pBuf);	/* メモリ解放 */
-
-		/* 画面 */
-		CRTMOD(g_nCrtmod);			/* モードをもとに戻す */
 
 		/*スーパーバイザーモード終了*/
 		SUPER(g_nSuperchk);
@@ -238,18 +173,24 @@ SS main(void)
 	{
 		UI time_st, time_now;
 		SS	input = 0;
+#ifdef DEBUG	/* デバッグコーナー */
+		UC	bTimePass = 1;
+#endif
 		
 		/* 時刻設定 */
 		GetNowTime(&time_st);	/* メイン処理の開始時刻を取得 */
 		SetStartTime(time_st);	/* メイン処理の開始時刻を記憶 */
-
+#ifdef DEBUG	/* デバッグコーナー */
+		g_unTime_Pass[0] = time_st;
+#endif
+		
 		/* タスク処理 */
 		TaskManage();			/* タスクを管理する */
 		GetTaskInfo(&stTask);	/* タスクの情報を得る */
 
 		/* 入力処理 */
 		get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
-		
+		g_Input = input;
 		if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
 		{
 			loop = 0;	/* ループ終了 */
@@ -390,7 +331,8 @@ SS main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
-				Music_Play(5);	/* メインBGM */
+				Music_Play(1);	/* メインBGM */
+//				Music_Play(0);	/* 停止 */
 
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 				
@@ -415,18 +357,61 @@ SS main(void)
 					/* グラフィックを消去 */
 					G_CLR_ALL_OFFSC(g_mode);
 				}
-				
+#ifdef DEBUG	/* デバッグコーナー */
+				if(g_bDebugMode == TRUE)
+				{
+					GetNowTime(&time_now);
+					g_unTime_Pass[bTimePass] = time_now - g_unTime_Pass[0];	/* 1 */
+					bTimePass++;
+					g_unTime_Pass[0] = time_now;	/* 一時保存 */
+				}
+#endif
 				/* 自車の情報を取得 */
 				MyCarInfo_Update(input);	/* 自車の情報を更新 */
+#ifdef DEBUG	/* デバッグコーナー */
+				if(g_bDebugMode == TRUE)
+				{
+					GetNowTime(&time_now);
+					g_unTime_Pass[bTimePass] = time_now - g_unTime_Pass[0];	/* 2 */
+					bTimePass++;
+					g_unTime_Pass[0] = time_now;	/* 一時保存 */
+				}
+#endif
 				
 				/* ラスター処理 */
 				Raster_Main(g_mode);
+#ifdef DEBUG	/* デバッグコーナー */
+				if(g_bDebugMode == TRUE)
+				{
+					GetNowTime(&time_now);
+					g_unTime_Pass[bTimePass] = time_now - g_unTime_Pass[0];	/* 3 */
+					bTimePass++;
+					g_unTime_Pass[0] = time_now;	/* 一時保存 */
+				}
+#endif
 				
 				/* コースアウト時の処理 */
 				MyCar_CourseOut();	/* コースアウト時のエフェクト */
-
+#ifdef DEBUG	/* デバッグコーナー */
+				if(g_bDebugMode == TRUE)
+				{
+					GetNowTime(&time_now);
+					g_unTime_Pass[bTimePass] = time_now - g_unTime_Pass[0];	/* 4 */
+					bTimePass++;
+					g_unTime_Pass[0] = time_now;	/* 一時保存 */
+				}
+#endif
 				/* 余った時間で処理 */
 				BG_main(&bFlip);	/* バックグランド処理 */
+#ifdef DEBUG	/* デバッグコーナー */
+				if(g_bDebugMode == TRUE)
+				{
+					GetNowTime(&time_now);
+					g_unTime_Pass[bTimePass] = time_now - g_unTime_Pass[0];	/* 5 */
+					bTimePass++;
+					g_unTime_Pass[0] = time_now;	/* 一時保存 */
+				}
+#endif
 			}
 			break;
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
@@ -516,20 +501,22 @@ SS main(void)
 #ifdef DEBUG	/* デバッグコーナー */
 	{
 		UI i=0, j=0;
+		UI st;
 		ST_RAS_INFO	stRasInfo;
 		GetRasterInfo(&stRasInfo);
 		
 		printf("stRasInfo st,mid,ed,size=(%4d,%4d,%4d,%4d)\n", stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size);
 		printf("GetRasterIntPos[i]=(x,y,pat)=(H_pos)\n");
 		
-		for(i=stRasInfo.st; i < stRasInfo.ed; i+=RASTER_NEXT)
+		st = stRasInfo.st;
+		for(i=st; i < stRasInfo.ed; i+=RASTER_NEXT)
 		{
 			US x, y;
 			SS pat;
 			
 			GetRasterIntPos( &x, &y, &pat, i );
 			
-			printf("[%3d]=(%4d,%4d,%4d)=(%4d), ", i, x, y, pat, (y - RASTER_MIN + i - 128) );
+			printf("[%3d]=(%4d,%4d,%4d)=(%4d), ", i, x, y, pat, i - st/*(y + i - ROAD_ST_POINT)*/ );
 			if((j%3) == 0)printf("\n");
 			j++;
 		}
@@ -549,11 +536,11 @@ static void App_Init(void)
 	SetDebugNum(0x80);
 
 	/* MFP */
-	TimerD_INIT();	/* タイマーD初期化 */
+	g_CpuTime = TimerD_INIT();	/* タイマーD初期化 */
 
 	/* 音楽 */
 	Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
-	Music_Play(1);	/* ローディング中 */
+	Music_Play(3);	/* ローディング中 */
 	
 	/* スーパーバイザーモード開始 */
 	g_nSuperchk = SUPER(0);
@@ -636,7 +623,7 @@ SS BG_main(UC* bFlip)
 	{
 		GetNowTime(&time_now);	/* 現在時刻を取得 */
 		
-		if((time_now - time_st) >= 14)	/* 14ms以内なら余った時間で処理する */
+		if((time_now - time_st) >= 500)	/* 28ms以内なら余った時間で処理する */
 		{
 			break;
 		}
@@ -655,29 +642,55 @@ SS BG_main(UC* bFlip)
 			/* 背景 */
 			case BackGround_G:
 			{
-				Move_Course_BG(g_mode);	/* コースの動きにあわせて背景を動かす */
+				if((time_now - time_st) >= 28)	/* 28ms以内なら余った時間で処理する */
+				{
+					bFlipState++;
+				}
+				else
+				{
+					Move_Course_BG(g_mode);	/* コースの動きにあわせて背景を動かす */
+				}
 				
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
 			}
 			/* ヤシの木(E:右側 / O:左側) */
+			case Object0_G:
 			case Object1_G:
 			case Object2_G:
 			case Object3_G:
 			case Object4_G:
 			case Object5_G:
 			case Object6_G:
+			case Object7_G:
+			case Object8_G:
+			case Object9_G:
+			case ObjectA_G:
+			case ObjectB_G:
+			case ObjectC_G:
+			case ObjectD_G:
+			case ObjectE_G:
+			case ObjectF_G:
 			{
-				bNum = bFlipState - Object1_G;
-				/* 描画順をソートする */
-				if(bNum == 0)
+				if((time_now - time_st) >= 28)	/* 28ms以内なら余った時間で処理する */
 				{
-					Sort_Course_Obj();		/* コースオブジェクト */
+					bFlipState++;
+				}
+				else
+				{
+					bNum = bFlipState - Object0_G;
+					if(bNum < COURSE_OBJ_MAX)
+					{
+						/* 描画順をソートする */
+						if(bNum == 0)
+						{
+							Sort_Course_Obj();		/* コースオブジェクト */
+						}
+						Course_Obj_main(bNum, g_mode, g_mode_rev);
+					}
 				}
 				
-				Course_Obj_main(bNum, g_mode, g_mode_rev);
-
 				bFlipState++;
 				*bFlip = FALSE;
 				break;
@@ -688,14 +701,24 @@ SS BG_main(UC* bFlip)
 			case Enemy3_G:
 			case Enemy4_G:
 			{
-				bNum = bFlipState - Enemy1_G;
-				/* 描画順をソートする */
-				if(bNum == 0)
+				if((time_now - time_st) >= 28)	/* 28ms以内なら余った時間で処理する */
 				{
-					Sort_EnemyCAR();		/* ライバル車 */
+					bFlipState++;
 				}
-				
-				EnemyCAR_main(bNum, g_mode, g_mode_rev);
+				else
+				{
+					bNum = bFlipState - Enemy1_G;
+					if(bNum < ENEMYCAR_MAX)
+					{
+						/* 描画順をソートする */
+						if(bNum == 0)
+						{
+							Sort_EnemyCAR();		/* ライバル車 */
+						}
+						
+						EnemyCAR_main(bNum, g_mode, g_mode_rev);
+					}
+				}
 				
 				bFlipState++;
 				*bFlip = FALSE;
@@ -703,10 +726,16 @@ SS BG_main(UC* bFlip)
 			}
 			case MyCar_G:
 			{
-				
-				T_Main(g_mode);	/* テキスト画面の処理 */
+				if((time_now - time_st) >= 28)	/* 28ms以内なら余った時間で処理する */
+				{
+					bFlipState++;
+				}
+				else
+				{
+					T_Main(g_mode);	/* テキスト画面の処理 */
 
-				MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
+					MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
+				}
 				
 				bFlipState++;
 				*bFlip = FALSE;
@@ -717,42 +746,112 @@ SS BG_main(UC* bFlip)
 			{
 				if(g_bDebugMode == TRUE)
 				{
-//					if(stTask.b496ms == TRUE)	/* モニタ */
+					UC	str[256] = {0};
+					static UC ubDispNum = DEBUG_ENEMYCAR;
+					static UC ubDispNum_flag = 0;
+
+					if(ChatCancelSW((g_Input & KEY_b_RLUP)!=0u, &ubDispNum_flag) == TRUE)	/* ロールアップで表示切替 */
 					{
-						UC	str[256] = {0};
-
-#if 0	/* ラスター情報 */
-						US x, y;
-						SS pat;
-						SS pos;
-						ST_RAS_INFO	stRasInfo;
-						ST_ROAD_INFO	stRoadInfo;
-						GetRasterInfo(&stRasInfo);
-						GetRoadInfo(&stRoadInfo);
-
-						pos = Mmax(Mmin( (g_uDebugNum - 0x80), stRasInfo.size ), 0);
-						GetRasterIntPos( &x, &y, &pat, stRasInfo.st + pos );
-						
-						sprintf(str, "[%d]s(%d,%d,%d,%d)i(%d,%d,%d)o(%d,%d)",
-							pos, 
-							stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size,
-							x, y, pat, 
-							stRoadInfo.Horizon, stRoadInfo.Horizon_tmp );	/* ラスター情報 */
-#endif						
-#if 0	/* 敵車情報 */
-						UI	i = 0;
-						ST_ENEMYCARDATA	stEnemyCar = {0};
-						i = g_uDebugNum - 128;
-						i = Mmin(Mmax(i, 0), ENEMYCAR_MAX-1);
-						GetEnemyCAR(&stEnemyCar, i);	/* ライバル車の情報 */
-						sprintf(str, "Enemy %d (%3d,%3d,%3d),Debug(%3d)", i, stEnemyCar.x, stEnemyCar.y, stEnemyCar.z, g_uDebugNum);	/* ライバル車の情報 */
-#endif						
-#if 1	/* CPU情報 */
-						sprintf(str, "CPU Time%2d[ms](MAX%2d[ms]),Debug(%3d)", g_unTime_cal, g_unTime_cal_PH, g_uDebugNum);	/* 処理負荷 */
-#endif						
-						/* 表示 */
-						Put_Message_To_Graphic(str, g_mode);	/* グラフィックのデバッグエリアにメッセージ描画 */
+						ubDispNum++;
+						if(DEBUG_MAX <= ubDispNum)
+						{
+							ubDispNum = DEBUG_NONE;
+						}
 					}
+
+					switch(ubDispNum)
+					{
+					case DEBUG_NONE:
+						{
+							/* 非表示 */
+						}
+						break;
+					case DEBUG_COURSE_OBJ:
+						{
+#if 1	/* 障害物情報 */
+							UI	i = 0;
+							ST_COURSE_OBJ	stCourse_Obj = {0};
+							i = Mmin(Mmax(g_uDebugNum, 0), COURSE_OBJ_MAX-1);
+							GetCourseObj(&stCourse_Obj, i);	/* ライバル車の情報 */
+							sprintf(str, "C_Obj[%d](%4d,%3d,%d)(%6d,%d),Debug(%3d)", i, stCourse_Obj.x, stCourse_Obj.y, stCourse_Obj.z, stCourse_Obj.uTime, stCourse_Obj.ubAlive, g_uDebugNum);	/* ライバル車の情報 */
+#endif
+						}
+						break;
+					case DEBUG_ENEMYCAR:
+						{
+#if 1	/* 敵車情報 */
+							UI	i = 0;
+							ST_ENEMYCARDATA	stEnemyCar = {0};
+							i = Mmin(Mmax(g_uDebugNum, 0), ENEMYCAR_MAX-1);
+							GetEnemyCAR(&stEnemyCar, i);	/* ライバル車の情報 */
+							sprintf(str, "Enemy[%d] (%d)(%4d,%4d,%4d),spd(%3d)", i,
+								stEnemyCar.ubAlive,
+								stEnemyCar.x,
+								stEnemyCar.y,
+								stEnemyCar.z,
+								stEnemyCar.VehicleSpeed
+							);	/* ライバル車の情報 */
+#endif
+						}
+						break;
+					case DEBUG_MYCAR:
+						{
+#if 1	/* 自車情報 */
+							ST_CARDATA	stMyCar;
+							GetMyCar(&stMyCar);	/* 自車 */
+							sprintf(str, "Car[%d](%4d,%3d,%d,%d,%d,%d,%d)",
+									stMyCar.ubCarType,			/* 車の種類 */
+									stMyCar.Steering,			/* ステア */
+									stMyCar.ubThrottle,			/* スロットル開度 */
+									stMyCar.ubBrakeLights,		/* ブレーキライト */
+									stMyCar.ubHeadLights,		/* ヘッドライト */
+									stMyCar.ubWiper,			/* ワイパー */
+									stMyCar.bTire,				/* タイヤの状態 */
+									stMyCar.ubOBD				/* 故障の状態 */
+							);	/* 自車の情報 */
+#endif
+						}
+						break;
+					case DEBUG_RASTER:
+						{
+
+#if 1	/* ラスター情報 */
+							US x, y;
+							SS pat;
+							SS pos;
+							ST_RAS_INFO	stRasInfo;
+							GetRasterInfo(&stRasInfo);
+
+							pos = Mmax(Mmin( g_uDebugNum, stRasInfo.size ), 0);
+							GetRasterIntPos( &x, &y, &pat, stRasInfo.st + pos );
+							
+							sprintf(str, "Ras[st+(%d)]s(%d,%d,%d,%d)i(%3d,%3d,%3d)",
+								pos,
+								stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size,
+								x, y, pat
+							);	/* ラスター情報 */
+#endif
+						}
+						break;
+					case DEBUG_CPUTIME:
+						{
+#if 1	/* CPU情報 */
+//							sprintf(str, "CPU Time%2d[ms](MAX%2d[ms]),Debug(%3d)", g_unTime_cal, g_unTime_cal_PH, g_uDebugNum);	/* 処理負荷 */
+							sprintf(str, "%d Time[ms]%2d(M%2d),%2d,%2d,%2d,%2d,%2d", g_CpuTime, g_unTime_cal, g_unTime_cal_PH, 
+									g_unTime_Pass[1],
+									g_unTime_Pass[2],
+									g_unTime_Pass[3],
+									g_unTime_Pass[4],
+									g_unTime_Pass[5]
+							);
+#endif
+						}
+						break;
+					default:
+						break;
+					}
+					/* 表示 */
+					Put_Message_To_Graphic(str, g_mode);	/* グラフィックのデバッグエリアにメッセージ描画 */
 				}
 				
 				bFlipState++;
@@ -783,6 +882,11 @@ SS BG_main(UC* bFlip)
 		}
 		
 		if(bFlipStateOld == bFlipState)	/* ステートが一周したらループ終了 */
+		{
+			break;
+		}
+
+		if((time_now - time_st) >= 14)	/* 14ms以内なら余った時間で処理する */
 		{
 			break;
 		}

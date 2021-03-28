@@ -47,7 +47,7 @@ void MOV_INIT(void)
 	}
 	
 	/* グラフィックリスト */
-	Load_MACS_List("data\\mov\\mov_list.txt", mov_list, &mov_list_max);
+	Load_MACS_List("data\\mov\\", "mov_list.txt", mov_list, &mov_list_max);
 	for(i = 0; i < mov_list_max; i++)
 	{
 		moon_chk = MoonRegst(mov_list[i]);	/* メモリへ登録 */

@@ -8,6 +8,7 @@
 
 #include "inc/usr_macro.h"
 #include "Draw.h"
+#include "CRTC.h"
 #include "Graphic.h"
 #include "OutPut_Text.h"
 
@@ -695,7 +696,7 @@ SS Put_Message_To_Graphic(UC *str, UC bMode)
 	
 	/* メッセージエリア クリア */
 	WINDOW( x, y, x + WIDTH, y + 16);	/* 描画可能枠再設定 */
-//	G_CLR_AREA(x, WIDTH, y, 16, 0);		/* Screen0 消去 */
+
 	Draw_Fill( x, y, x + WIDTH, y + 16, 0x01);	/* Screen0 指定パレットで塗りつぶし */
 	
 	/* メッセージエリア 描画 */

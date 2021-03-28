@@ -28,7 +28,7 @@ clean:
 execonly:
 	$(RM) *.ind *.bak *.s *.o \
 
-OverKata.x:	OverKata.o APL_MACS.o APL_Math.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
+OverKata.x:	OverKata.o APL_MACS.o APL_Math.o CRTC.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
 			FileManager.o Graphic.o Input.o MFP.o Moon.o Music.o MyCar.o OutPut_Text.o \
 			PCG.o Raster.o Task.o Text.o Trap14.o
 	$(LD) $^ -o $@ -l $(LIBS)
@@ -42,6 +42,8 @@ APL_MACS.o:	APL_MACS.c
 APL_Math.o:	APL_Math.c
 	$(CC) $(CFLAGS) -c $<
 Course_Obj.o:	Course_Obj.c
+	$(CC) $(CFLAGS) -c $<
+CRTC.o:	CRTC.c
 	$(CC) $(CFLAGS) -c $<
 EnemyCAR.o:	EnemyCAR.c
 	$(CC) $(CFLAGS) -c $<
@@ -73,9 +75,13 @@ Text.o:	Text.c
 	$(CC) $(CFLAGS) -c $<
 Trap14.o:	Trap14.c
 	$(CC) $(CFLAGS) -c $<
-OverKata.o:	inc/usr_define.h
+Course_Obj.o:	inc/usr_define.h
+EnemyCAR.o:	inc/usr_define.h
 Graphic.o:	inc/usr_define.h
 MFP.o:		inc/usr_define.h
+MyCar.o:	inc/usr_define.h
+Raster.o:	inc/usr_define.h
+OverKata.o:	inc/usr_define.h
 
 Moon.o:	Moon.s
 

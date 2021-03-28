@@ -10,7 +10,8 @@
 typedef struct
 {
 	US	st;			/* 開始位置 */
-	US	mid;		/* 中間位置 */
+	US	mid_H;		/* 中間位置(H) */
+	US	mid;		/* 中間位置(L) */
 	US	ed;			/* 終了位置 */
 	US	size;		/* 開始と終了の差分 */
 }	ST_RAS_INFO;
@@ -27,7 +28,7 @@ typedef struct
 typedef struct
 {
 	SS	Horizon;		/* 水平位置 */
-	SS	Horizon_tmp;	/* 仮水平位置 */
+	SS	Horizon_Base;	/* 水平基準位置 */
 	SS	offset_x;		/*  */
 	SS	offset_y;		/*  */
 	SS	offset_val;		/*  */

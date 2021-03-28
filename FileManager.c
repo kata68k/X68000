@@ -24,10 +24,10 @@ SS File_Load(SC *, void *, size_t, size_t);
 SS File_Load_CSV(SC *, US *, US *, US *);
 SS PCG_SP_dataload(SC *);
 SS PCG_PAL_dataload(SC *);
-SS Load_Music_List(SC *, SC (*)[256], UI *);
-SS Load_SE_List(SC *, SC (*)[256], UI *);
-SS Load_CG_List(SC *, CG_LIST *, UI *);
-SS Load_MACS_List(SC *, SC (*)[256], UI *);
+SS Load_Music_List(	SC *, SC *, SC (*)[256], UI *);
+SS Load_SE_List(	SC *, SC *, SC (*)[256], UI *);
+SS Load_CG_List(	SC *, SC *, CG_LIST *, UI *);
+SS Load_MACS_List(	SC *, SC *, SC (*)[256], UI *);
 SS GetFileLength(SC *, SI *);
 SS GetFilePICinfo(SC *, BITMAPINFOHEADER *);
 SS GetRectangleSise(US *, US, US, US);
@@ -331,14 +331,14 @@ SS PCG_PAL_dataload(SC *fname)
 		/* スプライトパレットに転送 */
 		for( i = 0 ; i < 256 ; i++ )
 		{
-			SPALET( (i&15) | (1<<0x1F) , i/16+1 , pal_dat[i] ) ;
+			SPALET( (i&15) | (1<<0x1F) , Mdiv16(i)+1 , pal_dat[i] ) ;
 		}
 	}
 	
 	return ret;
 }
 
-SS Load_Music_List(SC *fname, SC (*music_list)[256], UI *list_max)
+SS Load_Music_List(SC *fpath, SC *fname, SC (*music_list)[256], UI *list_max)
 {
 	FILE *fp;
 	SS ret = 0;
@@ -346,7 +346,8 @@ SS Load_Music_List(SC *fname, SC (*music_list)[256], UI *list_max)
 	SC z_name[256];
 	UI i=0, num=0;
 	
-	fp = fopen(fname, "r");
+	sprintf(z_name, "%s%s", fpath, fname);
+	fp = fopen(z_name, "r");
 	if(fp == NULL)
 	{
 		ret = -1;
@@ -361,7 +362,7 @@ SS Load_Music_List(SC *fname, SC (*music_list)[256], UI *list_max)
 			sscanf(p,"%d = %s", &num, z_name);
 			if(i == num)
 			{
-				sprintf(music_list[i], "data\\music\\%s", z_name);
+				sprintf(music_list[i], "%s%s", fpath, z_name);
 			}
 			i++;
 		}
@@ -372,7 +373,7 @@ SS Load_Music_List(SC *fname, SC (*music_list)[256], UI *list_max)
 	return ret;
 }
 
-SS Load_SE_List(SC *fname, SC (*music_list)[256], UI *list_max)
+SS Load_SE_List(SC *fpath, SC *fname, SC (*music_list)[256], UI *list_max)
 {
 	FILE *fp;
 	SS ret = 0;
@@ -380,7 +381,8 @@ SS Load_SE_List(SC *fname, SC (*music_list)[256], UI *list_max)
 	SC z_name[256];
 	UI i=0, num=0;
 	
-	fp = fopen(fname, "r");
+	sprintf(z_name, "%s%s", fpath, fname);
+	fp = fopen(z_name, "r");
 	if(fp == NULL)
 	{
 		ret = -1;
@@ -395,7 +397,7 @@ SS Load_SE_List(SC *fname, SC (*music_list)[256], UI *list_max)
 			sscanf(p,"%d = %s", &num, z_name);
 			if(i == num)
 			{
-				sprintf(music_list[i], "data\\se\\%s", z_name);
+				sprintf(music_list[i], "%s%s", fpath, z_name);
 			}
 			i++;
 		}
@@ -406,7 +408,7 @@ SS Load_SE_List(SC *fname, SC (*music_list)[256], UI *list_max)
 	return ret;
 }
 
-SS Load_CG_List(SC *fname, CG_LIST *cg_list, UI *list_max)
+SS Load_CG_List(SC *fpath, SC *fname, CG_LIST *cg_list, UI *list_max)
 {
 	FILE *fp;
 	SS ret = 0;
@@ -414,7 +416,8 @@ SS Load_CG_List(SC *fname, CG_LIST *cg_list, UI *list_max)
 	SC z_name[256];
 	UI i=0, num=0, bType = 0, bTransPal = 0;
 	
-	fp = fopen(fname, "r");
+	sprintf(z_name, "%s%s", fpath, fname);
+	fp = fopen(z_name, "r");
 	if(fp == NULL)
 	{
 		ret = -1;
@@ -433,7 +436,7 @@ SS Load_CG_List(SC *fname, CG_LIST *cg_list, UI *list_max)
 #endif
 			if(i == num)
 			{
-				sprintf( cg_list->bFileName, "data\\cg\\%s", z_name );
+				sprintf( cg_list->bFileName, "%s%s", fpath, z_name );
 				cg_list->ubType = bType;
 				cg_list->ubTransPal = bTransPal;
 			}
@@ -447,7 +450,7 @@ SS Load_CG_List(SC *fname, CG_LIST *cg_list, UI *list_max)
 	return ret;
 }
 
-SS Load_MACS_List(SC *fname, SC (*macs_list)[256], UI *list_max)
+SS Load_MACS_List(SC *fpath, SC *fname, SC (*macs_list)[256], UI *list_max)
 {
 	FILE *fp;
 	SS ret = 0;
@@ -455,7 +458,8 @@ SS Load_MACS_List(SC *fname, SC (*macs_list)[256], UI *list_max)
 	SC z_name[256];
 	UI i=0, num=0;
 	
-	fp = fopen(fname, "r");
+	sprintf(z_name, "%s%s", fpath, fname);
+	fp = fopen(z_name, "r");
 	if(fp == NULL)
 	{
 		ret = -1;
@@ -470,7 +474,7 @@ SS Load_MACS_List(SC *fname, SC (*macs_list)[256], UI *list_max)
 			sscanf(p,"%d = %s", &num, z_name);
 			if(i == num)
 			{
-				sprintf(macs_list[i], "data\\mov\\%s", z_name);
+				sprintf(macs_list[i], "%s%s", fpath, z_name);
 			}
 			i++;
 		}
