@@ -248,6 +248,7 @@ SS	MyCarInfo_Update(SS input)
 			if( (time - unExplosion_time) >  (150 - Mdiv64(rpm)) )	/* ‰ñ“]”‚ÌƒGƒ“ƒWƒ“‰¹(60000 / rpm) */
 			{
 				unExplosion_time = time;
+//				SE_Play_Fast(6);	/* FMŒø‰Ê‰¹Ä¶(‚‘¬) */
 //				SE_Play(6);		/* FMŒø‰Ê‰¹Ä¶ */
 			}
 			else

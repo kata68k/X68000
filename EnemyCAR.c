@@ -91,9 +91,9 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 		if(g_pStEnemyCar[bNum]->ubAlive == TRUE)
 		{
 			SS	x, y, z;
-			SS	cal;
+			SS	cal, dis;
 			SS	dx, dy, dz;
-			SS	mx, my, dist;
+			SS	mx, my;
 			US	ras_x, ras_y, ras_pat, ras_num;
 			SS	Out_Of_Disp = 0;
 			ST_CARDATA	stMyCar;
@@ -117,8 +117,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			GetRasterInfo(&stRasInfo);
 			GetRoadInfo(&stRoadInfo);
 
-			dist = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
-
+#if 0
 			cal = Mdiv256(dist * y);	/* 奥行の比率で移動量が変わる */
 			if(cal == 0)
 			{
@@ -140,27 +139,32 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 			{
 				dist = cal;
 			}
-			
+#endif
 			/* ライバル車との距離 */
-			if(dist >= 0)
+			dis = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
+			if(y <= 0)
 			{
-				y += Mmax(dist, 1);
+				y = stRasInfo.st + RASTER_NEXT;
+			}
+			cal = Mdiv256(Mabs(dis) * y);	/* 奥行の比率で移動量が変わる */
+			
+			if(dis >= 0)
+			{
+				y += cal;
 			}
 			else
 			{
-				dist = Mabs(dist);
-				y -= dist;
-				y = Mmax( y, stRasInfo.st );
-				if(y == stRasInfo.st)	/* 先を越された */
+				y -= cal;
+				
+				if(y <= (stRasInfo.st + RASTER_NEXT))
 				{
-					Out_Of_Disp = -1;
+					Out_Of_Disp = -1;	/* 先を越された */
 				}
 			}
-
-			ras_num = Mmax( Mmin( y, stRasInfo.ed ), stRasInfo.st + RASTER_NEXT);	/* ラスター情報の配列番号を算出 */
 			/* 位置 */
-			y = Mmax(y, ras_num);
-			my = Mmax(y - 32, 0);
+			my = Mmax(y - (stRasInfo.st + RASTER_NEXT), 0);
+
+			ras_num = Mmin( y, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
 
 			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
 			
@@ -186,12 +190,13 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 				mx += Mdiv128(cal);
 			}
 
-			if( (y > 0) && (ret >= 0) && (y < Y_MAX_WINDOW) && (Out_Of_Disp == 0))
+			if( (my > 0) && (ret >= 0) && (y < Y_MAX_WINDOW) && (Out_Of_Disp == 0))
 			{
 				dx = mx;
 				dy = y;
+				cal = y - RASTER_MIN;
 				/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を256倍して16で割った pat 0-10 */
-				z = Mmin( Mmax( 10 - ( Mdiv10( Mmul256(my) / (my + ROAD_ED_POINT) ) ) , 0), 10 );
+				z = Mmin( Mmax( 10 - ( Mdiv10( Mmul256(cal) / (cal + ROAD_ED_POINT) ) ) , 0), 10 );
 				dz = z;
 				
 				/* 当たり判定の設定 */
@@ -272,7 +277,7 @@ SS	SetAlive_EnemyCAR(void)
 			rand &= 0x0Fu;
 			
 			g_pStEnemyCar[i]->ubCarType = 0;
-			g_pStEnemyCar[i]->VehicleSpeed = Mmax(Mmin(stMyCar.VehicleSpeed, 110), 80);
+			g_pStEnemyCar[i]->VehicleSpeed = Mmax(Mmin(stMyCar.VehicleSpeed, 110), 60);
 			g_pStEnemyCar[i]->x = rand;
 			g_pStEnemyCar[i]->y = 0;
 			g_pStEnemyCar[i]->z = 4;

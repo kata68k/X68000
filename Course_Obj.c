@@ -90,6 +90,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 	{
 		SS	x, y, z;
 		SS	dx, dy, dz;
+		SS	st, cal;
 		SS	mx, my;
 		US	ras_x, ras_y, ras_pat, ras_num;
 		UC	bEven;
@@ -132,9 +133,21 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		{
 			y += (uCount - uTime);	/* 変化量 */
 		}
+		my = Mmin(Mdiv16(y*y), Y_MAX_WINDOW);
 		
-		ras_num = Mmax(Mmin((y*y)>>4, stRasInfo.ed), RASTER_NEXT);	/* ラスター情報の配列番号を算出 */
-		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, stRasInfo.st + ras_num);	/* 配列番号のラスター情報取得 */
+		ras_num = Mmin((stRasInfo.st + RASTER_NEXT + my), stRasInfo.ed);	/* ラスター情報の配列番号を算出 */
+		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
+
+		if(stRasInfo.st < stRasInfo.mid)
+		{
+			st = 0;
+		}
+		else
+		{
+			st = stRasInfo.st - stRasInfo.mid;
+		}
+
+		x = Mmul2(ras_num - (stRasInfo.st + RASTER_NEXT));	/* 96に対して200なのでおよそ2倍 */
 		
 		/* センター */
 		if( ras_x < 256 )	/* 左カーブ */
@@ -145,40 +158,37 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		{
 			mx = ROAD_CT_POINT + (512 - ras_x);
 		}
-		
-		/* 位置 */
-		if( stRasInfo.st > stRasInfo.mid )
-		{
-			my = ras_num + ((stRasInfo.st - stRasInfo.mid) << 1);
-		}
-		else
-		{
-			my = ras_num;
-		}
-		
-		x = Mmul2(my);	/* 96に対して200なのでおよそ２倍 */
+		cal = x + 16 + Mmul2(st);	/* 16は道の最小幅 */
 		
 		/* 差分 */
 		if(bEven == TRUE)	/* 左 */
 		{
-			dx = mx - x - 16;	/* 16は道の最小幅 */
+			dx = mx - cal;
 		}
 		else				/* 右 */
 		{
-			dx = mx + x + 16;	/* 16は道の最小幅 */
+			dx = mx + cal;
+		}
+		if(dx > 256)
+		{
+			dx = 0x7FFF;
+		}
+		if(dx < 0)
+		{
+			dx = 0x7FFF;
 		}
 		
 		z = x;
 		
-		if( (my > 0) && (ret >= 0) && (dx < 256))
+		if( (my > 0) && (my < Y_MAX_WINDOW) && (ret >= 0) && (dx < 256))
 		{
 			
 			/* 水平線 */
 			dy = stRasInfo.st;
 			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
 			//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
-			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して32で割った(=7pat) */
-			dz = Mmin( Mmax( 7 - (((z<<8) / (z + ROAD_ED_POINT))>>4) , 0), 7 );
+			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して16で割った(=7pat) */
+			dz = Mmin( Mmax( 7 - (Mdiv16(Mmul256(z) / (z + ROAD_ED_POINT))) , 0), 7 );
 			/* 描画 */
 			Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
 											stCRT.hide_offset_y + dy,
@@ -206,7 +216,7 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 		}
 		else
 		{
-			if(dx >= 448)	/* 512から64引いた値（64より小さいと消えにくい） */
+			if(my >= Y_MAX_WINDOW)	/* 512から64引いた値（64より小さいと消えにくい） */
 			{
 				x = 0;
 				y = 0;
