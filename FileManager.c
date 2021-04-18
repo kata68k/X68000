@@ -16,33 +16,33 @@
 #include "Graphic.h"
 
 /* ＰＣＧデータ */
-static UC	*pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
-static US	pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ */
+static uint8_t	*pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
+static uint16_t	pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ */
 
 /* 関数のプロトタイプ宣言 */
-SS File_Load(SC *, void *, size_t, size_t);
-SS File_Load_CSV(SC *, US *, US *, US *);
-SS PCG_SP_dataload(SC *);
-SS PCG_PAL_dataload(SC *);
-SS Load_Music_List(	SC *, SC *, SC (*)[256], UI *);
-SS Load_SE_List(	SC *, SC *, SC (*)[256], UI *);
-SS Load_CG_List(	SC *, SC *, CG_LIST *, UI *);
-SS Load_MACS_List(	SC *, SC *, SC (*)[256], UI *);
-SS GetFileLength(SC *, SI *);
-SS GetFilePICinfo(SC *, BITMAPINFOHEADER *);
-SS GetRectangleSise(US *, US, US, US);
-void *MyMalloc(SI);
-SS MyMfree(void *);
+int16_t File_Load(int8_t *, void *, size_t, size_t);
+int16_t File_Load_CSV(int8_t *, uint16_t *, uint16_t *, uint16_t *);
+int16_t PCG_SP_dataload(int8_t *);
+int16_t PCG_PAL_dataload(int8_t *);
+int16_t Load_Music_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
+int16_t Load_SE_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
+int16_t Load_CG_List(	int8_t *, int8_t *, CG_LIST *, uint32_t *);
+int16_t Load_MACS_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
+int16_t GetFileLength(int8_t *, int32_t *);
+int16_t GetFilePICinfo(int8_t *, BITMAPINFOHEADER *);
+int16_t GetRectangleSise(uint16_t *, uint16_t, uint16_t, uint16_t);
+void *MyMalloc(int32_t);
+int16_t MyMfree(void *);
 
 /* ファイル読み込み */
 /* *fname	ファイル名 */
 /* *ptr		格納先の先頭アドレス */
 /* size		データのサイズ */
 /* n		データの個数 */
-SS File_Load(SC *fname, void *ptr, size_t size, size_t n)
+int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 {
 	FILE *fp;
-	SS ret = 0;
+	int16_t ret = 0;
 
 	/* ファイルを開ける */
 	fp = fopen(fname, "rb");
@@ -76,11 +76,11 @@ SS File_Load(SC *fname, void *ptr, size_t size, size_t n)
 /* *ptr		格納先の先頭アドレス */
 /* *Col		データの行数のアドレス */
 /* *Row		データの列数のアドレス */
-SS File_Load_CSV(SC *fname, US *ptr, US *Col, US *Row)
+int16_t File_Load_CSV(int8_t *fname, uint16_t *ptr, uint16_t *Col, uint16_t *Row)
 {
 	FILE *fp;
-	SS ret = 0;
-	US x, y, flag, cnv_flag;
+	int16_t ret = 0;
+	uint16_t x, y, flag, cnv_flag;
 	char buf[1000], *p, *end;
 	
 	x = 0;
@@ -100,7 +100,7 @@ SS File_Load_CSV(SC *fname, US *ptr, US *Col, US *Row)
 	        p = buf;
 			do
 			{
-				SL num = strtol(p, &end, 0);
+				int64_t num = strtol(p, &end, 0);
 
 //				printf("(%d,%d)=%d ->%s", x, y, num, end);
 
@@ -117,7 +117,7 @@ SS File_Load_CSV(SC *fname, US *ptr, US *Col, US *Row)
 				else if(p != end)
 				{
 					/* 変換できた */
-					*ptr = (US)num;
+					*ptr = (uint16_t)num;
 					ptr++;
 
 					p = end + 1;
@@ -152,11 +152,11 @@ SS File_Load_CSV(SC *fname, US *ptr, US *Col, US *Row)
 /* *st_ptr	格納先の先頭アドレス */
 /* *Col		データの行数のアドレス */
 /* *Row		データの列数のアドレス */
-SS File_Load_Course_CSV(SC *fname, ST_ROADDATA *st_ptr, US *Col, US *Row)
+int16_t File_Load_Course_CSV(int8_t *fname, ST_ROADDATA *st_ptr, uint16_t *Col, uint16_t *Row)
 {
 	FILE *fp;
-	SS ret = 0;
-	US x, y, flag, cnv_flag;
+	int16_t ret = 0;
+	uint16_t x, y, flag, cnv_flag;
 	char buf[1000], *p, *end;
 	
 	x = 0;
@@ -176,7 +176,7 @@ SS File_Load_Course_CSV(SC *fname, ST_ROADDATA *st_ptr, US *Col, US *Row)
 	        p = buf;
 			do
 			{
-				SL num = strtol(p, &end, 0);
+				int64_t num = strtol(p, &end, 0);
 
 //				printf("(%d,%d)=%d ->%s\n", x, y, num, end);
 
@@ -198,37 +198,37 @@ SS File_Load_Course_CSV(SC *fname, ST_ROADDATA *st_ptr, US *Col, US *Row)
 					{
 						case 0:
 						{
-							st_ptr->bHeight = (UC)num;
+							st_ptr->bHeight = (uint8_t)num;
 							break;
 						}
 						case 1:
 						{
-							st_ptr->bWidth = (UC)num;
+							st_ptr->bWidth = (uint8_t)num;
 							break;
 						}
 						case 2:
 						{
-							st_ptr->bAngle = (UC)num;
+							st_ptr->bAngle = (uint8_t)num;
 							break;
 						}
 						case 3:
 						{
-							st_ptr->bfriction = (UC)num;
+							st_ptr->bfriction = (uint8_t)num;
 							break;
 						}
 						case 4:
 						{
-							st_ptr->bPat = (UC)num;
+							st_ptr->bPat = (uint8_t)num;
 							break;
 						}
 						case 5:
 						{
-							st_ptr->bObject = (UC)num;
+							st_ptr->bObject = (uint8_t)num;
 							break;
 						}
 						case 6:
 						{
-							st_ptr->bRepeatCount = (UC)num;
+							st_ptr->bRepeatCount = (uint8_t)num;
 							break;
 						}
 						default:
@@ -264,9 +264,9 @@ SS File_Load_Course_CSV(SC *fname, ST_ROADDATA *st_ptr, US *Col, US *Row)
 	return ret;
 }
 
-SS PCG_SP_dataload(SC *fname)
+int16_t PCG_SP_dataload(int8_t *fname)
 {
-	SS ret = 0;
+	int16_t ret = 0;
 
 	FILE *fp;
 
@@ -279,14 +279,14 @@ SS PCG_SP_dataload(SC *fname)
 	}
 	else
 	{
-		SI	pcg_size;
+		int32_t	pcg_size;
 		pcg_size = filelength( fileno( fp ) );
 		
 		pcg_dat = NULL;
-		pcg_dat = (UC*)MyMalloc( pcg_size );
+		pcg_dat = (uint8_t*)MyMalloc( pcg_size );
 		if(pcg_dat != NULL)
 		{
-			UI i,j;
+			uint32_t i,j;
 			
 			j = fread( pcg_dat
 				,  128		/* 1PCG = 128byte */
@@ -305,12 +305,12 @@ SS PCG_SP_dataload(SC *fname)
 	return ret;
 }
 
-SS PCG_PAL_dataload(SC *fname)
+int16_t PCG_PAL_dataload(int8_t *fname)
 {
-	SS ret = 0;
+	int16_t ret = 0;
 
 	FILE *fp;
-	UI i;
+	uint32_t i;
 
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
 
@@ -338,13 +338,13 @@ SS PCG_PAL_dataload(SC *fname)
 	return ret;
 }
 
-SS Load_Music_List(SC *fpath, SC *fname, SC (*music_list)[256], UI *list_max)
+int16_t Load_Music_List(int8_t *fpath, int8_t *fname, int8_t (*music_list)[256], uint32_t *list_max)
 {
 	FILE *fp;
-	SS ret = 0;
-	SC buf[1000], *p;
-	SC z_name[256];
-	UI i=0, num=0;
+	int16_t ret = 0;
+	int8_t buf[1000], *p;
+	int8_t z_name[256];
+	uint32_t i=0, num=0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -373,13 +373,13 @@ SS Load_Music_List(SC *fpath, SC *fname, SC (*music_list)[256], UI *list_max)
 	return ret;
 }
 
-SS Load_SE_List(SC *fpath, SC *fname, SC (*music_list)[256], UI *list_max)
+int16_t Load_SE_List(int8_t *fpath, int8_t *fname, int8_t (*music_list)[256], uint32_t *list_max)
 {
 	FILE *fp;
-	SS ret = 0;
-	SC buf[1000], *p;
-	SC z_name[256];
-	UI i=0, num=0;
+	int16_t ret = 0;
+	int8_t buf[1000], *p;
+	int8_t z_name[256];
+	uint32_t i=0, num=0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -408,13 +408,13 @@ SS Load_SE_List(SC *fpath, SC *fname, SC (*music_list)[256], UI *list_max)
 	return ret;
 }
 
-SS Load_CG_List(SC *fpath, SC *fname, CG_LIST *cg_list, UI *list_max)
+int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *list_max)
 {
 	FILE *fp;
-	SS ret = 0;
-	SC buf[1000], *p;
-	SC z_name[256];
-	UI i=0, num=0, bType = 0, bTransPal = 0;
+	int16_t ret = 0;
+	int8_t buf[1000], *p;
+	int8_t z_name[256];
+	uint32_t i=0, num=0, bType = 0, bTransPal = 0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -450,13 +450,13 @@ SS Load_CG_List(SC *fpath, SC *fname, CG_LIST *cg_list, UI *list_max)
 	return ret;
 }
 
-SS Load_MACS_List(SC *fpath, SC *fname, SC (*macs_list)[256], UI *list_max)
+int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, int8_t (*macs_list)[256], uint32_t *list_max)
 {
 	FILE *fp;
-	SS ret = 0;
-	SC buf[1000], *p;
-	SC z_name[256];
-	UI i=0, num=0;
+	int16_t ret = 0;
+	int8_t buf[1000], *p;
+	int8_t z_name[256];
+	uint32_t i=0, num=0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -485,11 +485,11 @@ SS Load_MACS_List(SC *fpath, SC *fname, SC (*macs_list)[256], UI *list_max)
 	return ret;
 }
 
-SS	GetFileLength(SC *pFname, SI *pSize)
+int16_t	GetFileLength(int8_t *pFname, int32_t *pSize)
 {
 	FILE *fp;
-	SS ret = 0;
-	SI	Tmp;
+	int16_t ret = 0;
+	int32_t	Tmp;
 
 	fp = fopen( pFname , "rb" ) ;
 	if(fp == NULL)		/* Error */
@@ -525,15 +525,15 @@ SS	GetFileLength(SC *pFname, SI *pSize)
 	return ret;
 }
 
-SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
+int16_t	GetFilePICinfo(int8_t *pFname, BITMAPINFOHEADER *info)
 {
 	FILE *fp;
-	SS ret = 0;
-	UC	bFlag = FALSE;
-	UC	*pBuf;
-	UC	sBuf[128] = {0};
-	US	uWord;
-	UI	i;
+	int16_t ret = 0;
+	uint8_t	bFlag = FALSE;
+	uint8_t	*pBuf;
+	uint8_t	sBuf[128] = {0};
+	uint16_t	uWord;
+	uint32_t	i;
 
 	fp = fopen( pFname , "rb" ) ;
 	if(fp == NULL)
@@ -542,11 +542,11 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 	}
 	else
 	{
-		memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+		memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 		pBuf = &sBuf[0];	/* 先頭アドレス */
 
 		/* PIC */
-		fread( pBuf, sizeof(UC), 3, fp );
+		fread( pBuf, sizeof(uint8_t), 3, fp );
 		if(strncmp( pBuf, "PIC", 3 ) == 0)
 		{
 			/* 一致 */
@@ -559,32 +559,32 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 			printf("error:PICファイルではありません = %s\n", pBuf );
 		}
 		
-		memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+		memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 		pBuf = &sBuf[0];	/* 先頭アドレス */
 
 		/* 拡張ヘッダか？ */
-		fread( pBuf, sizeof(UC), 3, fp );
+		fread( pBuf, sizeof(uint8_t), 3, fp );
 		if(strncmp( pBuf, "/MM", 3 ) == 0)
 		{
 			/* 一致 */
 //			printf("拡張ファイルです\n", pBuf );
 
-			memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+			memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 			pBuf = &sBuf[0];	/* 先頭アドレス */
 
 			for(i=0; i < 128; i++)
 			{
 				/* 拡張ヘッダ判定 */
-				fread( pBuf, sizeof(UC), 1, fp );
+				fread( pBuf, sizeof(uint8_t), 1, fp );
 				if(strncmp( pBuf, "/", 1 ) == 0)
 				{
 					*pBuf = 0x00;
 //					printf("%s\n", &sBuf[0]);
 					
-					memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+					memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 					pBuf = &sBuf[0];	/* 先頭アドレス */
 
-					fread( pBuf, sizeof(UC), 1, fp );
+					fread( pBuf, sizeof(uint8_t), 1, fp );
 					/* 拡張ヘッダ終了判定 */
 					if(strncmp( &sBuf[0], ":", 1 ) == 0)
 					{
@@ -595,19 +595,19 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 						pBuf++;
 					}
 					
-					fread( pBuf, sizeof(UC), 1, fp );
+					fread( pBuf, sizeof(uint8_t), 1, fp );
 					/* 画像データの作者判定 */
 					if(strncmp( &sBuf[0], "AU", 2 ) == 0)
 					{
 //						printf("画像データの作者:");
-						memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+						memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 						pBuf = &sBuf[0];	/* 先頭アドレス */
 					}
 					/* 画像のロード座標 */
 					else if(strncmp( &sBuf[0], "XY", 2 ) == 0)
 					{
 //						printf("XY:");
-						memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+						memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 						pBuf = &sBuf[0];	/* 先頭アドレス */
 					}
 					else
@@ -621,13 +621,13 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 				}
 			}
 			
-			memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+			memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 			pBuf = &sBuf[0];	/* 先頭アドレス */
 
 			/* コメント終了まで読み込む */
 			for(i=0; i < 128; i++)
 			{
-				fread( pBuf, sizeof(UC), 1, fp);
+				fread( pBuf, sizeof(uint8_t), 1, fp);
 				if(*pBuf == 0x1Au)
 				{
 					if(i != 0u)
@@ -648,7 +648,7 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 
 			for(i=0; i < 128; i++)
 			{
-				fread( pBuf, sizeof(UC), 1, fp);
+				fread( pBuf, sizeof(uint8_t), 1, fp);
 				if(*pBuf == 0x1Au)
 				{
 //					printf("コメント(%d)：%s\n", i, sBuf[0] );
@@ -664,12 +664,12 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 		{
 			bFlag = FALSE;
 
-			memset(sBuf, 0, sizeof(UC) * 128);	/* バッファクリア */
+			memset(sBuf, 0, sizeof(uint8_t) * 128);	/* バッファクリア */
 			pBuf = &sBuf[0];	/* 先頭アドレス */
 			
 			while(1)
 			{
-				fread( pBuf, sizeof(UC), 1, fp);
+				fread( pBuf, sizeof(uint8_t), 1, fp);
 				if(*pBuf == 0x00u)
 				{
 					bFlag = TRUE;
@@ -683,7 +683,7 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 		if(bFlag == TRUE)
 		{
 			bFlag = FALSE;
-			fread( pBuf, sizeof(UC), 1, fp);
+			fread( pBuf, sizeof(uint8_t), 1, fp);
 			if(*pBuf == 0x00u)
 			{
 				bFlag = TRUE;
@@ -694,7 +694,7 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 		if(bFlag == TRUE)
 		{
 			bFlag = FALSE;
-			fread( pBuf, sizeof(UC), 1, fp);
+			fread( pBuf, sizeof(uint8_t), 1, fp);
 			if(*pBuf == 0x00u)
 			{
 //				printf("Type/Mode：%d\n", *pBuf );
@@ -705,18 +705,18 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 		if(bFlag == TRUE)
 		{
 			/* 色のビット数 */
-			fread( &uWord, sizeof(US), 1, fp);
+			fread( &uWord, sizeof(uint16_t), 1, fp);
 			info->biBitCount = uWord;
 //			printf("color bit：%d\n", uWord );
 
 			/* Ｘ方向のサイズ */
-			fread( &uWord, sizeof(US), 1, fp);
-			info->biWidth	= (SL)uWord;
+			fread( &uWord, sizeof(uint16_t), 1, fp);
+			info->biWidth	= (int64_t)uWord;
 //			printf("X,Y：(%4d,", uWord );
 
 			/* Ｙ方向のサイズ */
-			fread( &uWord, sizeof(US), 1, fp);
-			info->biHeight	= (SL)uWord;
+			fread( &uWord, sizeof(uint16_t), 1, fp);
+			info->biHeight	= (int64_t)uWord;
 //			printf("%4d)\n", uWord );
 		}
 
@@ -726,16 +726,16 @@ SS	GetFilePICinfo(SC *pFname, BITMAPINFOHEADER *info)
 	return ret;
 }
 
-SS	GetRectangleSise(US *uSize, US uWidth, US uHeight, US uMaxSize)
+int16_t	GetRectangleSise(uint16_t *uSize, uint16_t uWidth, uint16_t uHeight, uint16_t uMaxSize)
 {
-	SS ret = 0;
+	int16_t ret = 0;
 	
 	*uSize = Mmax( ((((uWidth+ 7u) & 0xFFF8u) * uHeight) << uMaxSize),  (512u << uMaxSize) );
 	
 	return ret;
 }
 
-void *MyMalloc(SI Size)
+void *MyMalloc(int32_t Size)
 {
 	void *pPtr = NULL;
 	
@@ -752,15 +752,15 @@ void *MyMalloc(SI Size)
 		{
 			puts("メモリが確保できませんでした");
 		}
-		else if((UI)pPtr >= 0x81000000)
+		else if((uint32_t)pPtr >= 0x81000000)
 		{
-			if((UI)pPtr >= 0x82000000)
+			if((uint32_t)pPtr >= 0x82000000)
 			{
 				puts("メモリ不足です");
 			}
 			else
 			{
-				printf("メモリが確保できませんでした(%d)\n", (UI)pPtr - 0x81000000 );
+				printf("メモリが確保できませんでした(%d)\n", (uint32_t)pPtr - 0x81000000 );
 			}
 			pPtr = NULL;
 		}
@@ -773,10 +773,10 @@ void *MyMalloc(SI Size)
 	return pPtr;
 }
 
-SS	MyMfree(void *pPtr)
+int16_t	MyMfree(void *pPtr)
 {
-	SS ret = 0;
-	UI	result;
+	int16_t ret = 0;
+	uint32_t	result;
 	
 	if(pPtr == 0)
 	{

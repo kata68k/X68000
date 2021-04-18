@@ -81,29 +81,6 @@
 
 /* 構造体 */
 
-/* コースの構造体 */
-typedef struct
-{
-	UC	bHeight;	/* 道の標高	(0x80センター) */
-	UC	bWidth;		/* 道の幅	(0x80センター) */
-	UC	bAngle;		/* 道の角度	(0x80センター) */
-	UC	bfriction;	/* 道の摩擦	(0x80センター) */
-	UC	bPat;		/* 道の種類	 */
-	UC	bObject;	/* 出現ポイントのオブジェクトの種類 */
-	UC	bRepeatCount;	/* 繰り返し回数 */
-}	ST_ROADDATA;
-
-/* 画面情報の構造体 */
-typedef struct
-{
-	SS	view_offset_x;		/* 表示画面のX座標オフセット */
-	SS	view_offset_y;		/* 表示画面のY座標オフセット */
-	SS	hide_offset_x;		/* 非表示画面のX座標オフセット */
-	SS	hide_offset_y;		/* 非表示画面のY座標オフセット */
-	SS	BG_offset_x;		/* BG画面のX座標オフセット */
-	SS	BG_offset_y;		/* BG画面のY座標オフセット */
-}	ST_CRT;
-
 /* データテーブル */
 
 extern void (*usr_abort)(void);	/* ユーザのアボート処理関数 */

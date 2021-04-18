@@ -11,7 +11,8 @@
 enum{
 	OBD_NORMAL,
 	OBD_DAMAGE,
-	OBD_SPIN,
+	OBD_SPIN_L,
+	OBD_SPIN_R,
 	OBD_COURSEOUT,
 	OBD_MAX
 };
@@ -21,29 +22,29 @@ enum{
 /* 車の構造体 */
 typedef struct
 {
-	UC	ubCarType;			/* 車の種類 */
-	US	uEngineRPM;			/* エンジン回転数 */
-	SS	VehicleSpeed;		/* 車速 */
-	SS	Steering;			/* ステア */
-	UC	ubShiftPos;			/* ギア段 */
-	UC	ubThrottle;			/* スロットル開度 */
-	UC	ubBrakeLights;		/* ブレーキライト */
-	UC	ubHeadLights;		/* ヘッドライト */
-	UC	ubWiper;			/* ワイパー */
-	SC	bTire;				/* タイヤの状態 */
-	UC	ubOBD;				/* 故障の状態 */
+	uint8_t	ubCarType;			/* 車の種類 */
+	uint16_t	uEngineRPM;			/* エンジン回転数 */
+	int16_t	VehicleSpeed;		/* 車速 */
+	int16_t	Steering;			/* ステア */
+	uint8_t	ubShiftPos;			/* ギア段 */
+	uint8_t	ubThrottle;			/* スロットル開度 */
+	uint8_t	ubBrakeLights;		/* ブレーキライト */
+	uint8_t	ubHeadLights;		/* ヘッドライト */
+	uint8_t	ubWiper;			/* ワイパー */
+	int8_t	bTire;				/* タイヤの状態 */
+	uint8_t	ubOBD;				/* 車両の状態 */
 }	ST_CARDATA;
 
 /* extern宣言 */
 
-extern	SS	MyCar_G_Load(void);
-extern	SS	GetMyCar(ST_CARDATA *stDat);
-extern	SS	SetMyCar(ST_CARDATA stDat);
-extern	SS	MyCarInfo_Init(void);
-extern	SS	MyCarInfo_Update(SS);
-extern	SS	MyCar_Interior(UC);
-extern	SS	MyCar_CourseOut(void);
-extern	SS	GetMyCarSpeed(SS *);
+extern	int16_t	MyCar_G_Load(void);
+extern	int16_t	GetMyCar(ST_CARDATA *stDat);
+extern	int16_t	SetMyCar(ST_CARDATA stDat);
+extern	int16_t	MyCarInfo_Init(void);
+extern	int16_t	MyCarInfo_Update(int16_t);
+extern	int16_t	MyCar_Interior(uint8_t);
+extern	int16_t	MyCar_CourseOut(void);
+extern	int16_t	GetMyCarSpeed(int16_t *);
 
 /* メモ */
 

@@ -8,8 +8,9 @@ LD		= hlk
 LKFLAGS	=	-z-stack=131072
 
 INC		= 
-#LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
-LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMSC3LIB.L
+LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
+#LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMSC3LIB.L
+#LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/mcclib.a
 LZH		= OverKata001
 
 #vpath	%.c	./;

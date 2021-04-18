@@ -15,78 +15,78 @@
 #define	TAB_SIZE	(4)
 
 /* 関数のプロトタイプ宣言 */
-void Message_Num(void *, SS, SS, US, UC, UC *);
-SS BG_TextPut(SC *, SS, SS);
-SS BG_PutToText(SS, SS, SS, SS, UC);
-SS BG_TimeCounter(UI, US, US);
-SS BG_Number(UI, US, US);
-SS Text_To_Text(US, SS, SS, UC, UC *);
-SS PutTextInfo(ST_TEXTINFO);
-SS Put_Message_To_Graphic(UC *, UC);
+void Message_Num(void *, int16_t, int16_t, uint16_t, uint8_t, uint8_t *);
+int16_t BG_TextPut(int8_t *, int16_t, int16_t);
+int16_t BG_PutToText(int16_t, int16_t, int16_t, int16_t, uint8_t);
+int16_t BG_TimeCounter(uint32_t, uint16_t, uint16_t);
+int16_t BG_Number(uint32_t, uint16_t, uint16_t);
+int16_t Text_To_Text(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
+int16_t PutTextInfo(ST_TEXTINFO);
+int16_t Put_Message_To_Graphic(uint8_t *, uint8_t);
 
 /* 関数 */
 
-void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode, UC *sFormat)
+void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, uint8_t *sFormat)
 {
 	char str[64];
-	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
+	volatile uint16_t *CRTC_480 = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
 
 	memset(str, 0, sizeof(str));
 
 	switch(mode){
 	case MONI_Type_UL:
 		{
-			UL *num;
-			num = (UL *)pNum;
+			uint64_t *num;
+			num = (uint64_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SL:
 		{
-			SL *num;
-			num = (SL *)pNum;
+			int64_t *num;
+			num = (int64_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_UI:
 		{
-			UI *num;
-			num = (UI *)pNum;
+			uint32_t *num;
+			num = (uint32_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SI:
 		{
-			SI *num;
-			num = (SI *)pNum;
+			int32_t *num;
+			num = (int32_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_US:
 		{
-			US *num;
-			num = (US *)pNum;
+			uint16_t *num;
+			num = (uint16_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SS:
 		{
-			SS *num;
-			num = (SS *)pNum;
+			int16_t *num;
+			num = (int16_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_UC:
 		{
-			UC *num;
-			num = (UC *)pNum;
+			uint8_t *num;
+			num = (uint8_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
 	case MONI_Type_SC:
 		{
-			SC *num;
-			num = (SC *)pNum;
+			int8_t *num;
+			num = (int8_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
@@ -104,8 +104,8 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode, UC *sFormat)
 		break;
 	default:
 		{
-			US *num;
-			num = (US *)pNum;
+			uint16_t *num;
+			num = (uint16_t *)pNum;
 			sprintf(str, sFormat, *num);
 		}
 		break;
@@ -121,24 +121,24 @@ void Message_Num(void *pNum, SS x, SS y, US nCol, UC mode, UC *sFormat)
 	}
 }
 
-SS BG_TextPut(SC *sString, SS x, SS y)
+int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 {
-	US *BG_HEAD 		= (US *)0xEB8000;
-	US *BG_TEXT_HEAD = (US *)0xEB8800;
-//	US *BG_NUM_HEAD  = (US *)0xEB8600;
-	UC *T0_HEAD = (UC *)0xE00000;
-	UC *T1_HEAD = (UC *)0xE20000;
-	UC *T2_HEAD = (UC *)0xE40000;
-	UC *T3_HEAD = (UC *)0xE60000;
-	US	*pStPAT;
-	UC	*pDst0;
-	UC	*pDst1;
-	UC	*pDst2;
-	UC	*pDst3;
-	SS ret = 0;
+	uint16_t *BG_HEAD 		= (uint16_t *)0xEB8000;
+	uint16_t *BG_TEXT_HEAD = (uint16_t *)0xEB8800;
+//	uint16_t *BG_NUM_HEAD  = (uint16_t *)0xEB8600;
+	uint8_t *T0_HEAD = (uint8_t *)0xE00000;
+	uint8_t *T1_HEAD = (uint8_t *)0xE20000;
+	uint8_t *T2_HEAD = (uint8_t *)0xE40000;
+	uint8_t *T3_HEAD = (uint8_t *)0xE60000;
+	uint16_t	*pStPAT;
+	uint8_t	*pDst0;
+	uint8_t	*pDst1;
+	uint8_t	*pDst2;
+	uint8_t	*pDst3;
+	int16_t ret = 0;
 #if 1
 #else
-	US	BitMask[4][4] = { 
+	uint16_t	BitMask[4][4] = { 
 			0x1000, 0x2000, 0x4000, 0x8000,
 			0x0100, 0x0200, 0x0400, 0x0800,
 			0x0010, 0x0020, 0x0040, 0x0080,
@@ -200,7 +200,7 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 			case 0x59:	/* Y */
 			case 0x5A:	/* X */
 			{
-				UI i, j, k;
+				uint32_t i, j, k;
 				
 				if(*sString == 0x20)		/* SP(空白) */
 				{
@@ -213,8 +213,8 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 				}
 				else	/* アルファベット */
 				{
-					j = (UI)((SC)*sString - '@');
-					pStPAT = BG_TEXT_HEAD + (US)(0x10 * j);
+					j = (uint32_t)((int8_t)*sString - '@');
+					pStPAT = BG_TEXT_HEAD + (uint16_t)(0x10 * j);
 				}
 
 				k = (y * 0x80) + (x >> 3);
@@ -227,8 +227,8 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 				for(i=0; i < 8; i++)
 				{
 #if 1
-					US nTmp[4];
-					US nBuff[4];
+					uint16_t nTmp[4];
+					uint16_t nBuff[4];
 					
 					nTmp[0] = *pStPAT;	/* 16bit(0,1,2,3) -> 4dot分抽出 */
 					pStPAT++;
@@ -279,12 +279,12 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 					nBuff[3] = (nTmp[1] & 0b0000000000001000) >> 3;
 					*pDst3 |= (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]);
 #else
-					US nTmp[2];
+					uint16_t nTmp[2];
 
 					/* 8bit(PCG) to 1bit(Text-VRAM) */
 					for(j=0; j < 8; j++)
 					{
-						UI	bitshift;
+						uint32_t	bitshift;
 
 						bitshift = j;
 
@@ -332,21 +332,21 @@ SS BG_TextPut(SC *sString, SS x, SS y)
 	return ret;
 }
 
-SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
+int16_t BG_PutToText(int16_t nPatNum, int16_t x, int16_t y, int16_t mode, uint8_t bClr)
 {
-	US *BG_HEAD = (US *)0xEB8000;
-	UC *T0_HEAD = (UC *)0xE00000;
-	UC *T1_HEAD = (UC *)0xE20000;
-	UC *T2_HEAD = (UC *)0xE40000;
-	UC *T3_HEAD = (UC *)0xE60000;
-	US	*pStPAT;
-	UC	*pDst0;
-	UC	*pDst1;
-	UC	*pDst2;
-	UC	*pDst3;
-	SS	ret = 0;
-	US	i, j, k;
-	US	BitMask[4][4] = { 
+	uint16_t *BG_HEAD = (uint16_t *)0xEB8000;
+	uint8_t *T0_HEAD = (uint8_t *)0xE00000;
+	uint8_t *T1_HEAD = (uint8_t *)0xE20000;
+	uint8_t *T2_HEAD = (uint8_t *)0xE40000;
+	uint8_t *T3_HEAD = (uint8_t *)0xE60000;
+	uint16_t	*pStPAT;
+	uint8_t	*pDst0;
+	uint8_t	*pDst1;
+	uint8_t	*pDst2;
+	uint8_t	*pDst3;
+	int16_t	ret = 0;
+	uint16_t	i, j, k;
+	uint16_t	BitMask[4][4] = { 
 			0x1000, 0x2000, 0x4000, 0x8000,
 			0x0100, 0x0200, 0x0400, 0x0800,
 			0x0010, 0x0020, 0x0040, 0x0080,
@@ -357,12 +357,12 @@ SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
 	{
 	case BG_H_rev:
 	case BG_VH_rev:
-		pStPAT = BG_HEAD + (US)(0x10 * (nPatNum + 1));
+		pStPAT = BG_HEAD + (uint16_t)(0x10 * (nPatNum + 1));
 		break;
 	case BG_Normal:
 	case BG_V_rev:
 	default:
-		pStPAT = BG_HEAD + (US)(0x10 * nPatNum);
+		pStPAT = BG_HEAD + (uint16_t)(0x10 * nPatNum);
 		break;
 	}
 
@@ -374,7 +374,7 @@ SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
 	
 	for(i=0; i < 8; i++)
 	{
-		US nTmp[2];
+		uint16_t nTmp[2];
 		
 		switch(mode)
 		{
@@ -406,7 +406,7 @@ SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
 		/* 8bit(PCG) to 1bit(Text-VRAM) */
 		for(j=0; j < 8; j++)
 		{
-			UI	bitshift;
+			uint32_t	bitshift;
 
 			switch(mode)
 			{
@@ -452,11 +452,11 @@ SS BG_PutToText(SS nPatNum, SS x, SS y, SS mode, UC bClr)
 	return ret;
 }
 
-SS BG_TimeCounter(UI unTime, US x, US y)
+int16_t BG_TimeCounter(uint32_t unTime, uint16_t x, uint16_t y)
 {
-	SS ret = 0;
-	UI un100=0, un10=0, un1=0;
-	US u100_view[2], u10_view[2], u1_view[2];
+	int16_t ret = 0;
+	uint32_t un100=0, un10=0, un1=0;
+	uint16_t u100_view[2], u10_view[2], u1_view[2];
 
 	if(unTime >= 1000)unTime = 999;
 #if 1
@@ -465,11 +465,11 @@ SS BG_TimeCounter(UI unTime, US x, US y)
 	un1 = (unTime % 10);
 #endif
 	/* 表示 */
-	u100_view[0] = 128 + (US)(un100 << 1);
+	u100_view[0] = 128 + (uint16_t)(un100 << 1);
 	u100_view[1] = u100_view[0]+1;
-	u10_view[0] = 128 + (US)(un10 << 1);
+	u10_view[0] = 128 + (uint16_t)(un10 << 1);
 	u10_view[1] = u10_view[0] + 1;
-	u1_view[0] = 128 + (US)(un1 << 1);
+	u1_view[0] = 128 + (uint16_t)(un1 << 1);
 	u1_view[1] = u1_view[0] + 1;
 	
 	BG_PutToText( u100_view[0], x-(BG_WIDTH<<1),		y,			BG_Normal, TRUE);	/* 100桁目 */
@@ -482,14 +482,14 @@ SS BG_TimeCounter(UI unTime, US x, US y)
 	return ret;
 }
 
-SS BG_Number(UI unNum, US x, US y)
+int16_t BG_Number(uint32_t unNum, uint16_t x, uint16_t y)
 {
-	SS ret = 0;
-	UC ucDigit[10];
+	int16_t ret = 0;
+	uint8_t ucDigit[10];
 #if 0
-	UI unDigit, unDigitCal;
+	uint32_t unDigit, unDigitCal;
 #endif	
-	static UC ucOverFlow = FALSE;
+	static uint8_t ucOverFlow = FALSE;
 	
 	if(unNum >= 10000000)
 	{
@@ -517,30 +517,30 @@ SS BG_Number(UI unNum, US x, US y)
 }
 
 /* TEXT-RAMに展開したデータから数字情報を作る */	/* 処理負荷改善@kunichikoさんのアドバイス */
-SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
+int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_t *sFormat)
 {
-	UC	*T0_HEAD = (UC *)0xE00000;
-	UC	*T1_HEAD = (UC *)0xE20000;
-	UC	*T2_HEAD = (UC *)0xE40000;
-	UC	*T3_HEAD = (UC *)0xE60000;
-	UC	*pSrc0;
-	UC	*pSrc1;
-	UC	*pSrc2;
-	UC	*pSrc3;
-//	UC	*T3_END = (UC *)0xE7FFFF;
-	UC	*pDst0;
-	UC	*pDst1;
-	UC	*pDst2;
-	UC	*pDst3;
-	UC	*pData0;
-	UC	*pData1;
-	UC	*pData2;
-	UC	*pData3;
-	UC	data;
-	UC	ucDigit[10] = {0};
-	UC	*pString;
-	UI	i, k, size;
-	SS	ret = 0;
+	uint8_t	*T0_HEAD = (uint8_t *)0xE00000;
+	uint8_t	*T1_HEAD = (uint8_t *)0xE20000;
+	uint8_t	*T2_HEAD = (uint8_t *)0xE40000;
+	uint8_t	*T3_HEAD = (uint8_t *)0xE60000;
+	uint8_t	*pSrc0;
+	uint8_t	*pSrc1;
+	uint8_t	*pSrc2;
+	uint8_t	*pSrc3;
+//	uint8_t	*T3_END = (uint8_t *)0xE7FFFF;
+	uint8_t	*pDst0;
+	uint8_t	*pDst1;
+	uint8_t	*pDst2;
+	uint8_t	*pDst3;
+	uint8_t	*pData0;
+	uint8_t	*pData1;
+	uint8_t	*pData2;
+	uint8_t	*pData3;
+	uint8_t	data;
+	uint8_t	ucDigit[10] = {0};
+	uint8_t	*pString;
+	uint32_t	i, k, size;
+	int16_t	ret = 0;
 	
 	if( (x < 0) || (y < 0) || (x > 1023) || (y > 1023) ) return -1;
 
@@ -659,11 +659,11 @@ SS Text_To_Text(US uNum, SS x, SS y, UC bLarge, UC *sFormat)
 }
 
 
-SS PutTextInfo(ST_TEXTINFO stTextInfo)
+int16_t PutTextInfo(ST_TEXTINFO stTextInfo)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
-	US	x, y;
+	uint16_t	x, y;
 	x = stTextInfo.uPosX;
 	y = stTextInfo.uPosY;
 
@@ -681,11 +681,11 @@ SS PutTextInfo(ST_TEXTINFO stTextInfo)
 	return ret;
 }
 
-SS Put_Message_To_Graphic(UC *str, UC bMode)
+int16_t Put_Message_To_Graphic(uint8_t *str, uint8_t bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
-	SS	x, y;
+	int16_t	x, y;
 	ST_CRT	stCRT = {0};
 	
 	GetCRT(&stCRT, bMode);	/* 画面情報を取得 */

@@ -10,18 +10,18 @@
 
 
 /* ŠÖ”‚Ìƒvƒƒgƒ^ƒCƒvéŒ¾ */
-US	get_key(US *, UC, UC );
-US	DirectInputKeyNum(US *, US );
-UC	ChatCancelSW(UC , UC *);
-SS	KeyHitESC(void);
+uint16_t	get_key(uint16_t *, uint8_t, uint8_t );
+uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
+uint8_t	ChatCancelSW(uint8_t , uint8_t *);
+int16_t	KeyHitESC(void);
 
 /* ŠÖ” */
-US get_key( US *key, UC bPlayer, UC mode )
+uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 {
-	UI kd_k1,kd_k2_1,kd_k2_2,kd_b,kd_b2,kd_b3,kd_b4,kd_b5,kd_b6,kd_b7;
-	static SS repeat_flag_a = KEY_TRUE;
-	static SS repeat_flag_b = KEY_TRUE;
-	US ret = 0;
+	uint32_t kd_k1,kd_k2_1,kd_k2_2,kd_b,kd_b2,kd_b3,kd_b4,kd_b5,kd_b6,kd_b7;
+	static int16_t repeat_flag_a = KEY_TRUE;
+	static int16_t repeat_flag_b = KEY_TRUE;
+	uint16_t ret = 0;
 	
 	kd_b4	= BITSNS( 0 );
 	kd_b3	= BITSNS( 2 );
@@ -74,14 +74,14 @@ US get_key( US *key, UC bPlayer, UC mode )
 	return ret;
 }
 
-US	DirectInputKeyNum(US *uVal, US uDigit)
+uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 {
-	US ret = 0;
-	static US uNum[10] = {0};
-	static US uCount = 0;
-	static UC bKeyFlag1 = FALSE;
-	static UC bKeyFlag2 = FALSE;
-	UI i, kd_g0, kd_g1;
+	uint16_t ret = 0;
+	static uint16_t uNum[10] = {0};
+	static uint16_t uCount = 0;
+	static uint8_t bKeyFlag1 = FALSE;
+	static uint8_t bKeyFlag2 = FALSE;
+	uint32_t i, kd_g0, kd_g1;
 	
 	if(uDigit > 10)return -1;
 	
@@ -166,8 +166,8 @@ US	DirectInputKeyNum(US *uVal, US uDigit)
 	if( ( (kd_g0 != 0) || (kd_g1 != 0) )
 		&& (uCount == uDigit) )
 	{
-		US uCal = 0;
-		US uD = 1;
+		uint16_t uCal = 0;
+		uint16_t uD = 1;
 		
 		for(i = 0; i < uDigit; i++)
 		{
@@ -190,9 +190,9 @@ US	DirectInputKeyNum(US *uVal, US uDigit)
 }
 
 /* ƒ`ƒƒƒ^ƒŠƒ“ƒO–hŽ~SW */
-UC	ChatCancelSW(UC bJudge, UC *bFlag)
+uint8_t	ChatCancelSW(uint8_t bJudge, uint8_t *bFlag)
 {
-	UC	ret = FALSE;
+	uint8_t	ret = FALSE;
 	
 	if(bJudge != 0u)
 	{
@@ -247,13 +247,13 @@ UC	ChatCancelSW(UC bJudge, UC *bFlag)
 #endif
 #endif
 
-SS	KeyHitESC(void)
+int16_t	KeyHitESC(void)
 {
-	SS	ret = 0;
-	static UC bFlag = 0;
+	int16_t	ret = 0;
+	static uint8_t bFlag = 0;
 	
 	{
-		UI	loop = 1;
+		uint32_t	loop = 1;
 		do
 		{
 			if( ( BITSNS( 0 ) & 0x02 ) != 0 )	/* ‚d‚r‚b */

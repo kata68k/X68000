@@ -5,12 +5,12 @@
 
 #define PI	(3.14159265f)
 
-extern	const	SS	t_Sin256[91];
+extern	const	int16_t	t_Sin256[91];
 
 extern	FLOAT APL_Atan2(FLOAT , FLOAT );
-extern	SS APL_Cos(SS);
-extern	SS APL_Sin(SS);
-extern	SS APL_Tan256(SS);
-extern	UI APL_uDiv(UI, UI);
-extern	SI APL_sDiv(SI, SI);
+extern	int16_t APL_Cos(int16_t);
+extern	int16_t APL_Sin(int16_t);
+extern	int16_t APL_Tan256(int16_t);
+extern	uint32_t APL_uDiv(uint32_t, uint32_t);
+extern	int32_t APL_sDiv(int32_t, int32_t);
 #endif	/* APL_MATH_H */

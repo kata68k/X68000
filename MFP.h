@@ -15,18 +15,18 @@ enum{
 	DST_50us,
 };
 
-extern SS MFP_INIT(void);
-extern SS MFP_EXIT(void);
-extern SS MFP_RESET(void);
-extern SS TimerD_INIT(void);
-extern SS TimerD_EXIT(void);
-extern UC GetNowTime(UI *);		/* 現在の時間を取得する */
-extern UC SetNowTime(UI);		/* 現在の時間を設定する */
-extern UC GetStartTime(UI *);	/* 開始の時間を取得する */
-extern UC SetStartTime(UI);		/* 開始の時間を設定する */
-extern SS SetRasterIntData(void *, size_t);
-extern SS GetRasterIntPos(US *, US *, US *, US);
-extern SS vwait(SS);
+extern int16_t MFP_INIT(void);
+extern int16_t MFP_EXIT(void);
+extern int16_t MFP_RESET(void);
+extern int16_t TimerD_INIT(void);
+extern int16_t TimerD_EXIT(void);
+extern uint8_t GetNowTime(uint32_t *);		/* 現在の時間を取得する */
+extern uint8_t SetNowTime(uint32_t);		/* 現在の時間を設定する */
+extern uint8_t GetStartTime(uint32_t *);	/* 開始の時間を取得する */
+extern uint8_t SetStartTime(uint32_t);		/* 開始の時間を設定する */
+extern int16_t SetRasterIntData(void *, size_t);
+extern int16_t GetRasterIntPos(uint16_t *, uint16_t *, uint16_t *, uint16_t);
+extern int16_t vwait(int16_t);
 
 
 #endif	/* MFP_H */

@@ -26,12 +26,12 @@ void T_Time(void);
 void T_Score(void);
 void T_Speed(void);
 void T_Gear(void);
-void T_Main(UC);
-SS T_Scroll(UI, UI);
-SI T_Box(SS, SS, SS, SS, US, UC);
-SI T_Fill(SS, SS, SS, SS, US, UC);
-SI T_xLine(SS, SS, SS w, US, UC);
-SI T_yLine(SS, SS, SS h, US, UC);
+void T_Main(uint8_t);
+int16_t T_Scroll(uint32_t, uint32_t);
+int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
+int32_t T_Fill(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
+int32_t T_xLine(int16_t, int16_t, int16_t w, uint16_t, uint8_t);
+int32_t T_yLine(int16_t, int16_t, int16_t h, uint16_t, uint8_t);
 
 /* 関数 */
 void T_INIT(void)
@@ -91,8 +91,8 @@ void T_PALET(void)
 
 void T_SetBG_to_Text(void)
 {
-	SS	i;
-	US	x, y;
+	int16_t	i;
+	uint16_t	x, y;
 
 	/* テキストエリアに作業データ展開1 */
 	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 256, 0);//232
@@ -108,7 +108,7 @@ void T_SetBG_to_Text(void)
 
 void T_TopScore(void)
 {
-	UI	i,e;
+	uint32_t	i,e;
 	for(i=0; i<2; i++)
 	{
 		/* TOP */
@@ -131,7 +131,7 @@ void T_TopScore(void)
 
 void T_Time(void)
 {
-	UI	i,e;
+	uint32_t	i,e;
 	for(i=0; i<2; i++)
 	{
 		/* TIME */
@@ -157,7 +157,7 @@ void T_Time(void)
 
 void T_Score(void)
 {
-	UI	i,e;
+	uint32_t	i,e;
 	for(i=0; i<2; i++)
 	{
 		/* SCORE */
@@ -185,7 +185,7 @@ void T_Score(void)
 
 void T_Speed(void)
 {
-	UI	i;
+	uint32_t	i;
 	for(i=0; i<2; i++)
 	{
 		/* SPEED */
@@ -197,7 +197,7 @@ void T_Speed(void)
 
 void T_Gear(void)
 {
-	UI	i;
+	uint32_t	i;
 	for(i=0; i<2; i++)
 	{
 		/* GEAR */
@@ -205,13 +205,13 @@ void T_Gear(void)
 	}
 }
 
-void T_Main(UC bMode)
+void T_Main(uint8_t bMode)
 {
-	UI time_now;
-	static UI time_old = 0;
-	UI unStart_time, unTimer;
-	US uTimeCounter;
-	static UI unPassTime = 0;
+	uint32_t time_now;
+	static uint32_t time_old = 0;
+	uint32_t unStart_time, unTimer;
+	uint16_t uTimeCounter;
+	static uint32_t unPassTime = 0;
 	ST_CRT		stCRT = {0};
 	ST_CARDATA	stMyCar = {0};
 
@@ -236,7 +236,7 @@ void T_Main(UC bMode)
 		}
 		else
 		{
-			uTimeCounter = (US)(unTimer / 1000);
+			uTimeCounter = (uint16_t)(unTimer / 1000);
 		}
 		g_stTextInfo.uTimeCounter = uTimeCounter;
 	}
@@ -252,7 +252,7 @@ void T_Main(UC bMode)
 	g_stTextInfo.uVs = stMyCar.VehicleSpeed;
 	
 	/* Gear */
-	g_stTextInfo.uShiftPos = (US)stMyCar.ubShiftPos;
+	g_stTextInfo.uShiftPos = (uint16_t)stMyCar.ubShiftPos;
 
 	/* 座標 */
 	g_stTextInfo.uPosX = 0u;	/* X座標 */
@@ -262,11 +262,11 @@ void T_Main(UC bMode)
 	PutTextInfo(g_stTextInfo);
 }
 
-SS T_Scroll(UI uPosX, UI uPosY)
+int16_t T_Scroll(uint32_t uPosX, uint32_t uPosY)
 {
-	SS	ret = 0;
-	volatile US *CRTC_R10 = (US *)0xE80014u;	/* テキストX方向スクロール */
-	volatile US *CRTC_R11 = (US *)0xE80016u;	/* テキストY方向スクロール */
+	int16_t	ret = 0;
+	volatile uint16_t *CRTC_R10 = (uint16_t *)0xE80014u;	/* テキストX方向スクロール */
+	volatile uint16_t *CRTC_R11 = (uint16_t *)0xE80016u;	/* テキストY方向スクロール */
 
 	*CRTC_R10 = Mbset(*CRTC_R10, 0x03FF, uPosX);	/* CRTC R10 */
 	*CRTC_R11 = Mbset(*CRTC_R11, 0x03FF, uPosY);	/* CRTC R11 */
@@ -274,9 +274,9 @@ SS T_Scroll(UI uPosX, UI uPosY)
 	return ret;
 }
 
-SI T_Box(SS x1, SS y1, SS x2, SS y2, US line_style, UC color)
+int32_t T_Box(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_style, uint8_t color)
 {
-	SI	ret = 0;
+	int32_t	ret = 0;
 	struct _tboxptr stTxBox;
 	
 	stTxBox.x = x1;
@@ -313,9 +313,9 @@ SI T_Box(SS x1, SS y1, SS x2, SS y2, US line_style, UC color)
 	return ret;
 }
 
-SI T_Fill(SS x1, SS y1, SS x2, SS y2, US line_style, UC color)
+int32_t T_Fill(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_style, uint8_t color)
 {
-	SI	ret = 0;
+	int32_t	ret = 0;
 	struct _txfillptr stTxFill;
 	
 	stTxFill.x = x1;
@@ -352,9 +352,9 @@ SI T_Fill(SS x1, SS y1, SS x2, SS y2, US line_style, UC color)
 	return ret;
 }
 
-SI T_xLine(SS x1, SS y1, SS w, US line_style, UC color)
+int32_t T_xLine(int16_t x1, int16_t y1, int16_t w, uint16_t line_style, uint8_t color)
 {
-	SI	ret = 0;
+	int32_t	ret = 0;
 	struct _xlineptr stTxLine;
 	
 	stTxLine.x = x1;
@@ -390,9 +390,9 @@ SI T_xLine(SS x1, SS y1, SS w, US line_style, UC color)
 	return ret;
 }
 
-SI T_yLine(SS x1, SS y1, SS h, US line_style, UC color)
+int32_t T_yLine(int16_t x1, int16_t y1, int16_t h, uint16_t line_style, uint8_t color)
 {
-	SI	ret = 0;
+	int32_t	ret = 0;
 	struct _ylineptr stTyLine;
 	
 	stTyLine.x = x1;

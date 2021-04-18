@@ -7,10 +7,11 @@
 /* externêÈåæ */
 extern	void Init_Music(void);
 extern	void Exit_Music(void);
-extern	SI Music_Play(UC);
-extern	SI Music_Stop(void);
-extern	SI SE_Play(UC);
-extern	SI SE_Play_Fast(UC);
-extern	SI ADPCM_Play(UC);
-
+extern	int32_t Music_Play(uint8_t);
+extern	int32_t Music_Stop(void);
+extern	int32_t SE_Play(uint8_t);
+extern	int32_t SE_Play_Fast(uint8_t);
+extern	int32_t ADPCM_Play(uint8_t);
+extern	int32_t M_SetMusic(uint32_t);
+extern	int32_t M_Play(int32_t);
 #endif	/* MUSIC_H */

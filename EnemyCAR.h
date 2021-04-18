@@ -14,27 +14,27 @@
 /* ライバル車の構造体 */
 typedef struct
 {
-	UC	ubCarType;			/* 車の種類 */
-	SS	VehicleSpeed;		/* 車速 */
-	SS	x;					/* X座標 */
-	SS	y;					/* Y座標 */
-	SS	z;					/* Z座標(倍率) */
-	SS	sx;					/* X座標(当たり判定開始座標) */
-	SS	ex;					/* X座標(当たり判定終了座標) */
-	SS	sy;					/* Y座標(当たり判定開始座標) */
-	SS	ey;					/* Y座標(当たり判定終了座標) */
-	UC	ubBrakeLights;		/* ブレーキライト */
-	UC	ubOBD;				/* 故障の状態 */
-	UC	ubAlive;			/* 表示の状態 */
+	uint8_t	ubCarType;			/* 車の種類 */
+	int16_t	VehicleSpeed;		/* 車速 */
+	int16_t	x;					/* X座標 */
+	int16_t	y;					/* Y座標 */
+	int16_t	z;					/* Z座標(倍率) */
+	int16_t	sx;					/* X座標(当たり判定開始座標) */
+	int16_t	ex;					/* X座標(当たり判定終了座標) */
+	int16_t	sy;					/* Y座標(当たり判定開始座標) */
+	int16_t	ey;					/* Y座標(当たり判定終了座標) */
+	uint8_t	ubBrakeLights;		/* ブレーキライト */
+	uint8_t	ubOBD;				/* 車両の状態 */
+	uint8_t	ubAlive;			/* 表示の状態 */
 }	ST_ENEMYCARDATA;
 
 /* extern宣言 */
-extern	SS	InitEnemyCAR(void);
-extern	SS	GetEnemyCAR(ST_ENEMYCARDATA *, SS);
-extern	SS	SetEnemyCAR(ST_ENEMYCARDATA, SS);
-extern	SS	EnemyCAR_main(UC, UC, UC);
-extern	SS	SetAlive_EnemyCAR(void);
-extern	SS	Put_EnemyCAR(US, US, US, UC);
-extern	SS	Sort_EnemyCAR(void);
+extern	int16_t	InitEnemyCAR(void);
+extern	int16_t	GetEnemyCAR(ST_ENEMYCARDATA *, int16_t);
+extern	int16_t	SetEnemyCAR(ST_ENEMYCARDATA, int16_t);
+extern	int16_t	EnemyCAR_main(uint8_t, uint8_t, uint8_t);
+extern	int16_t	SetAlive_EnemyCAR(void);
+extern	int16_t	Put_EnemyCAR(uint16_t, uint16_t, uint16_t, uint8_t);
+extern	int16_t	Sort_EnemyCAR(void);
 
 #endif	/* ENEMYCAR_H */

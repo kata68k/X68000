@@ -36,16 +36,16 @@ enum
 /* タスクの構造体 */
 typedef struct
 {
-	UC	b8ms;	/*   8ms Task */
-	UC	b16ms;	/*  16ms Task */
-	UC	b32ms;	/*  32ms Task */
-	UC	b96ms;	/*  96ms Task */
-	UC	b496ms;	/* 496ms Task */
-	UC	bScene;	/* シーン */
+	uint8_t	b8ms;	/*   8ms Task */
+	uint8_t	b16ms;	/*  16ms Task */
+	uint8_t	b32ms;	/*  32ms Task */
+	uint8_t	b96ms;	/*  96ms Task */
+	uint8_t	b496ms;	/* 496ms Task */
+	uint8_t	bScene;	/* シーン */
 }	ST_TASK;
 
-extern	SS	TaskManage(void);
-extern	SS	GetTaskInfo(ST_TASK *);
-extern	SS	SetTaskInfo(UC);
+extern	int16_t	TaskManage(void);
+extern	int16_t	GetTaskInfo(ST_TASK *);
+extern	int16_t	SetTaskInfo(uint8_t);
 
 #endif	/* TASK_H */

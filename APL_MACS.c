@@ -21,23 +21,23 @@
 #define	MACS_MAX	(16)
 
 /* グローバル変数 */
-static SC	mov_list[MACS_MAX][256]	=	{0};
-static UI	mov_list_max	=	0u;
+static int8_t	mov_list[MACS_MAX][256]	=	{0};
+static uint32_t	mov_list_max	=	0u;
 /* 構造体定義 */
 
 #endif	/* MACS_MOON */
 
 /* 関数のプロトタイプ宣言 */
 void MOV_INIT(void);
-SI MOV_Play(UC);
-static UI moon_check(void);
+int32_t MOV_Play(uint8_t);
+static uint32_t moon_check(void);
 
 /* 関数 */
 void MOV_INIT(void)
 {
 #ifdef 	MACS_MOON
-	US	i;
-	SI	moon_chk = 0;
+	uint16_t	i;
+	int32_t	moon_chk = 0;
 
 	/* MACS再生するためのドライバ常駐チェック */
 	if(moon_check() == 0)
@@ -61,16 +61,16 @@ void MOV_INIT(void)
 }
 
 /* 動画再生 */
-SI MOV_Play(UC bPlayNum)
+int32_t MOV_Play(uint8_t bPlayNum)
 {
-	SI	ret=0;
+	int32_t	ret=0;
 
 	if(bPlayNum >= mov_list_max)return ret;
 
 #ifdef 	MACS_MOON
 #if 1	/* MOONを使う場合 */
 	{
-		SI	moon_stat = 0;
+		int32_t	moon_stat = 0;
 
 		moon_stat = MoonPlay(mov_list[bPlayNum]);	/* 再生 */
 		if(moon_stat != 0)
@@ -85,15 +85,15 @@ SI MOV_Play(UC bPlayNum)
 	}
 #else	/* MACSDRV単独の場合 */
 	{
-		SC	*pBuff = NULL;
-		SI	FileSize = 0;
+		int8_t	*pBuff = NULL;
+		int32_t	FileSize = 0;
 
 		GetFileLength(mov_list[bPlayNum], &FileSize);	/* ファイルのサイズ取得 */
 		printf("MacsData = %d\n", FileSize);
-		pBuff = (SC*)MyMalloc(FileSize);	/* メモリ確保 */
+		pBuff = (int8_t*)MyMalloc(FileSize);	/* メモリ確保 */
 		if(pBuff != NULL)
 		{
-			File_Load(mov_list[bPlayNum], pBuff, sizeof(UC), FileSize );	/* ファイル読み込みからメモリへ保存 */
+			File_Load(mov_list[bPlayNum], pBuff, sizeof(uint8_t), FileSize );	/* ファイル読み込みからメモリへ保存 */
 			MACS_Play(pBuff);	/* 再生 */
 			MyMfree(pBuff);	/* メモリ解放 */
 		}
@@ -104,11 +104,11 @@ SI MOV_Play(UC bPlayNum)
 	return	ret;
 }
 
-static UI moon_check(void)
+static uint32_t moon_check(void)
 {
-	UI	ret = 0;
+	uint32_t	ret = 0;
 #ifdef 	MACS_MOON
-	UL *v = (UL *)( B_LPEEK((UL *)(0x1d1*4)) + 2 );
+	uint64_t *v = (uint64_t *)( B_LPEEK((uint64_t *)(0x1d1*4)) + 2 );
 	if( B_LPEEK( v ) == 'MOON' && B_LPEEK( v+1 ) == 'IOCS' )
 	{
 		ret = 1;

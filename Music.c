@@ -12,60 +12,74 @@
 #include "FileManager.h"
 #include "Output_Text.h"
 
-#define ZM_V3
+#define ZM_V2	1
+#define ZM_V3	0
+#define MC_DRV	0
 
-#ifdef	ZM_V2
-		#include "inc/ZMUSIC.H"
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
+#elif	MC_DRV == 1
 #else
-	#ifdef	ZM_V3
-		#include "inc/ZMSC3LIB.H"
-	#else
-		#error "No Music Lib"
-	#endif
+	#error "No Music Lib"
 #endif
 
-#ifdef	ZM_V2
+#if		ZM_V2 == 1
+	#include "inc/ZMUSIC.H"
+#elif	ZM_V3 == 1
+	#include "inc/ZMSC3LIB.H"
+#elif	MC_DRV == 1
+	#include "inc/mcclib.h"
 #else
-	#ifdef	ZM_V3
-	#else
-		#error "No Music Lib"
-	#endif
+	#error "No Music Lib"
 #endif
 
 #define ZM_NUM_V2	(0x02)
 #define ZM_NUM_V3	(0x03)
+#define MC_DRV_NUM	(0x00600000)
 
 #define	MUSIC_MAX	(32)
 #define	SOUND_MAX	(32)
 #define	ADPCM_MAX	(32)
 
 /* グローバル変数 */
-static SC	music_list[MUSIC_MAX][256]	=	{0};
-static SC	music_dat[MUSIC_MAX][4096]	=	{0};
-static SS	music_dat_size[MUSIC_MAX]	=	{0};
-static UI	m_list_max	=	0u;
+static int8_t	music_list[MUSIC_MAX][256]	=	{0};
+static uint32_t	m_list_max	=	0u;
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
+	static int8_t	music_dat[MUSIC_MAX][4096]	=	{0};
+	static int16_t	music_dat_size[MUSIC_MAX]	=	{0};
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
+#endif
 
-static SC	se_list[SOUND_MAX][256]	=	{0};
-static SC	se_dat[SOUND_MAX][4096]	=	{0};
-static SS	se_dat_size[SOUND_MAX]	=	{0};
-static SI	se_dat_addr[SOUND_MAX]	=	{0};
-static UI	s_list_max	=	0u;
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
+	static int8_t	se_list[SOUND_MAX][256]	=	{0};
+	static int8_t	se_dat[SOUND_MAX][4096]	=	{0};
+	static int16_t	se_dat_size[SOUND_MAX]	=	{0};
+	static int32_t	se_dat_addr[SOUND_MAX]	=	{0};
+	static uint32_t	s_list_max	=	0u;
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
+#endif
 
-static SC	adpcm_list[ADPCM_MAX][256]	=	{0};
-static SC	adpcm_dat[ADPCM_MAX][32768]	=	{0};
-static SI	adpcm_dat_size[ADPCM_MAX]	=	{0};
-static UI	p_list_max	=	0u;
+static int8_t	adpcm_list[ADPCM_MAX][256]	=	{0};
+static int8_t	adpcm_dat[ADPCM_MAX][32768]	=	{0};
+static int32_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
+static uint32_t	p_list_max	=	0u;
 
-UC	v[] = {
+uint8_t	v[] = {
 #if 1
-/* 自機ミサイル */
+/* エンジン音 */
 /*	AF  OM  WF  SY  SP PMD AMD PMS AMS PAN DUMMY	*/
-	60, 15,  0,  0,  0,  0,  0,  0,  0,  3,  0,
+	60,  3,  0,  0,  0,  0,  0,  0,  0,  3,  0,
 /*	AR  DR  SR  RR  SL  OL  KS  ML DT1 DT2 AME	*/
-	27, 15,  5,  2,  0,  0,  0,  0,  3,  1,  0,
-	31, 18, 18,  6,  7,  0,  0,  0,  3,  2,  0,
-	22, 31,  0, 10,  0, 42,  0,  7,  7,  0,  0,
-	15, 31,  0,  8,  0,  0,  2,  1,  7,  0,  0
+	31,  0,  0,  0,  0, 31,  0,  0,  0,  0,  0,
+	31,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	31,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	31,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 #else
 /*	AF  OM  WF  SY  SP PMD AMD PMS AMS PAN DUMMY	*/
 	59, 15,  2,  1,200,127,  0,  0,  0,  3,  0,
@@ -77,7 +91,7 @@ UC	v[] = {
 #endif
 };
 
-UC	SE_Data[] = {	/* 構造体にした方がよい？ */
+uint8_t	SE_Data[] = {	/* 構造体にした方がよい？ */
 //		0x01,										/* (+1)ZMDの構造 */
 //		0x5A,0x6D,0x75,0x53,0x69,0x43,			/* (+6)ZmuSiC */
 //		0x20,										/* (+7)バージョン */
@@ -113,32 +127,36 @@ UC	SE_Data[] = {	/* 構造体にした方がよい？ */
 /* 関数のプロトタイプ宣言 */
 void Init_Music(void);
 void Exit_Music(void);
-SI Music_Play(UC);
-SI Music_Stop(void);
-SI SE_Play(UC);
-SI SE_Play_Fast(UC);
-SI ADPCM_Play(UC);
-SI Get_ZMD_Trak_Head(UC *, SS);
+int32_t Music_Play(uint8_t);
+int32_t Music_Stop(void);
+int32_t SE_Play(uint8_t);
+int32_t SE_Play_Fast(uint8_t);
+int32_t ADPCM_Play(uint8_t);
+int32_t Get_ZMD_Trak_Head(uint8_t *, int16_t);
+int32_t M_SetMusic(uint32_t);
+int32_t M_Play(int32_t);
 
 /* 関数 */
 void Init_Music(void)
 {
-	UI	unZmusicVer;
-	UI	unZmusicVerNum;
-	UI	i;
-	SS	ret;
+	uint32_t	i;
+#if		(ZM_V2 == 1) || (ZM_V3 == 1)
+	uint32_t	unZmusicVer;
+	uint32_t	unZmusicVerNum;
+#endif
 
 	/* サウンド常駐確認 */
-#ifdef	ZM_V2
+#if		ZM_V2 == 1
 	unZmusicVer = zm_ver();
 	if(unZmusicVer == 0)		/* 0:常駐ナシ */
 	{
 		puts("Z-MUSICを常駐してください。");
 		exit(0);
 	}
-#else
-	#ifdef	ZM_V3
-//	SC	sTONE[33] = {0};
+	unZmusicVerNum = ZM_NUM_V2;	/* Ver2.0x判定 */
+#elif	ZM_V3 == 1
+	int16_t	ret;
+//	int8_t	sTONE[33] = {0};
 	
 	unZmusicVer = zm_check_zmsc();
 	printf("zm_check_zmsc = %d\n", unZmusicVer);
@@ -147,25 +165,28 @@ void Init_Music(void)
 		puts("Z-MUSICを常駐してください。");
 		exit(0);
 	}
-	#else
-		#error "No Music Lib"
-	#endif
+	unZmusicVerNum = ZM_NUM_V3;	/* Ver3.0x判定 */
+#elif	MC_DRV == 1
+	if( MC_INIT() < MC_DRV_NUM )
+	{
+		puts( "mcdrv が常駐してないかバージョンが古い！" );
+		exit(0);
+	}
+#else
+	#error "No Music Lib"
 #endif
 	
-#ifdef	ZM_V2
-	unZmusicVerNum = ZM_NUM_V2;	/* Ver2.0x判定 */
-#else
-	#ifdef	ZM_V3
-	unZmusicVerNum = ZM_NUM_V3;	/* Ver3.0x判定 */
-	#else
-		#error "No Music Lib"
-	#endif
-#endif
+#if		(ZM_V2 == 1) || (ZM_V3 == 1)
 	if((unZmusicVer&0xF000u)>>12 != unZmusicVerNum)	/* Ver判定 */
 	{
 		printf("Z-MUSIC Ver%dを常駐してください。\n", unZmusicVerNum);
 		exit(0);
 	}
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
+#endif
+
 
 #if 0
 	if((unZmusicVer&0xFFFF000u)>>16 == 0u)	/* PCM8判定 */
@@ -176,50 +197,88 @@ void Init_Music(void)
 #endif
 	
 	/* サウンド初期化 */
-#ifdef	ZM_V2
+#if		ZM_V2 == 1
 	m_init();		/* 初期化 */
 	m_ch("fm");		/* FM */
-#else
-	#ifdef	ZM_V3
+#elif	ZM_V3 == 1
 	ret = zm_init(0);		/* 初期化 */
 	printf("zm_init = %d\n", ret);
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
 #endif
 
 	Music_Stop();	/* 音楽停止 */
 
-#ifdef	ZM_V2
-	Load_Music_List("data\\music\\", "m_list.txt", music_list, &m_list_max);
-	printf("%s\n", music_list[i]);
-#else
-	#ifdef	ZM_V3
 	/* BGM */
+#if		ZM_V2 == 1
+	Load_Music_List("data\\music\\", "m_list.txt", music_list, &m_list_max);
+	for(i = 0; i < m_list_max; i++)
+	{
+		printf("%s\n", music_list[i]);
+	}
+#elif	ZM_V3 == 1
 	Load_Music_List("data\\music\\", "m_list_V3.txt", music_list, &m_list_max);
 	for(i = 0; i < m_list_max; i++)
 	{
-		music_dat_size[i] = File_Load(music_list[i], music_dat[i], sizeof(UC), 0);
+		music_dat_size[i] = File_Load(music_list[i], music_dat[i], sizeof(uint8_t), 0);
 		printf("Music File %2d = %s = size(%d[byte])\n", i, music_list[i], music_dat_size[i]);
 	}
+#elif	MC_DRV == 1
+	Load_Music_List("data\\music\\", "m_list_MC.txt", music_list, &m_list_max);
+	for(i = 0; i < m_list_max; i++)
+	{
+		printf("%s\n", music_list[i]);
+	}
+#else
+	#error "No Music Lib"
+#endif
+	
 	/* 効果音(FM) */
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
 	Load_SE_List("data\\seFM\\", "s_list_V3.txt", se_list, &s_list_max);
 	for(i = 0; i < s_list_max; i++)
 	{
-		se_dat_size[i] = File_Load(se_list[i], se_dat[i], sizeof(UC), 0);
+		se_dat_size[i] = File_Load(se_list[i], se_dat[i], sizeof(uint8_t), 0);
 		se_dat_addr[i] = Get_ZMD_Trak_Head(se_dat[i], se_dat_size[i]);
 		printf("Sound Effect File %2d = %s = size(%d[byte](Head[0x%x]))\n", i, se_list[i], se_dat_size[i], se_dat_addr[i]);
 	}
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
+#endif
+
+#if		ZM_V2 == 1
+	/* ZPD登録 */
+#elif	ZM_V3 == 1
+	/* ZPD登録 */
+//	ret = zm_register_zpd("data\\se\\OverKata_V3.ZPD");
+//	printf("zm_register_zpd = %d\n", ret);
+#elif	MC_DRV == 1
+	/* PDX登録 */
+#else
+	#error "No Music Lib"
+#endif
+
 	/* 効果音(ADPCM) */
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
+#endif
 	Load_SE_List("data\\se\\", "p_list_V3.txt", adpcm_list, &p_list_max);
+
 	for(i = 0; i < p_list_max; i++)
 	{
 #if 1
-	 	adpcm_dat_size[i] = (SI)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(UC), 0);
+	 	adpcm_dat_size[i] = (int32_t)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(uint8_t), 0);
 		printf("ADPCM File %2d = %s = size(%d[byte])\n", i, adpcm_list[i], adpcm_dat_size[i]);
 #else
+	#if		ZM_V3 == 1
 		/* ADPCM登録 */
-		static SC	*adpcm_addr[ADPCM_MAX];
+		static int8_t	*adpcm_addr[ADPCM_MAX];
 		sprintf( sTONE, "%s", "test" );
 		sprintf( adpcm_dat[i], "%s%c%s%c", sTONE, 0, adpcm_list[i], 0 );
 		printf("adpcm_dat %2d = %s\n", i, adpcm_dat[i]);
@@ -236,15 +295,9 @@ void Init_Music(void)
 					0:エラー
 		*/
 		printf("ADPCM File %2d = %s = addr(0x%x)\n", i, adpcm_list[i], adpcm_addr[i]);
-#endif
-	}
-	/* ZPD登録 */
-//	ret = zm_register_zpd("data\\se\\OverKata_V3.ZPD");
-//	printf("zm_register_zpd = %d\n", ret);
-	#else
-		#error "No Music Lib"
 	#endif
 #endif
+	}
 	
 #if 0
 	exit(0);
@@ -255,61 +308,62 @@ void Exit_Music(void)
 {
 	Music_Stop();	/* 音楽停止 */
 	
-#ifdef	ZM_V2
+#if		ZM_V2 == 1
 	m_init();		/* 初期化 */
-#else
-	#ifdef	ZM_V3
+#elif	ZM_V3 == 1
 	zm_init(0);		/* 初期化 */
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+	MC_QUIT();		/* 終了処理 */
+#else
+	#error "No Music Lib"
 #endif
 }
 
 /* 音楽再生 */
-SI Music_Play(UC bPlayNum)
+int32_t Music_Play(uint8_t bPlayNum)
 {
-	SI	ret=0;
+	int32_t	ret=0;
 	if(bPlayNum > m_list_max)return ret;
 
 	Music_Stop();	/* 音楽停止 */
-#ifdef	ZM_V2
+#if		ZM_V2 == 1
 	zmd_play(&music_list[bPlayNum][0]);	
-#else
-	#ifdef	ZM_V3
+#elif	ZM_V3 == 1
 	ret = zm_play_zmd(music_dat_size[bPlayNum], &music_dat[bPlayNum][0]);
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+	MC_MMCP_PLAY(&music_list[bPlayNum][0]);
+#else
+	#error "No Music Lib"
 #endif
+
 	return	ret;
 }
 
 /* 音楽停止 */
-SI Music_Stop(void)
+int32_t Music_Stop(void)
 {
-	SI	ret=0;
-#ifdef	ZM_V2
+	int32_t	ret=0;
+	
+#if		ZM_V2 == 1
 	m_stop(0,0,0,0,0,0,0,0,0,0);
-#else
-	#ifdef	ZM_V3
+#elif	ZM_V3 == 1
 	zm_stop_all();
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
 #endif
+	
 	return	ret;
 }
 
 /* 効果音ZMDの演奏(FM音源で効果音再生する) */
-SI SE_Play(UC bPlayNum)
+int32_t SE_Play(uint8_t bPlayNum)
 {
-	SI	ret=0;
-#ifdef	ZM_V2
-	#error "No Music Lib"
-#else
-	#ifdef	ZM_V3
-	SI	HeadNum = 0;
+	int32_t	ret=0;
+
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
+	int32_t	HeadNum = 0;
 	
 	if(bPlayNum > s_list_max)return ret;
 	
@@ -319,24 +373,26 @@ SI SE_Play(UC bPlayNum)
 	/* 引数
 		char *zmd:ZMDの格納バッファ(ヘッダを含まず)
 	*/
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
 #endif
+
 	return	ret;
 }
 
 /* 効果音ZMDの演奏(FM音源で効果音再生する) */
-SI SE_Play_Fast(UC bPlayNum)
+int32_t SE_Play_Fast(uint8_t bPlayNum)
 {
-	SI	ret=0;
-#ifdef	ZM_V2
+	int32_t	ret=0;
+	
+#if		ZM_V2 == 1
 	/* 事前のデータ調整や初期化で音色の初期化が別途必要 */
 	struct	_regs	stInReg = {0}, stOutReg = {0};
-	UI	retReg;
-//	UI	TrkFreeSize;
-	UC	bCh, bTrk;
-	SI	level;
+	uint32_t	retReg;
+//	uint32_t	TrkFreeSize;
+	uint8_t	bCh, bTrk;
+	int32_t	level;
 
 	if(bPlayNum > m_list_max)return ret;
 
@@ -364,7 +420,7 @@ SI SE_Play_Fast(UC bPlayNum)
 	stInReg.d0 = 0xF0;				/* ZMUSIC.XによるIOCSコール */
 	stInReg.d1 = 0x12;				/* se_play $12（ZMUSIC内のファンクションコール） */
 	stInReg.d2 = bTrk;				/* 演奏トラックNo */
-	stInReg.a1 = (UI)&SE_Data[0];	/* 演奏データ格納アドレス */
+	stInReg.a1 = (uint32_t)&SE_Data[0];	/* 演奏データ格納アドレス */
 	
 	retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
 	{
@@ -377,9 +433,8 @@ SI SE_Play_Fast(UC bPlayNum)
 //			Message_Num(&stOutReg.a6,	22,	9,	2, MONI_Type_SI, "0x%x");
 	}
 	intlevel(level);		/* 割り込み解除 */
-#else
-	#ifdef	ZM_V3
-	SI	HeadNum = 0;
+#elif	ZM_V3 == 1
+	int32_t	HeadNum = 0;
 
 	if(bPlayNum > s_list_max)return ret;
 	
@@ -389,17 +444,18 @@ SI SE_Play_Fast(UC bPlayNum)
 	/* 引数
 		char *zmd:ZMDの格納バッファ(トラック・チャンネル情報テーブルから)
 	*/
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
 #endif
+
 	return	ret;
 }
 
 /* (AD)PCM効果音の演奏 */
-SI ADPCM_Play(UC bPlayNum)
+int32_t ADPCM_Play(uint8_t bPlayNum)
 {
-	SI	ret=0;
+	int32_t	ret=0;
 	
 	if(bPlayNum > p_list_max)return ret;
 
@@ -410,17 +466,17 @@ SI ADPCM_Play(UC bPlayNum)
 	}
 	_iocs_adpcmout(adpcm_dat[bPlayNum], 0x403, adpcm_dat_size[bPlayNum]);	/* 再生 */
 #if 0
+	
 #ifdef	ZM_V2
-	SI	adpcm_sns;
+	int32_t	adpcm_sns;
 	adpcm_sns = m_stat(9/*Mmin(Mmax(25, vx), 31)*/);	/* ADPCM ch1(9) ch2-8(25-31) */
 //	Message_Num(&adpcm_sns,	 0, 13, 2, MONI_Type_SI, "%d");
 
 	m_pcmplay(bPlayNum, 3, 4);
-#else
-	#ifdef	ZM_V3
-//	SI	errnum;
-//	SC	errtbl[64]={0};
-//	UC	**p;
+#elif	ZM_V3 == 1
+//	int32_t	errnum;
+//	int8_t	errtbl[64]={0};
+//	uint8_t	**p;
 
 	if(bPlayNum > p_list_max)return ret;
 	
@@ -474,26 +530,128 @@ SI ADPCM_Play(UC bPlayNum)
 	}
 //	Message_Num(&ret,	 11, 12, 2, MONI_Type_SI, "0x%x");
 
-	#else
-		#error "No Music Lib"
-	#endif
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
 #endif
+	
 #endif	
 	return	ret;
 }
 
 /* 演奏トラックまでのオフセットを取得 */
-SI	Get_ZMD_Trak_Head(UC *dat, SS size)
+int32_t	Get_ZMD_Trak_Head(uint8_t *dat, int16_t size)
 {
-	UI	ret = 0;
+	int32_t	ret = 0;
 	
-#ifdef	ZM_V3
-	UC	*p;
+#if		ZM_V2 == 1
+#elif	ZM_V3 == 1
+	uint8_t	*p;
 	p = dat + (4*2) + (4*1);
 	ret = (*(p+0) << 12) + (*(p+1) << 8) + (*(p+2) << 4) + *(p+3);
-#endif	
+#elif	MC_DRV == 1
+#else
+	#error "No Music Lib"
+#endif
 	
 	return	ret;
 }
 
+/* エンジン音 */
+int32_t	M_SetMusic(uint32_t uNum)
+{
+	int32_t	ret = 0;
+#if		ZM_V2 == 1
+	uint8_t	uMML[30];
+	uint32_t	i = 0u;
+	int32_t	err = 0;
+	int32_t	buf = 30;
+	
+//	Music_Play(uNum);
+	
+	for(i = 6; i < 8; i++)
+	{
+		int32_t	ch, trk;
+		ch = i + 1;
+		trk = i + 1;
+		
+		err = m_vset( 129, v );
+		if(err != 0)
+		{
+			printf("m_vset error %d\n", err);
+		}
+		
+		err = m_assign( ch, trk );
+		if(err != 0)
+		{
+			printf("m_assign error %d\n", err);
+		}
+		err = m_alloc( trk, buf );
+		if(err != 0)
+		{
+			printf("m_alloc error %d\n", err);
+		}
+		sprintf(uMML, "@129 o3 @v127 k0 @r1 d+", uNum);
+		err = m_trk( trk, uMML );
+		if(err != 0)
+		{
+			printf("m_trk error %d\n", err);
+		}
+		err = m_play(i+1,0,0,0,0,0,0,0,0,0);
+		if(err != 0)
+		{
+			printf("m_play error %d\n", err);
+		}
+	}
+
+//	err = m_tempo(100);
+//	if(err != 0)
+//	{
+//		printf("m_tempo error %d\n", err);
+//	}
+
+#endif	
+	return ret;
+}
+	
+int32_t	M_Play(int32_t k)
+{
+	int32_t	ret = 0;
+	
+#if		ZM_V2 == 1
+	uint8_t	uMML[30];
+	int32_t	err = 0;
+	static uint8_t ubChanel = 0u;
+	uint8_t	uUseChanel = 3u;	/* 使用チャンネル(後ろから何チャンネル分使うか？) */
+
+	err = m_alloc( (8-uUseChanel+1)+ubChanel, 30 );
+	if(err != 0)
+	{
+		printf("m_alloc error %d\n", err);
+	}
+	if(k > 191)k=191;
+	if(k < 0)k=0;
+	sprintf(uMML, "@129 k%d @k%d d+&", (k>>1), (k&1)<<5 );
+//	sprintf(uMML, "@1 v15 u127 d+& o4'gb<d'96", k);
+	err = m_trk( (8-uUseChanel+1)+ubChanel, uMML );
+	if(err != 0)
+	{
+		printf("m_trk error %d\n", err);
+	}
+	err = m_play((8-uUseChanel+1)+ubChanel,0,0,0,0,0,0,0,0,0);
+	if(err != 0)
+	{
+		printf("m_play error %d\n", err);
+	}
+	if(ubChanel >= (uUseChanel-1))
+	{
+		ubChanel = 0u;
+	}
+	else
+	{
+		ubChanel++;
+	}
+#endif	
+	return ret;
+}
 #endif	/* MUSIC_C */

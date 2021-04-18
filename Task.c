@@ -7,26 +7,26 @@
 
 ST_TASK	g_stTask = {0}; 
 
-SS	TaskManage(void);
-SS	GetTaskInfo(ST_TASK *);
-SS	SetTaskInfo(UC);
+int16_t	TaskManage(void);
+int16_t	GetTaskInfo(ST_TASK *);
+int16_t	SetTaskInfo(uint8_t);
 
-SS	TaskManage(void)
+int16_t	TaskManage(void)
 {
-	SS ret=0;
+	int16_t ret=0;
 	
-	static SC	bFirstTime		= TRUE;
-	static UI	un8ms_time		= 0;
-	static UI	un16ms_time		= 0;
-	static UI	un32ms_time		= 0;
-	static UI	un96ms_time		= 0;
-	static UI	un496ms_time	= 0;
-	UI	time;
-	UC	b8ms_time;
-	UC	b16ms_time;
-	UC	b32ms_time;
-	UC	b96ms_time;
-	UC	b496ms_time;
+	static int8_t	bFirstTime		= TRUE;
+	static uint32_t	un8ms_time		= 0;
+	static uint32_t	un16ms_time		= 0;
+	static uint32_t	un32ms_time		= 0;
+	static uint32_t	un96ms_time		= 0;
+	static uint32_t	un496ms_time	= 0;
+	uint32_t	time;
+	uint8_t	b8ms_time;
+	uint8_t	b16ms_time;
+	uint8_t	b32ms_time;
+	uint8_t	b96ms_time;
+	uint8_t	b496ms_time;
 
 	GetStartTime(&time);	/* ŠJŽnŽž‚ðŽæ“¾ */
 	
@@ -101,9 +101,9 @@ SS	TaskManage(void)
 	return ret;
 }
 
-SS	GetTaskInfo(ST_TASK *pst_Task)
+int16_t	GetTaskInfo(ST_TASK *pst_Task)
 {
-	SS ret=0;
+	int16_t ret=0;
 
 	pst_Task->b8ms		=	g_stTask.b8ms;
 	pst_Task->b16ms		=	g_stTask.b16ms;
@@ -115,9 +115,9 @@ SS	GetTaskInfo(ST_TASK *pst_Task)
 	return ret;
 }
 
-SS	SetTaskInfo(UC bScene)
+int16_t	SetTaskInfo(uint8_t bScene)
 {
-	SS ret=0;
+	int16_t ret=0;
 
 	g_stTask.bScene = bScene;
 

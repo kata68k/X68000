@@ -13,40 +13,40 @@
 #include "Raster.h"
 
 /* 変数 */
-static UC g_bTimer_D;
-static UC g_bRasterSET;
-static volatile UI NowTime;
-static volatile UI StartTime;
-static volatile US g_uRas_Count;
-static volatile US Hsync_count;
-static volatile US Vsync_count;
+static uint8_t g_bTimer_D;
+static uint8_t g_bRasterSET;
+static volatile uint32_t NowTime;
+static volatile uint32_t StartTime;
+static volatile uint16_t g_uRas_Count;
+static volatile uint16_t Hsync_count;
+static volatile uint16_t Vsync_count;
 
 static ST_RASTER_INT g_stRasterInt[RASTER_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
-SS MFP_INIT(void);
-SS MFP_EXIT(void);
-SS MFP_RESET(void);
-SS TimerD_INIT(void);
-SS TimerD_EXIT(void);
-UC GetNowTime(UI *);	/* 現在の時間を取得する */
-UC SetNowTime(UI);		/* 現在の時間を設定する */
-UC GetStartTime(UI *);	/* 開始の時間を取得する */
-UC SetStartTime(UI);	/* 開始の時間を設定する */
-SS SetRasterIntData(void *, size_t);
-SS GetRasterIntPos(US *, US *, US *, US);
+int16_t MFP_INIT(void);
+int16_t MFP_EXIT(void);
+int16_t MFP_RESET(void);
+int16_t TimerD_INIT(void);
+int16_t TimerD_EXIT(void);
+uint8_t GetNowTime(uint32_t *);	/* 現在の時間を取得する */
+uint8_t SetNowTime(uint32_t);		/* 現在の時間を設定する */
+uint8_t GetStartTime(uint32_t *);	/* 開始の時間を取得する */
+uint8_t SetStartTime(uint32_t);	/* 開始の時間を設定する */
+int16_t SetRasterIntData(void *, size_t);
+int16_t GetRasterIntPos(uint16_t *, uint16_t *, uint16_t *, uint16_t);
 static void interrupt Timer_D_Func(void);
 static void interrupt Hsync_Func(void);
 static void interrupt Raster_Func(void);
 static void interrupt Vsync_Func(void);
-SS vwait(SS);
+int16_t vwait(int16_t);
 
 /* 関数 */
-SS MFP_INIT(void)
+int16_t MFP_INIT(void)
 {
-	SI	vdispst = -1;
-	volatile UC *MFP_TACR = (UC *)0xe88019;
-	volatile UC *MFP_TADR = (UC *)0xe8801f;
+	int32_t	vdispst = -1;
+	volatile uint8_t *MFP_TACR = (uint8_t *)0xe88019;
+	volatile uint8_t *MFP_TADR = (uint8_t *)0xe8801f;
 
 	/* ラスタ割り込み */
 	g_bRasterSET = FALSE;
@@ -71,9 +71,9 @@ SS MFP_INIT(void)
 	return vdispst;
 }
 
-SS MFP_EXIT(void)
+int16_t MFP_EXIT(void)
 {
-	SI	vdispst = -1;
+	int32_t	vdispst = -1;
 
 	g_bRasterSET = FALSE;
 
@@ -89,12 +89,12 @@ SS MFP_EXIT(void)
 	return vdispst;
 }
 
-SS MFP_RESET(void)
+int16_t MFP_RESET(void)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 
-	volatile UC *MFP_INTCTRL_A  = (UC *)0xE88007;	/* 割り込みイネーブルレジスタA */
-	volatile UC *MFP_TADR  		= (UC *)0xE8801F;	/* タイマーAデータレジスタ */
+	volatile uint8_t *MFP_INTCTRL_A  = (uint8_t *)0xE88007;	/* 割り込みイネーブルレジスタA */
+	volatile uint8_t *MFP_TADR  		= (uint8_t *)0xE8801F;	/* タイマーAデータレジスタ */
 	
 	*MFP_TADR = 1;					/* カウンタ設定 */
 	*MFP_INTCTRL_A |= 0b01000000;	/* CRTC Raster割り込み許可 */
@@ -103,9 +103,9 @@ SS MFP_RESET(void)
 	return ret;
 }
 
-SS	TimerD_INIT()
+int16_t	TimerD_INIT()
 {
-	SS CpuCount=0;
+	int16_t CpuCount=0;
 	/* Timer-D割り込み */
 	NowTime = 0;
 	StartTime = 0;
@@ -122,7 +122,7 @@ SS	TimerD_INIT()
 	return CpuCount;
 }
 
-SS	TimerD_EXIT()
+int16_t	TimerD_EXIT()
 {
 	TIMERDST((void *)0, 0, 1);	/* stop */
 	g_bTimer_D = FALSE;
@@ -130,33 +130,33 @@ SS	TimerD_EXIT()
 	return 0;
 }
 
-UC GetNowTime(UI *time)	/* 現在の時間を取得する */
+uint8_t GetNowTime(uint32_t *time)	/* 現在の時間を取得する */
 {
 	*time = NowTime;
 	return g_bTimer_D;
 }
 
-UC SetNowTime(UI time)	/* 現在の時間を設定する */
+uint8_t SetNowTime(uint32_t time)	/* 現在の時間を設定する */
 {
 	NowTime = time;
 	return g_bTimer_D;
 }
 
-UC GetStartTime(UI *time)	/* 開始の時間を取得する */
+uint8_t GetStartTime(uint32_t *time)	/* 開始の時間を取得する */
 {
 	*time = StartTime;
 	return g_bTimer_D;
 }
 
-UC SetStartTime(UI time)	/* 開始の時間を設定する */
+uint8_t SetStartTime(uint32_t time)	/* 開始の時間を設定する */
 {
 	StartTime = time;
 	return g_bTimer_D;
 }
 
-SS SetRasterIntData(void *pSrc, size_t n)
+int16_t SetRasterIntData(void *pSrc, size_t n)
 {
-	SS ret = 0;
+	int16_t ret = 0;
 	if(memcpy(g_stRasterInt, pSrc, n) == NULL)
 	{
 		ret = -1;
@@ -168,9 +168,9 @@ SS SetRasterIntData(void *pSrc, size_t n)
 	return ret;
 }
 
-SS GetRasterIntPos(US *x, US *y, US *pat, US uNum)
+int16_t GetRasterIntPos(uint16_t *x, uint16_t *y, uint16_t *pat, uint16_t uNum)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 
 	if(uNum >= RASTER_MAX)
 	{
@@ -228,20 +228,20 @@ static void interrupt Hsync_Func(void)
 /* ２ライン飛ばしぐらいが精度の限界 */	/* EXCEED.さんのアドバイス */
 static void interrupt Raster_Func(void)
 {
-	volatile US *BG0scroll_x  = (US *)0xEB0800;
-	volatile US *BG0scroll_y  = (US *)0xEB0802;
-	volatile US *BG1scroll_x  = (US *)0xEB0804;
-	volatile US *BG1scroll_y  = (US *)0xEB0806;
-	volatile US *CRTC_R09 = (US *)0xE80012u;	/* ラスター割り込み位置 */
-//	volatile US *CRTC_R12 = (US *)0xE80018u;	/* スクリーン0 X */
-//	volatile US *CRTC_R14 = (US *)0xE8001Cu;	/* スクリーン1 X */
-	volatile US *VIDEO_REG3 = (US *)0xE82600;
+	volatile uint16_t *BG0scroll_x  = (uint16_t *)0xEB0800;
+	volatile uint16_t *BG0scroll_y  = (uint16_t *)0xEB0802;
+	volatile uint16_t *BG1scroll_x  = (uint16_t *)0xEB0804;
+	volatile uint16_t *BG1scroll_y  = (uint16_t *)0xEB0806;
+	volatile uint16_t *CRTC_R09 = (uint16_t *)0xE80012u;	/* ラスター割り込み位置 */
+//	volatile uint16_t *CRTC_R12 = (uint16_t *)0xE80018u;	/* スクリーン0 X */
+//	volatile uint16_t *CRTC_R14 = (uint16_t *)0xE8001Cu;	/* スクリーン1 X */
+	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
 
-	US nNum = g_uRas_Count - SP_Y_OFFSET;	/* おそらくここはSP_Y_OFFSETではなく、CRTC_R06分を引くのが正解 */
+	uint16_t nNum = g_uRas_Count - SP_Y_OFFSET;	/* おそらくここはSP_Y_OFFSETではなく、CRTC_R06分を引くのが正解 */
 
 #ifdef DEBUG	/* デバッグコーナー */
-	UC	bDebugMode;
-	US	uDebugNum;
+	uint8_t	bDebugMode;
+	uint16_t	uDebugNum;
 	GetDebugMode(&bDebugMode);
 	GetDebugNum(&uDebugNum);
 #endif
@@ -276,19 +276,19 @@ static void interrupt Raster_Func(void)
 
 static void interrupt Vsync_Func(void)
 {
-	volatile US *BG0scroll_x  = (US *)0xEB0800;
-	volatile US *BG0scroll_y  = (US *)0xEB0802;
-	volatile US *BG1scroll_x  = (US *)0xEB0804;
-	volatile US *BG1scroll_y  = (US *)0xEB0806;
-//	volatile US *BGCTRL		  = (US *)0xEB0808;
-	volatile US *VIDEO_REG3 = (US *)0xE82600;
-	volatile US *CRTC_R06 = (US *)0xE8000Cu;	/* 垂直表示開始位置-1 */
+	volatile uint16_t *BG0scroll_x  = (uint16_t *)0xEB0800;
+	volatile uint16_t *BG0scroll_y  = (uint16_t *)0xEB0802;
+	volatile uint16_t *BG1scroll_x  = (uint16_t *)0xEB0804;
+	volatile uint16_t *BG1scroll_y  = (uint16_t *)0xEB0806;
+//	volatile uint16_t *BGCTRL		  = (uint16_t *)0xEB0808;
+	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
+	volatile uint16_t *CRTC_R06 = (uint16_t *)0xE8000Cu;	/* 垂直表示開始位置-1 */
 	
 	/* V-Sync割り込み処理 */
 #ifdef 	MACS_MOON
 	/* 何もしない */
 #else	/* MACS_MOON */
-//	SI	vdispst = -1;
+//	int32_t	vdispst = -1;
 	vdispst = VDISPST((void *)0, 0, 0);	/* stop */
 #endif	/* MACS_MOON */
 
@@ -352,8 +352,8 @@ static void interrupt Vsync_Func(void)
 
 #if 0
 	{
-		volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
-		volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
+		volatile uint16_t *CRTC_R21 = (uint16_t *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
+		volatile uint16_t *CRTC_480 = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
 
 		if((*CRTC_480 & 0x02u) == 0u)		/* クリア実行でない */
 		{
@@ -373,12 +373,12 @@ static void interrupt Vsync_Func(void)
 #endif	/* MACS_MOON */
 }
 
-SS vwait(SS count)				/* 約count／60秒待つ	*/
+int16_t vwait(int16_t count)				/* 約count／60秒待つ	*/
 {
-	SS ret = 0;
-	volatile UC *mfp = (UC *)0xe88001;
-//	volatile US *BGCTRL = (US *)0xEB0808;
-//	volatile US *VIDEO_REG3 = (US *)0xE82600;
+	int16_t ret = 0;
+	volatile uint8_t *mfp = (uint8_t *)0xe88001;
+//	volatile uint16_t *BGCTRL = (uint16_t *)0xEB0808;
+//	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
 	
 //	*BGCTRL = Mbset(*BGCTRL, Bit_9, Bit_9);
 	

@@ -22,20 +22,20 @@
 static ST_COURSE_OBJ	g_stCourse_Obj[COURSE_OBJ_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
-SS	InitCourseObj(void);
-SS	GetCourseObj(ST_COURSE_OBJ *, SS);
-SS	SetCourseObj(ST_COURSE_OBJ, SS);
-SS	Course_Obj_main(UC, UC, UC);
-SS	Put_CouseObject(SS, SS, US, UC, UC);
-SS	Sort_Course_Obj(void);
-SS	Load_Course_Data(UC);
-SS	Move_Course_BG(UC);
+int16_t	InitCourseObj(void);
+int16_t	GetCourseObj(ST_COURSE_OBJ *, int16_t);
+int16_t	SetCourseObj(ST_COURSE_OBJ, int16_t);
+int16_t	Course_Obj_main(uint8_t, uint8_t, uint8_t);
+int16_t	Put_CouseObject(int16_t, int16_t, uint16_t, uint8_t, uint8_t);
+int16_t	Sort_Course_Obj(void);
+int16_t	Load_Course_Data(uint8_t);
+int16_t	Move_Course_BG(uint8_t);
 
 /* 関数 */
-SS	InitCourseObj(void)
+int16_t	InitCourseObj(void)
 {
-	SS ret = 0;
-	SS i;
+	int16_t ret = 0;
+	int16_t i;
 	
 	for(i=0; i<COURSE_OBJ_MAX; i++)
 	{
@@ -50,9 +50,9 @@ SS	InitCourseObj(void)
 	return ret;
 }
 
-SS	GetCourseObj(ST_COURSE_OBJ *stDat, SS Num)
+int16_t	GetCourseObj(ST_COURSE_OBJ *stDat, int16_t Num)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	if(Num < COURSE_OBJ_MAX)
 	{
 		*stDat = g_stCourse_Obj[Num];
@@ -64,9 +64,9 @@ SS	GetCourseObj(ST_COURSE_OBJ *stDat, SS Num)
 	return ret;
 }
 
-SS	SetCourseObj(ST_COURSE_OBJ stDat, SS Num)
+int16_t	SetCourseObj(ST_COURSE_OBJ stDat, int16_t Num)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	if(Num < COURSE_OBJ_MAX)
 	{
@@ -79,30 +79,30 @@ SS	SetCourseObj(ST_COURSE_OBJ stDat, SS Num)
 	return ret;
 }
 
-SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
+int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 {
-	SS	ret = 0;
-	US	uCount;
+	int16_t	ret = 0;
+	uint16_t	uCount;
 
 	GetRoadCycleCount(&uCount);
 
 	if(g_stCourse_Obj[bNum].ubAlive == TRUE)
 	{
-		SS	x, y, z;
-		SS	dx, dy, dz;
-		SS	st, cal;
-		SS	mx, my;
-		US	ras_x, ras_y, ras_pat, ras_num;
-		UC	bEven;
-		SS	Out_Of_Disp;
-		US	uTime;
+		int16_t	x, y, z;
+		int16_t	dx, dy, dz;
+		int16_t	st, cal;
+		int16_t	mx, my;
+		uint16_t	ras_x, ras_y, ras_pat, ras_num;
+		uint8_t	bEven;
+		int16_t	Out_Of_Disp;
+		uint16_t	uTime;
 
 		ST_CRT	stCRT;
 		ST_RAS_INFO	stRasInfo;
 		ST_ROAD_INFO	stRoadInfo;
 		
 #ifdef DEBUG	/* デバッグコーナー */
-		UC	bDebugMode;
+		uint8_t	bDebugMode;
 		GetDebugMode(&bDebugMode);
 #endif
 		
@@ -243,18 +243,18 @@ SS Course_Obj_main(UC bNum, UC bMode, UC bMode_rev)
 	return ret;
 }
 
-SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
+int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uint8_t ubPos)
 {
-	SS	ret = 0;
-	SS	i;
-	US	w, h;
-	UC	ubType;
-	UC	ubPos_H;
-	UI	uWidth, uHeight, uFileSize;
-	UI	uWidth_o, uHeight_o;
-	UI	uW_tmp, uH_tmp;
-	US	height_sum = 0u;
-	US	height_sum_o = 0u;
+	int16_t	ret = 0;
+	int16_t	i;
+	uint16_t	w, h;
+	uint8_t	ubType;
+	uint8_t	ubPos_H;
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint32_t	uWidth_o, uHeight_o;
+	uint32_t	uW_tmp, uH_tmp;
+	uint16_t	height_sum = 0u;
+	uint16_t	height_sum_o = 0u;
 	
 	ubType = g_stCourse_Obj[0].ubType;
 	
@@ -318,11 +318,11 @@ SS	Put_CouseObject(SS x, SS y, US Size, UC ubMode, UC ubPos)
 	return	ret;
 }
 
-SS	Sort_Course_Obj(void)
+int16_t	Sort_Course_Obj(void)
 {
-	SS	ret = 0;
-	SS	i;
-	SS	count = 0;
+	int16_t	ret = 0;
+	int16_t	i;
+	int16_t	count = 0;
 	ST_COURSE_OBJ	stTmp;
 	
 	while(1)
@@ -350,11 +350,11 @@ SS	Sort_Course_Obj(void)
 	return ret;
 }
 
-SS	Load_Course_Data(UC bCourseNum)
+int16_t	Load_Course_Data(uint8_t bCourseNum)
 {
-	SS	ret = 0;
-	SC	str[256];
-	US	x, y;
+	int16_t	ret = 0;
+	int8_t	str[256];
+	uint16_t	x, y;
 	ST_ROADDATA *p_stRoadData;
 	
 	/* コースデータ読み込み */
@@ -365,17 +365,17 @@ SS	Load_Course_Data(UC bCourseNum)
 	return ret;
 }
 
-SS	Move_Course_BG(UC bMode)
+int16_t	Move_Course_BG(uint8_t bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
-	SS	Slope;
-	SS	Angle;
-	SS	Move;
+	int16_t	Slope;
+	int16_t	Angle;
+	int16_t	Move;
 	ST_RAS_INFO	stRasInfo;
 	ST_ROAD_INFO	stRoadInfo;
 	ST_CARDATA	stMyCar = {0};
-	static SS	BG_x = X_OFFSET;
+	static int16_t	BG_x = X_OFFSET;
 	
 	GetRasterInfo(&stRasInfo);
 	GetRoadInfo(&stRoadInfo);

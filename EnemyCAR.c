@@ -22,19 +22,19 @@ ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
 ST_ENEMYCARDATA	*g_pStEnemyCar[ENEMYCAR_MAX];
 
 /* 関数のプロトタイプ宣言 */
-SS	InitEnemyCAR(void);
-SS	GetEnemyCAR(ST_ENEMYCARDATA *, SS);
-SS	SetEnemyCAR(ST_ENEMYCARDATA, SS);
-SS	EnemyCAR_main(UC, UC, UC);
-SS	SetAlive_EnemyCAR(void);
-SS	Put_EnemyCAR(US, US, US, UC);
-SS	Sort_EnemyCAR(void);
+int16_t	InitEnemyCAR(void);
+int16_t	GetEnemyCAR(ST_ENEMYCARDATA *, int16_t);
+int16_t	SetEnemyCAR(ST_ENEMYCARDATA, int16_t);
+int16_t	EnemyCAR_main(uint8_t, uint8_t, uint8_t);
+int16_t	SetAlive_EnemyCAR(void);
+int16_t	Put_EnemyCAR(uint16_t, uint16_t, uint16_t, uint8_t);
+int16_t	Sort_EnemyCAR(void);
 
 /* 関数 */
-SS	InitEnemyCAR(void)
+int16_t	InitEnemyCAR(void)
 {
-	SS ret = 0;
-	SS i;
+	int16_t ret = 0;
+	int16_t i;
 	
 	for(i=0; i<ENEMYCAR_MAX; i++)
 	{
@@ -53,9 +53,9 @@ SS	InitEnemyCAR(void)
 	return ret;
 }
 
-SS	GetEnemyCAR(ST_ENEMYCARDATA *stDat, SS Num)
+int16_t	GetEnemyCAR(ST_ENEMYCARDATA *stDat, int16_t Num)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	if(Num < ENEMYCAR_MAX)
 	{
 		*stDat = *g_pStEnemyCar[Num];
@@ -67,9 +67,9 @@ SS	GetEnemyCAR(ST_ENEMYCARDATA *stDat, SS Num)
 	return ret;
 }
 
-SS	SetEnemyCAR(ST_ENEMYCARDATA stDat, SS Num)
+int16_t	SetEnemyCAR(ST_ENEMYCARDATA stDat, int16_t Num)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	if(Num < ENEMYCAR_MAX)
 	{
@@ -82,27 +82,27 @@ SS	SetEnemyCAR(ST_ENEMYCARDATA stDat, SS Num)
 	return ret;
 }
 
-SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
+int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	if(bNum < ENEMYCAR_MAX)
 	{
 		if(g_pStEnemyCar[bNum]->ubAlive == TRUE)
 		{
-			SS	x, y, z;
-			SS	cal, dis;
-			SS	dx, dy, dz;
-			SS	mx, my;
-			US	ras_x, ras_y, ras_pat, ras_num;
-			SS	Out_Of_Disp = 0;
+			int16_t	x, y, z;
+			int16_t	cal, dis;
+			int16_t	dx, dy, dz;
+			int16_t	mx, my;
+			uint16_t	ras_x, ras_y, ras_pat, ras_num;
+			int16_t	Out_Of_Disp = 0;
 			ST_CARDATA	stMyCar;
 			ST_CRT		stCRT;
 			ST_RAS_INFO	stRasInfo;
 			ST_ROAD_INFO	stRoadInfo;
 
 #ifdef DEBUG	/* デバッグコーナー */
-			UC	bDebugMode;
+			uint8_t	bDebugMode;
 			GetDebugMode(&bDebugMode);
 #endif
 			ras_x = 0;
@@ -237,7 +237,7 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 				}
 				if(Out_Of_Disp < 0)
 				{
-					ADPCM_Play(16);	/* SE：WAKAME */
+//					ADPCM_Play(16);	/* SE：WAKAME */
 				}
 				g_pStEnemyCar[bNum]->ubAlive = FALSE;
 			}
@@ -259,10 +259,10 @@ SS	EnemyCAR_main(UC bNum, UC bMode, UC bMode_rev)
 	return ret;
 }
 
-SS	SetAlive_EnemyCAR(void)
+int16_t	SetAlive_EnemyCAR(void)
 {
-	SS	ret = 0;
-	SS	i;
+	int16_t	ret = 0;
+	int16_t	i;
 	ST_CARDATA	stMyCar;
 
 	GetMyCar(&stMyCar);
@@ -271,7 +271,7 @@ SS	SetAlive_EnemyCAR(void)
 	{
 		if(g_pStEnemyCar[i]->ubAlive == FALSE)
 		{
-			UI	rand = 0;
+			uint32_t	rand = 0;
 			/* 左右の挙動 */
 			rand = random();
 			rand &= 0x0Fu;
@@ -296,16 +296,16 @@ SS	SetAlive_EnemyCAR(void)
 	return	ret;
 }
 
-SS	Put_EnemyCAR(US x, US y, US Size, UC ubMode)
+int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode)
 {
-	SS	ret = 0;
-	SS	i;
-	US	w, h;
-	UI	uWidth, uHeight, uFileSize;
-	UI	uWidth_o, uHeight_o;
-	UI	uW_tmp, uH_tmp;
-	US	height_sum = 0u;
-	US	height_sum_o = 0u;
+	int16_t	ret = 0;
+	int16_t	i;
+	uint16_t	w, h;
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint32_t	uWidth_o, uHeight_o;
+	uint32_t	uW_tmp, uH_tmp;
+	uint16_t	height_sum = 0u;
+	uint16_t	height_sum_o = 0u;
 	
 	Get_PicImageInfo( ENEMYCAR_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 	uWidth_o = uWidth;
@@ -336,11 +336,11 @@ SS	Put_EnemyCAR(US x, US y, US Size, UC ubMode)
 	return	ret;
 }
 
-SS	Sort_EnemyCAR(void)
+int16_t	Sort_EnemyCAR(void)
 {
-	SS	ret = 0;
-	SS	i;
-	SS	count = 0;
+	int16_t	ret = 0;
+	int16_t	i;
+	int16_t	count = 0;
 	ST_ENEMYCARDATA	*pStEnemyCar_Tmp;
 	
 	while(1)

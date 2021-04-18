@@ -32,10 +32,10 @@
 #define	G_COLOR_SP	(1)	/* 特殊プライオリティとか */
 
 /* グローバル変数 */
-UI	g_CG_List_Max	=	0u;
-UC	*g_pCG_FileBuf[CG_MAX];
-US	g_CG_ColorCode[CG_MAX][256]	=	{0};
-UC	g_CG_MaxColor[CG_MAX][3]	=	{0};
+uint32_t	g_CG_List_Max	=	0u;
+uint8_t	*g_pCG_FileBuf[CG_MAX];
+uint16_t	g_CG_ColorCode[CG_MAX][256]	=	{0};
+uint8_t	g_CG_MaxColor[CG_MAX][3]	=	{0};
 
 /* グローバル構造体 */
 PICIMAGE	g_stPicImage[CG_MAX];
@@ -43,45 +43,45 @@ CG_LIST		g_stCG_LIST[CG_MAX];
 struct APICGINFO	g_CGInfo[CG_MAX];
 
 /* 関数のプロトタイプ宣言 */
-SS	Get_CG_FileList_MaxNum(UI *);
-UC	*Get_CG_FileBuf(UC);
-SS	Get_PicImageInfo(UC , UI *, UI *, UI *);
-SS	Get_PicImagePallet(UC);
-SS	Set_PicImagePallet(UC);
+int16_t	Get_CG_FileList_MaxNum(uint32_t *);
+uint8_t	*Get_CG_FileBuf(uint8_t);
+int16_t	Get_PicImageInfo(uint8_t , uint32_t *, uint32_t *, uint32_t *);
+int16_t	Get_PicImagePallet(uint8_t);
+int16_t	Set_PicImagePallet(uint8_t);
 void CG_File_Load(void);
 void G_INIT(void);
 void G_HOME(void);
-void G_VIEW(UC);
+void G_VIEW(uint8_t);
 void G_Palette_INIT(void);
 void G_Palette(void);
-SS	G_Stretch_Pict( SS , US , SS , US , UC , SS , US, SS, US, UC );
-SS	G_BitBlt(SS , US , SS , US , UC , SS , US , SS , US , UC , UC , UC , UC );
-SI	G_CLR(void);
-SS	G_CLR_AREA(SS, US, SS, US, UC);
-SS	G_CLR_ALL_OFFSC(UC);
-SS	G_FILL_AREA(SS, US, SS, US, UC, UC);
-SS	G_Load(UC, US, US, US);
-SS	G_Load_Mem(UC, US, US, US);
-SS	APICG_DataLoad2G(SC *, UL, UL, US);
-SS	APICG_DataLoad2M(UC , UL, UL, US, US *);
-SS	G_Subtractive_Color(US *, US *, US, US, US, UI);
-SS	PutGraphic_To_Text(UC , US , US );
-SS	PutGraphic_To_Symbol(UC *, US , US , US );
-SS	G_Scroll(SS, SS, UC);
+int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
+int16_t	G_BitBlt(int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t , int16_t , uint16_t , uint8_t , uint8_t , uint8_t , uint8_t );
+int32_t	G_CLR(void);
+int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);
+int16_t	G_CLR_ALL_OFFSC(uint8_t);
+int16_t	G_FILL_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t, uint8_t);
+int16_t	G_Load(uint8_t, uint16_t, uint16_t, uint16_t);
+int16_t	G_Load_Mem(uint8_t, uint16_t, uint16_t, uint16_t);
+int16_t	APICG_DataLoad2G(int8_t *, uint64_t, uint64_t, uint16_t);
+int16_t	APICG_DataLoad2M(uint8_t , uint64_t, uint64_t, uint16_t, uint16_t *);
+int16_t	G_Subtractive_Color(uint16_t *, uint16_t *, uint16_t, uint16_t, uint16_t, uint32_t);
+int16_t	PutGraphic_To_Text(uint8_t , uint16_t , uint16_t );
+int16_t	PutGraphic_To_Symbol(uint8_t *, uint16_t , uint16_t , uint16_t );
+int16_t	G_Scroll(int16_t, int16_t, uint8_t);
 
 /* 関数 */
-SS Get_CG_FileList_MaxNum(UI *uMaxNum)
+int16_t Get_CG_FileList_MaxNum(uint32_t *uMaxNum)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	*uMaxNum = g_CG_List_Max;
 	
 	return ret;
 }
 
-UC *Get_CG_FileBuf(UC bNum)
+uint8_t *Get_CG_FileBuf(uint8_t bNum)
 {
-	UC *ret = 0;
+	uint8_t *ret = 0;
 	
 	ret = g_pCG_FileBuf[bNum];
 //	printf("Get(%d,0x%p,0x%p)\n", bNum, g_pCG_FileBuf[bNum], ret );
@@ -89,9 +89,9 @@ UC *Get_CG_FileBuf(UC bNum)
 	return ret;
 }
 
-SS Get_PicImageInfo(UC bNum, UI *pWidth, UI *pHeight, UI *pFileSize)
+int16_t Get_PicImageInfo(uint8_t bNum, uint32_t *pWidth, uint32_t *pHeight, uint32_t *pFileSize)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	BITMAPFILEHEADER *pFile;
 	BITMAPINFOHEADER *pInfo;
 	
@@ -117,10 +117,10 @@ SS Get_PicImageInfo(UC bNum, UI *pWidth, UI *pHeight, UI *pFileSize)
 	return ret;
 }
 
-SS Get_PicImagePallet(UC bNum)
+int16_t Get_PicImagePallet(uint8_t bNum)
 {
-	SS	ret = 0;
-	UI	i;
+	int16_t	ret = 0;
+	uint32_t	i;
 
 	/* パレットの取得 */
 	for(i=0; i<256; i++)
@@ -131,12 +131,12 @@ SS Get_PicImagePallet(UC bNum)
 	return ret;
 }
 
-SS Set_PicImagePallet(UC bNum)
+int16_t Set_PicImagePallet(uint8_t bNum)
 {
-	SS	ret = 0;
-	UI	i;
-	UI	offset_val;
-	static UI offset = 0;
+	int16_t	ret = 0;
+	uint32_t	i;
+	uint32_t	offset_val;
+	static uint32_t offset = 0;
 	
 	/* パレットの設定 */
 	switch(g_stCG_LIST[bNum].ubType)
@@ -184,16 +184,16 @@ SS Set_PicImagePallet(UC bNum)
 
 void CG_File_Load(void)
 {
-	US	i;
-	SI	FileSize;
+	uint16_t	i;
+	int32_t	FileSize;
 
 	/* グラフィックリスト */
 	Load_CG_List("data\\cg\\", "g_list.txt", g_stCG_LIST, &g_CG_List_Max);
 	
 	for(i = 0; i < g_CG_List_Max; i++)
 	{
-		SI	Size;
-		UI	uSize8x = 0;
+		int32_t	Size;
+		uint32_t	uSize8x = 0;
 		BITMAPFILEHEADER *pFile;
 		BITMAPINFOHEADER *pInfo;
 
@@ -222,14 +222,14 @@ void CG_File_Load(void)
 #endif
 		/* メモリ展開用のサイズ演算 */
 		uSize8x = ((((pInfo->biWidth)+7)/8) * 8);	/* 8の倍数 */
-		Size = (pInfo->biHeight) * uSize8x * sizeof(US);
+		Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
 #ifdef DEBUG
 //		printf("Head3(%d)=(%d)\n", i, Size );
 //		KeyHitESC();	/* デバッグ用 */
 #endif
 		/* メモリ確保 */
 		g_stPicImage[i].pImageData = NULL;
-		g_stPicImage[i].pImageData = (US*)MyMalloc( Size );	/* メモリの確保 */
+		g_stPicImage[i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
 		if( g_stPicImage[i].pImageData == NULL )
 		{
 			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
@@ -243,13 +243,13 @@ void CG_File_Load(void)
 		
 		/* ファイルをメモリに保存する */
 		g_pCG_FileBuf[i] = NULL;
-		g_pCG_FileBuf[i] = (UC*)MyMalloc( FileSize );	/* メモリ確保 */
+		g_pCG_FileBuf[i] = (uint8_t*)MyMalloc( FileSize );	/* メモリ確保 */
 		if( g_pCG_FileBuf[i] == NULL )
 		{
 			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
 			continue;
 		}
-		File_Load( g_stCG_LIST[i].bFileName, (UC *)g_pCG_FileBuf[i], sizeof(UC), FileSize);	/* メモリに読み込み */
+		File_Load( g_stCG_LIST[i].bFileName, (uint8_t *)g_pCG_FileBuf[i], sizeof(uint8_t), FileSize);	/* メモリに読み込み */
 #ifdef DEBUG
 //		printf("File(%d,0x%p) = %d\n", i, g_pCG_FileBuf[i], FileSize);
 //		puts("========================");
@@ -263,13 +263,13 @@ void CG_File_Load(void)
 
 	for(i = 0; i < g_CG_List_Max; i++)
 	{
-		US	*pBuf = NULL;
-		US	*pSrcBuf = NULL;
-		US	*pDstBuf = NULL;
-		SI	Res;
-		UI	uWidth, uHeight;
-		UI	uSize8x = 0;
-		UI	uAPICG_work_Size;
+		uint16_t	*pBuf = NULL;
+		uint16_t	*pSrcBuf = NULL;
+		uint16_t	*pDstBuf = NULL;
+		int32_t	Res;
+		uint32_t	uWidth, uHeight;
+		uint32_t	uSize8x = 0;
+		uint32_t	uAPICG_work_Size;
 
 		BITMAPINFOHEADER *pInfo;
 		
@@ -284,7 +284,7 @@ void CG_File_Load(void)
 		
 		/* メモリ確保(画面を模擬) */
 		uAPICG_work_Size = Mdiv2(PIC_WORK_BUF_SIZE);
-		pSrcBuf = (US*)MyMalloc( uAPICG_work_Size );
+		pSrcBuf = (uint16_t*)MyMalloc( uAPICG_work_Size );
 		if( pSrcBuf == NULL )	/* メモリの確保 */
 		{
 			printf("error:CG File %2d = %s\n", i, g_stCG_LIST[i].bFileName );
@@ -314,14 +314,14 @@ void CG_File_Load(void)
 		
 #if 0	/* 画面に表示 */
 		{
-			US	*pDstGR = NULL;
-			UI	dx = 0, dy = 0;
+			uint16_t	*pDstGR = NULL;
+			uint32_t	dx = 0, dy = 0;
 
-//			memset((US*)0xC00000, 0x42, 0x80000);	/* デバッグ用 */
+//			memset((uint16_t*)0xC00000, 0x42, 0x80000);	/* デバッグ用 */
 			
 			for(y=0; y < uHeight; y++)
 			{
-				pDstGR = (US *)(0xC00000 + ((dy + y) << 10) + (dx << 1));
+				pDstGR = (uint16_t *)(0xC00000 + ((dy + y) << 10) + (dx << 1));
 				pBuf = pSrcBuf + (y << 9);
 				
 				for(x=0; x < uWidth; x++)
@@ -359,7 +359,7 @@ void CG_File_Load(void)
 			}
 			default:	/* 通常の256色CG */	
 			{
-				UI	x, y;
+				uint32_t	x, y;
 				
 				/* 加工後をメモリに保存する */
 				for(y=0; y < uHeight; y++)
@@ -408,10 +408,10 @@ void CG_File_Load(void)
 
 void G_INIT(void)
 {
-	volatile US *VIDEO_REG1 = (US *)0xE82400;
-	volatile US *VIDEO_REG2 = (US *)0xE82500;
-	volatile US *VIDEO_REG3 = (US *)0xE82600;
-	volatile US *V_Sync_end = (US *)0xE8000E;
+	volatile uint16_t *VIDEO_REG1 = (uint16_t *)0xE82400;
+	volatile uint16_t *VIDEO_REG2 = (uint16_t *)0xE82500;
+	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
+	volatile uint16_t *V_Sync_end = (uint16_t *)0xE8000E;
 
 	G_CLR_ON();				/* グラフィックのクリア */
 	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
@@ -481,7 +481,7 @@ void G_HOME(void)
 
 void G_Palette_INIT(void)
 {
-	UI	nPalette;
+	uint32_t	nPalette;
 
 	/* グラフィックパレットの初期化 */
 	for(nPalette=0; nPalette < 0xFF; nPalette++)
@@ -490,9 +490,9 @@ void G_Palette_INIT(void)
 	}
 }
 
-void G_VIEW(UC bSW)
+void G_VIEW(uint8_t bSW)
 {
-	volatile US *VIDEO_REG3 = (US *)0xE82600;
+	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
 	
 	if(bSW == TRUE)
 	{
@@ -522,16 +522,16 @@ void G_Palette(void)
 	GPALET( 0, SetRGB( 0,  0,  0));	/* Black */
 }
 
-SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
-					SS src_x, US src_w, SS src_y, US src_h, UC ubSrcScrn)
+int16_t G_Stretch_Pict(	int16_t dst_x, uint16_t dst_w, int16_t dst_y, uint16_t dst_h, uint8_t ubDstScrn,
+					int16_t src_x, uint16_t src_w, int16_t src_y, uint16_t src_h, uint8_t ubSrcScrn)
 {
-	SS	ret = 0;
-	US	*pDstGR,	*pSrcGR;
-	US	*pSrcGR_tmp;
-	UI	DstGR_H,	SrcGR_H;
-	SS	dst_ex,	dst_ey;
-	SS	src_ex,	src_ey;
-	SS	x, y;
+	int16_t	ret = 0;
+	uint16_t	*pDstGR,	*pSrcGR;
+	uint16_t	*pSrcGR_tmp;
+	uint32_t	DstGR_H,	SrcGR_H;
+	int16_t	dst_ex,	dst_ey;
+	int16_t	src_ex,	src_ey;
+	int16_t	x, y;
 
 	dst_ex	= dst_x + dst_w;
 	dst_ey	= dst_y + dst_h;
@@ -558,9 +558,9 @@ SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 	for(y = dst_y; y < dst_ey; y++)
 	{
 		/* アドレス算出 */
-		pDstGR = (US *)(DstGR_H + ((y << 10) + (dst_x << 1)));
+		pDstGR = (uint16_t *)(DstGR_H + ((y << 10) + (dst_x << 1)));
 
-		pSrcGR = (US *)(SrcGR_H + ((((src_y + Mmul_1p25(y - dst_y))) << 10) + (src_x << 1)));
+		pSrcGR = (uint16_t *)(SrcGR_H + ((((src_y + Mmul_1p25(y - dst_y))) << 10) + (src_x << 1)));
 		pSrcGR_tmp = pSrcGR;
 	
 		for(x = dst_x; x < dst_ex; x++)
@@ -579,18 +579,18 @@ SS G_Stretch_Pict(	SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 /* 画像のコピー */
 /* 同じサイズの画像を任意の位置に描画する */
 /* 表示先はx,y座標を画像の中心とした位置 */
-SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
-			SS src_x, US src_w, SS src_y, US src_h, UC ubSrcScrn,
-			UC ubMode, UC ubV, UC ubH)
+int16_t G_BitBlt(int16_t dst_x, uint16_t dst_w, int16_t dst_y, uint16_t dst_h, uint8_t ubDstScrn,
+			int16_t src_x, uint16_t src_w, int16_t src_y, uint16_t src_h, uint8_t ubSrcScrn,
+			uint8_t ubMode, uint8_t ubV, uint8_t ubH)
 {
-	SS	ret = 0;
-	US	*pDstGR,	*pSrcGR;
-	UI	DstGR_H,	SrcGR_H;
-	SS	dst_ex,	dst_ey;
-	SS	src_ex,	src_ey;
-	SS	x, y;
-	SS	x_min, y_min;
-	SS	x_max, y_max;
+	int16_t	ret = 0;
+	uint16_t	*pDstGR,	*pSrcGR;
+	uint32_t	DstGR_H,	SrcGR_H;
+	int16_t	dst_ex,	dst_ey;
+	int16_t	src_ex,	src_ey;
+	int16_t	x, y;
+	int16_t	x_min, y_min;
+	int16_t	x_max, y_max;
 
 	if(dst_x < X_MIN_DRAW)return -1;
 	if(dst_x >= X_MAX_DRAW)return -1;
@@ -740,9 +740,9 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 	for(y = dst_y; y < dst_ey; y++)
 	{
 		/* アドレス算出 */
-		pDstGR = (US *)(DstGR_H + ((y << 10) + (dst_x << 1)));
+		pDstGR = (uint16_t *)(DstGR_H + ((y << 10) + (dst_x << 1)));
 
-		pSrcGR = (US *)(SrcGR_H + (((src_y + (y - dst_y)) << 10) + (src_x << 1)));
+		pSrcGR = (uint16_t *)(SrcGR_H + (((src_y + (y - dst_y)) << 10) + (src_x << 1)));
 	
 		for(x = dst_x; x < dst_ex; x++)
 		{
@@ -758,23 +758,23 @@ SS G_BitBlt(SS dst_x, US dst_w, SS dst_y, US dst_h, UC ubDstScrn,
 }
 
 /* 画面のクリア */
-SI G_CLR(void)
+int32_t G_CLR(void)
 {
 	return _iocs_wipe();
 }
 
-SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
+int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 {
-	SS	ret = 0;
-	SS	i=0;
-	UL	ulGR_H;
-	UL	ulPoint;
-	UI	unSize;
+	int16_t	ret = 0;
+	int16_t	i=0;
+	uint64_t	ulGR_H;
+	uint64_t	ulPoint;
+	uint32_t	unSize;
 #if 0
-	US	data[512] = {0};
-	SI	nMode;
-	UC *DMA_DCR;
-	UC *DMA_GCR;
+	uint16_t	data[512] = {0};
+	int32_t	nMode;
+	uint8_t *DMA_DCR;
+	uint8_t *DMA_GCR;
 	
 	struct _chain stSrcImage;
 	struct _chain stDstImage[256];
@@ -782,8 +782,8 @@ SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 	if(DMAMODE() != 0u)return -1;
 #endif
 #if 0
-	volatile US *CRTC_R21 = (US *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
-	volatile US *CRTC_480 = (US *)0xE80480u;	/* CRTC動作ポート */
+	volatile uint16_t *CRTC_R21 = (uint16_t *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
+	volatile uint16_t *CRTC_480 = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
 #endif
 
 	switch(Screen)
@@ -818,16 +818,16 @@ SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 		stDstImage[i].len  =  unSize;
 	}
 	
-	DMA_DCR = (UC *)0xE84084u;
-	*DMA_DCR = Mbset(*DMA_DCR, ((UC)0b11000000), ((UC)0b10000000));	/* XRM(bit7,6) 10: */
-	DMA_GCR = (UC *)0xE840FFu;
-	*DMA_GCR = Mbset(*DMA_GCR, ((UC)0b0011), ((UC)0b0011));/* BR(bit1,0) 11:6.25% */
+	DMA_DCR = (uint8_t *)0xE84084u;
+	*DMA_DCR = Mbset(*DMA_DCR, ((uint8_t)0b11000000), ((uint8_t)0b10000000));	/* XRM(bit7,6) 10: */
+	DMA_GCR = (uint8_t *)0xE840FFu;
+	*DMA_GCR = Mbset(*DMA_GCR, ((uint8_t)0b0011), ((uint8_t)0b0011));/* BR(bit1,0) 11:6.25% */
 	
 	DMAMOV_A(&stDstImage[0],	/* addr1 */
 			&data[0],			/* addr2 */
 			nMode,				/* mode */
-//		Mmax((SI)h/16, 1));
-			(SI)h);				/* len */
+//		Mmax((int32_t)h/16, 1));
+			(int32_t)h);				/* len */
 #endif
 
 #if 0
@@ -836,7 +836,7 @@ SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 //		DMAMOVE(&data[0],									/* addr1 */
 //				(void *)(ulGR_H + ulPoint + (i * 0x400u)),	/* addr2 */
 //				nMode,										/* mode */
-//				(SI)unSize);								/* len */
+//				(int32_t)unSize);								/* len */
 	}
 #endif
 
@@ -859,9 +859,9 @@ SS G_CLR_AREA(SS x, US w, SS y, US h, UC Screen)
 	return	ret;
 }
 
-SS G_CLR_ALL_OFFSC(UC bMode)
+int16_t G_CLR_ALL_OFFSC(uint8_t bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	ST_CRT	stCRT = {0};
 	GetCRT(&stCRT, bMode);
@@ -877,13 +877,13 @@ SS G_CLR_ALL_OFFSC(UC bMode)
 	return	ret;
 }
 
-SS G_FILL_AREA(SS x, US w, SS y, US h, UC Screen, UC bPal)
+int16_t G_FILL_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen, uint8_t bPal)
 {
-	SS	ret = 0;
-	SS	i=0;
-	UL	ulGR_H;
-	UL	ulPoint;
-	UI	unSize;
+	int16_t	ret = 0;
+	int16_t	i=0;
+	uint64_t	ulGR_H;
+	uint64_t	ulPoint;
+	uint32_t	unSize;
 
 	WINDOW( x, y, x + w, y + h);	/* 描画可能枠再設定 */
 
@@ -914,27 +914,27 @@ SS G_FILL_AREA(SS x, US w, SS y, US h, UC Screen, UC bPal)
 }
 
 
-SS G_Load(UC bCGNum, US uX, US uY, US uArea)
+int16_t G_Load(uint8_t bCGNum, uint16_t uX, uint16_t uY, uint16_t uArea)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 
 	ret = APICG_DataLoad2G( g_stCG_LIST[bCGNum].bFileName, uX, uY, uArea);
 
 	return	ret;
 }
 
-SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
+int16_t G_Load_Mem(uint8_t bCGNum, uint16_t uX, uint16_t uY, uint16_t uArea)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 
-	US	*pDstGR, *pSrcGR;
-	UI	DstGR_H;
-	UI	Addr_Max;
-	UI	uMaxNum;
-	SS	x, y;
-	UI	uWidth, uHeight, uFileSize;
-	US	uSize8x = 0;
-	SS	Pal_offset;
+	uint16_t	*pDstGR, *pSrcGR;
+	uint32_t	DstGR_H;
+	uint32_t	Addr_Max;
+	uint32_t	uMaxNum;
+	int16_t	x, y;
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	uSize8x = 0;
+	int16_t	Pal_offset;
 
 	Get_CG_FileList_MaxNum(&uMaxNum);
 	if(uMaxNum <= bCGNum)
@@ -969,8 +969,8 @@ SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
 	for(y = 0; y < uHeight; y++)
 	{
 		/* アドレス算出 */
-		pDstGR = (US *)(DstGR_H + (((uY + y) << 10) + (uX << 1)));
-		if(Addr_Max <= (UI)pDstGR)
+		pDstGR = (uint16_t *)(DstGR_H + (((uY + y) << 10) + (uX << 1)));
+		if(Addr_Max <= (uint32_t)pDstGR)
 		{
 			continue;
 		}
@@ -983,7 +983,7 @@ SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
 				{
 					*pDstGR = *pSrcGR + Pal_offset;
 				}
-				if(Addr_Max > (UI)pDstGR)
+				if(Addr_Max > (uint32_t)pDstGR)
 				{
 					pDstGR++;
 				}
@@ -996,22 +996,22 @@ SS G_Load_Mem(UC bCGNum, US uX, US uY, US uArea)
 }
 
 /* PICファイルを読み込み */
-SS APICG_DataLoad2G(SC *fname, UL pos_x, UL pos_y, US uArea)
+int16_t APICG_DataLoad2G(int8_t *fname, uint64_t pos_x, uint64_t pos_y, uint16_t uArea)
 {
-	SS ret;
+	int16_t ret;
 
-	US *GR;
-	UC *file_buf = NULL, *work_buf = NULL;
+	uint16_t *GR;
+	uint8_t *file_buf = NULL, *work_buf = NULL;
 	
-	file_buf = (UC*)MyMalloc(PIC_FILE_BUF_SIZE);
-	work_buf = (UC*)MyMalloc(PIC_WORK_BUF_SIZE);
+	file_buf = (uint8_t*)MyMalloc(PIC_FILE_BUF_SIZE);
+	work_buf = (uint8_t*)MyMalloc(PIC_WORK_BUF_SIZE);
 	
 	if(uArea != 0)
 	{
-		GR = (US *)0xC80000;	/* Screen1 */
+		GR = (uint16_t *)0xC80000;	/* Screen1 */
 	}
 	else{
-		GR = (US *)0xC00000;	/* Screen0 */
+		GR = (uint16_t *)0xC00000;	/* Screen0 */
 	}
 	
 	if( (file_buf == NULL) || (work_buf == NULL) )
@@ -1021,7 +1021,7 @@ SS APICG_DataLoad2G(SC *fname, UL pos_x, UL pos_y, US uArea)
 	}
 	else
 	{
-		ret = APICLOAD(	(US*)GR, 
+		ret = APICLOAD(	(uint16_t*)GR, 
 						fname,				/* PICファイル名 */
 						pos_x, pos_y,		/* 描画先のX座標とY座標 */
 						file_buf,
@@ -1046,12 +1046,12 @@ SS APICG_DataLoad2G(SC *fname, UL pos_x, UL pos_y, US uArea)
 	return ret;
 }
 
-SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
+int16_t APICG_DataLoad2M(uint8_t uNum, uint64_t pos_x, uint64_t pos_y, uint16_t uArea, uint16_t *pDst)
 {
-	US *GR;
-	UC *work_buf = NULL;
-	UI	uMaxNum;
-	SS ret = 0;
+	uint16_t *GR;
+	uint8_t *work_buf = NULL;
+	uint32_t	uMaxNum;
+	int16_t ret = 0;
 	
 	Get_CG_FileList_MaxNum(&uMaxNum);
 	if(uMaxNum <= uNum)
@@ -1066,10 +1066,10 @@ SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
 		{
 		case 0:
 		default:
-			GR = (US *)0xC00000;	/* Screen0 */
+			GR = (uint16_t *)0xC00000;	/* Screen0 */
 			break;
 		case 1:
-			GR = (US *)0xC80000;	/* Screen1 */
+			GR = (uint16_t *)0xC80000;	/* Screen1 */
 			break;
 		}
 	}
@@ -1080,10 +1080,10 @@ SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
 	}
 	
 	{
-		UI uWidth, uHeight, uFileSize;
-		UC *pFileBuf;
+		uint32_t uWidth, uHeight, uFileSize;
+		uint8_t *pFileBuf;
 
-		pFileBuf = (UC*)Get_CG_FileBuf(uNum);	/* ファイルバッファのポインタ取得 */
+		pFileBuf = (uint8_t*)Get_CG_FileBuf(uNum);	/* ファイルバッファのポインタ取得 */
 		Get_PicImageInfo(uNum, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 
 #ifdef DEBUG
@@ -1091,8 +1091,8 @@ SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
 //		printf("MAPIC2(%d:%d)=(%d,%d)(%d)\n", uNum, uArea, uWidth, uHeight, uFileSize );
 #endif
 
-//		work_buf = (UC*)MyMalloc( uHeight * (((uWidth+7)/8) * 8) );
-		work_buf = (UC*)MyMalloc( PIC_WORK_BUF_SIZE );	/* 画面と同じ */
+//		work_buf = (uint8_t*)MyMalloc( uHeight * (((uWidth+7)/8) * 8) );
+		work_buf = (uint8_t*)MyMalloc( PIC_WORK_BUF_SIZE );	/* 画面と同じ */
 		if( work_buf == NULL )
 		{
 			/* メモリエラー */
@@ -1102,7 +1102,7 @@ SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
 		{
 			//int M_APICLOAD( UWORD *, struct APICGINFO *, long, long, UBYTE *, long, ULONG, UBYTE * );
 			/* メモリからロード */
-			ret = M_APICLOAD(	(US*)GR,			/* Load Ptr */
+			ret = M_APICLOAD(	(uint16_t*)GR,			/* Load Ptr */
 								&g_CGInfo[uNum],	/* Data Information */
 								pos_x, pos_y,		/* Load Position */
 								pFileBuf,			/* Load FileBuf */
@@ -1149,27 +1149,27 @@ SS APICG_DataLoad2M(UC uNum, UL pos_x, UL pos_y, US uArea, US *pDst)
       +--------------------------------------------------------------+
 #endif
 
-SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidthEx, UI uNum)
+int16_t G_Subtractive_Color(uint16_t *pSrcBuf, uint16_t *pDstBuf, uint16_t uWidth, uint16_t uHeight, uint16_t uWidthEx, uint32_t uNum)
 {
-	SS	ret = 0;
-	UI	i, j, k, m;
-	UI	x, y, z;
-	UI	uAPICG_work_Size;
-	UI	uSize8x = 0;
-	US	*pBuf = NULL;
-	US	col;
-	UC	ubR=0,ubG=0,ubB=0;
-	UC	ubNotUsePal[256];
-	US	uColTbl[256];
-	UC	ubConvPal;
-	UC	ubType;
-	UC	ubCow_R, ubCow_G, ubCow_B;
-	UC	ubTableOffset;
+	int16_t	ret = 0;
+	uint32_t	i, j, k, m;
+	uint32_t	x, y, z;
+	uint32_t	uAPICG_work_Size;
+	uint32_t	uSize8x = 0;
+	uint16_t	*pBuf = NULL;
+	uint16_t	col;
+	uint8_t	ubR=0,ubG=0,ubB=0;
+	uint8_t	ubNotUsePal[256];
+	uint16_t	uColTbl[256];
+	uint8_t	ubConvPal;
+	uint8_t	ubType;
+	uint8_t	ubCow_R, ubCow_G, ubCow_B;
+	uint8_t	ubTableOffset;
 	
 	/* 均等量子化テーブル */
-	UC	ubGen8_R[8];
-	UC	ubGen8_G[8];
-	UC	ubGen8_B[8];
+	uint8_t	ubGen8_R[8];
+	uint8_t	ubGen8_G[8];
+	uint8_t	ubGen8_B[8];
 
 	pBuf = pSrcBuf;
 	uAPICG_work_Size = Mdiv2(PIC_WORK_BUF_SIZE);
@@ -1248,7 +1248,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	}
 	else
 	{
-		UI uHalfSize = Mdiv2(uAPICG_work_Size);
+		uint32_t uHalfSize = Mdiv2(uAPICG_work_Size);
 		/* 減色カラーの対象を抽出 */
 		for(j=0; j < uHalfSize; j++)
 		{
@@ -1315,9 +1315,9 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 		{
 			if(x < uWidth)
 			{
-				UC pal;
+				uint8_t pal;
 				
-				pal = (UC)(*pBuf & 0x00FF);	/* 画像のパレット番号を取得 */
+				pal = (uint8_t)(*pBuf & 0x00FF);	/* 画像のパレット番号を取得 */
 
 				ubNotUsePal[pal] = 0;	/* 使用したパレット */
 
@@ -1327,7 +1327,7 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 				}
 				else
 				{
-					UC ubTmp;
+					uint8_t ubTmp;
 					
 					col = GPALET(pal, -1);	/* パレット番号からカラーコードを取得 */
 					ubR = GetR(col);
@@ -1336,10 +1336,10 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 					
 					if(ubType == 3u)	/* グレイスケール */
 					{
-						UI	uGlay;
-						uGlay =  ((UI)(Mmul2(ubR) + ubR));
-						uGlay += ((UI)(Mmul4(ubG) + Mmul2(ubG)));
-						uGlay += ((UI)ubB);
+						uint32_t	uGlay;
+						uGlay =  ((uint32_t)(Mmul2(ubR) + ubR));
+						uGlay += ((uint32_t)(Mmul4(ubG) + Mmul2(ubG)));
+						uGlay += ((uint32_t)ubB);
 						uGlay = Mdiv10(uGlay);
 						
 						col = SetRGB(uGlay, uGlay, uGlay);	/* ３色を合成 */
@@ -1446,29 +1446,29 @@ SS G_Subtractive_Color(US *pSrcBuf, US *pDstBuf, US uWidth, US uHeight, US uWidt
 	return ret;
 }
 
-SS PutGraphic_To_Text(UC bCGNum, US dx, US dy)
+int16_t PutGraphic_To_Text(uint8_t bCGNum, uint16_t dx, uint16_t dy)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 
-	UI	x, y, z;
-	UI	uMaxNum;
-	UI	uWidth, uHeight, uFileSize;
-	US	uSize8x = 0;
+	uint32_t	x, y, z;
+	uint32_t	uMaxNum;
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	uSize8x = 0;
 	
-	US	uDstTxAddr;
-	US	*pSrcGR;
+	uint16_t	uDstTxAddr;
+	uint16_t	*pSrcGR;
 	
-	UC	*T0_HEAD = (UC *)0xE00000;
-	UC	*T1_HEAD = (UC *)0xE20000;
-	UC	*T2_HEAD = (UC *)0xE40000;
-	UC	*T3_HEAD = (UC *)0xE60000;
-	UC	*pDst0;
-	UC	*pDst1;
-	UC	*pDst2;
-	UC	*pDst3;
-	US	unPal;
-	US	unPalOffset;
-	US	unTmp[4];
+	uint8_t	*T0_HEAD = (uint8_t *)0xE00000;
+	uint8_t	*T1_HEAD = (uint8_t *)0xE20000;
+	uint8_t	*T2_HEAD = (uint8_t *)0xE40000;
+	uint8_t	*T3_HEAD = (uint8_t *)0xE60000;
+	uint8_t	*pDst0;
+	uint8_t	*pDst1;
+	uint8_t	*pDst2;
+	uint8_t	*pDst3;
+	uint16_t	unPal;
+	uint16_t	unPalOffset;
+	uint16_t	unTmp[4];
 	
 	Get_CG_FileList_MaxNum(&uMaxNum);
 	if(uMaxNum <= bCGNum)
@@ -1535,9 +1535,9 @@ SS PutGraphic_To_Text(UC bCGNum, US dx, US dy)
 	return ret;
 }
 
-SS PutGraphic_To_Symbol(UC *sString, US dx, US dy, US uPal)
+int16_t PutGraphic_To_Symbol(uint8_t *sString, uint16_t dx, uint16_t dy, uint16_t uPal)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	struct _symbolptr stSymbol;
 	
@@ -1555,19 +1555,19 @@ SS PutGraphic_To_Symbol(UC *sString, US dx, US dy, US uPal)
 	return ret;
 }
 
-SS	G_Scroll(SS x, SS y, UC bSCNum)
+int16_t	G_Scroll(int16_t x, int16_t y, uint8_t bSCNum)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	
 	switch(bSCNum)
 	{
 	case 0:
 	default:
 		{
-			volatile US *CRTC_R12 = (US *)0xE80018u;
-			volatile US *CRTC_R13 = (US *)0xE8001Au;
-			volatile US *CRTC_R14 = (US *)0xE8001Cu;
-			volatile US *CRTC_R15 = (US *)0xE8001Eu;
+			volatile uint16_t *CRTC_R12 = (uint16_t *)0xE80018u;
+			volatile uint16_t *CRTC_R13 = (uint16_t *)0xE8001Au;
+			volatile uint16_t *CRTC_R14 = (uint16_t *)0xE8001Cu;
+			volatile uint16_t *CRTC_R15 = (uint16_t *)0xE8001Eu;
 			*CRTC_R12  = Mbset(*CRTC_R12 , 0x03FF, x);	/* Screen 0 x */
 			*CRTC_R13  = Mbset(*CRTC_R13 , 0x03FF, y);	/* Screen 0 y */
 			*CRTC_R14  = Mbset(*CRTC_R14 , 0x01FF, x);	/* Screen 1 x */
@@ -1576,10 +1576,10 @@ SS	G_Scroll(SS x, SS y, UC bSCNum)
 		}
 	case 1:
 		{
-			volatile US *CRTC_R16 = (US *)0xE80020u;
-			volatile US *CRTC_R17 = (US *)0xE80022u;
-			volatile US *CRTC_R18 = (US *)0xE80024u;
-			volatile US *CRTC_R19 = (US *)0xE80026u;
+			volatile uint16_t *CRTC_R16 = (uint16_t *)0xE80020u;
+			volatile uint16_t *CRTC_R17 = (uint16_t *)0xE80022u;
+			volatile uint16_t *CRTC_R18 = (uint16_t *)0xE80024u;
+			volatile uint16_t *CRTC_R19 = (uint16_t *)0xE80026u;
 			*CRTC_R16  = Mbset(*CRTC_R16 , 0x01FF, x);	/* Screen 2 x */
 			*CRTC_R17  = Mbset(*CRTC_R17 , 0x01FF, y);	/* Screen 2 y */
 			*CRTC_R18  = Mbset(*CRTC_R18 , 0x01FF, x);	/* Screen 3 x */

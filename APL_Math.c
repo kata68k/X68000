@@ -22,7 +22,7 @@
 /*
 */
 /* Sinテーブル 配列番号はdeg */		/* 必要であれば精度を上げる */
-const	SS	t_Sin256[91] = {
+const	int16_t	t_Sin256[91] = {
 /*	  0   1   2   3   4   5   6   7   8   9 */
 	  0,  4,  8, 13, 17, 22, 26, 31, 35, 40,/*   0 -  9 */
 	 44, 48, 53, 57, 61, 66, 70, 74, 79, 83,/*  10 - 19 */
@@ -172,19 +172,19 @@ const FLOAT atanTable[] =
 	
 /* 関数のプロトタイプ宣言 */
 FLOAT APL_Atan2(FLOAT , FLOAT );
-SS APL_Cos(SS);
-SS APL_Sin(SS);
-SS APL_Tan256(SS);
-UI APL_uDiv(UI, UI);
-SI APL_sDiv(SI, SI);
+int16_t APL_Cos(int16_t);
+int16_t APL_Sin(int16_t);
+int16_t APL_Tan256(int16_t);
+uint32_t APL_uDiv(uint32_t, uint32_t);
+int32_t APL_sDiv(int32_t, int32_t);
 
 /* 関数 */
 
 /* 参考 https://mitoshiropj.blogspot.com/2013/08/blog-post_9340.html */
 FLOAT APL_Atan2(FLOAT y, FLOAT x)
 {
-	const SI atanDevide = 1024;
-	SI	num;
+	const int32_t atanDevide = 1024;
+	int32_t	num;
 	FLOAT r, d;
 	
 	if (x >= 0)
@@ -195,7 +195,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 0-45
 				r = x / y;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("0-45 (%d)= %f, %f\n", num, r, d);
 				return d;
@@ -204,7 +204,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 45-90
 				r = y / x;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("45-90 (%d)= %f, %f\n", num, r, d);
 				return 90.0f - d;
@@ -216,7 +216,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 90-135
 				r = -y / x;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("90-135 (%d)= %f, %f\n", num, r, d);
 				return 90.0f + d;
@@ -225,7 +225,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 135-180
 				r = x / -y;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("135-180 (%d)= %f, %f\n", num, r, d);
 				return 180.0f - d;
@@ -240,7 +240,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 180-225
 				r = -x / -y;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("180-225 (%d)= %f, %f\n", num, r, d);
 				return 180.0f + d;
@@ -249,7 +249,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 225-270
 				r = -y / -x;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("225-270 (%d)= %f, %f\n", num, r, d);
 				return 270.0f - d;
@@ -261,7 +261,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 270-315
 				r = y / -x;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("270-315 (%d)= %f, %f\n", num, r, d);
 				return 270.0f + d;
@@ -270,7 +270,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 			{
 				// 315-360
 				r = -x / y;
-				num = (SI)(r * atanDevide);
+				num = (int32_t)(r * atanDevide);
 				d = atanTable[num];
 //				printf("315-360 (%d)= %f, %f\n", num, r, d);
 				return 360.0f - d;
@@ -279,7 +279,7 @@ FLOAT APL_Atan2(FLOAT y, FLOAT x)
 	}
 }
 
-SS APL_Sin(SS deg)
+int16_t APL_Sin(int16_t deg)
 {
 	while(deg < 0)
 	{
@@ -307,14 +307,14 @@ SS APL_Sin(SS deg)
 	}
 }
 
-SS APL_Cos(SS deg)
+int16_t APL_Cos(int16_t deg)
 {
 	return APL_Sin(90 + deg);
 }
 
-SS APL_Tan256(SS deg)
+int16_t APL_Tan256(int16_t deg)
 {
-	SS cal;
+	int16_t cal;
 	
 	if(APL_Cos(deg) == 0)
 	{
@@ -327,9 +327,9 @@ SS APL_Tan256(SS deg)
 	return cal;
 }
 
-UI APL_uDiv(UI uDenominator, UI uNumerator)
+uint32_t APL_uDiv(uint32_t uDenominator, uint32_t uNumerator)
 {
-	UI	cal = 0;
+	uint32_t	cal = 0;
 
 	if(uNumerator == 0u)
 	{
@@ -347,9 +347,9 @@ UI APL_uDiv(UI uDenominator, UI uNumerator)
 	return cal;
 }
 
-SI APL_sDiv(SI Denominator, SI Numerator)
+int32_t APL_sDiv(int32_t Denominator, int32_t Numerator)
 {
-	SI	cal = 0;
+	int32_t	cal = 0;
 	
 	if(Numerator == 0)
 	{

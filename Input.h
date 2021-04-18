@@ -30,9 +30,9 @@
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
-extern US	get_key(US *, UC, UC );
-extern US	DirectInputKeyNum(US *, US );
-extern UC	ChatCancelSW(UC , UC *);
-extern SS	KeyHitESC(void);
+extern uint16_t	get_key(uint16_t *, uint8_t, uint8_t );
+extern uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
+extern uint8_t	ChatCancelSW(uint8_t , uint8_t *);
+extern int16_t	KeyHitESC(void);
 
 #endif	/* INPUT_H */

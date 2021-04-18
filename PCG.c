@@ -15,14 +15,14 @@
 
 /* 関数のプロトタイプ宣言 */
 void PCG_INIT(void);
-void PCG_VIEW(UC);
-void PCG_Rotation(US *, US *, UC, UC, SS, SS, UC *, UC, US, US);
-void BG_TEXT_SET(SC *);
+void PCG_VIEW(uint8_t);
+void PCG_Rotation(uint16_t *, uint16_t *, uint8_t, uint8_t, int16_t, int16_t, uint8_t *, uint8_t, uint16_t, uint16_t);
+void BG_TEXT_SET(int8_t *);
 
 /* 関数 */
 void PCG_INIT(void)
 {
-	UI	j;
+	uint32_t	j;
 	
 	/* スプライトの初期化 */
 	SP_INIT();			/* スプライトの初期化 */
@@ -33,7 +33,7 @@ void PCG_INIT(void)
 		SP_REGST(j,-1,0,0,0,0);
 	}
 #if 0
-	for(UI i = 0; i < 256; i++ )
+	for(uint32_t i = 0; i < 256; i++ )
 	{
 		SP_CGCLR(i);			/* スプライトクリア */
 		SP_DEFCG( i, 1,  );
@@ -52,7 +52,7 @@ void PCG_INIT(void)
 	BG_TEXT_SET("data/map/map.csv");	/* マップデータによるＢＧの配置 */
 }
 
-void PCG_VIEW(UC bSW)
+void PCG_VIEW(uint8_t bSW)
 {
 	if(bSW == TRUE)
 	{
@@ -68,27 +68,27 @@ void PCG_VIEW(UC bSW)
 	}
 }
 
-void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, UC *sp_num, UC palNum, US ratio, US rad)
+void PCG_Rotation(uint16_t *pDst, uint16_t *pSrc, uint8_t bX_num, uint8_t bY_num, int16_t pos_x, int16_t pos_y, uint8_t *sp_num, uint8_t palNum, uint16_t ratio, uint16_t rad)
 {
-	SS	x, y, vx, vy;
-	SS	width, height;
-	UL	uPCG;
-	UL	uPCG_ARY[8];
-	UL	*pDstWork, *pSrcWork;
-	UC	*pBuf, *pDstBuf = NULL, *pSrcBuf = NULL;
-	UL	uADDR;
-	UL	uPointer_ADR, uPointer_ADR_X, uPointer_ADR_Y, uPointer_ADR_subX, uPointer_ADR_subY;
-	US	uMem_size;
-	UC	bShift;
-	UL	code = 0;
-	UC	V=0, H=0;
-	UC	spNum;	
-//	SC	bEx_num=0;
+	int16_t	x, y, vx, vy;
+	int16_t	width, height;
+	uint64_t	uPCG;
+	uint64_t	uPCG_ARY[8];
+	uint64_t	*pDstWork, *pSrcWork;
+	uint8_t	*pBuf, *pDstBuf = NULL, *pSrcBuf = NULL;
+	uint64_t	uADDR;
+	uint64_t	uPointer_ADR, uPointer_ADR_X, uPointer_ADR_Y, uPointer_ADR_subX, uPointer_ADR_subY;
+	uint16_t	uMem_size;
+	uint8_t	bShift;
+	uint64_t	code = 0;
+	uint8_t	V=0, H=0;
+	uint8_t	spNum;	
+//	int8_t	bEx_num=0;
 	
 	/* src size */
-	width =  16 * (SS)bX_num;
-	height = 16 * (SS)bY_num;
-	uMem_size = width * height * sizeof(UC);
+	width =  16 * (int16_t)bX_num;
+	height = 16 * (int16_t)bY_num;
+	uMem_size = width * height * sizeof(uint8_t);
 	
 	if((ratio > 0) && (ratio <= 16))
 	{
@@ -102,7 +102,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 //	Message_Num(&bEx_num, 11, 9, 2, MONI_Type_SC, "%2d");
 	
 	/* 作業エリア確保 */
-	pSrcBuf = (UC*)MyMalloc( (SI)uMem_size );
+	pSrcBuf = (uint8_t*)MyMalloc( (int32_t)uMem_size );
 	if( pSrcBuf == NULL )
 	{
 		return;
@@ -110,7 +110,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	pBuf = pSrcBuf;
 
 	/* PCG -> CG */
-	uPointer_ADR = (UL)pSrc;
+	uPointer_ADR = (uint64_t)pSrc;
 	uPointer_ADR_Y = 0ul;
 	
 	for(y = 0; y < bY_num; y++)	/* 一行分 */
@@ -128,25 +128,25 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 				for(vx = 0; vx < 2; vx++)	/* 16bit分 */
 				{
 					uADDR = uPointer_ADR + uPointer_ADR_Y + uPointer_ADR_subY + uPointer_ADR_X + uPointer_ADR_subX;	/* 原点 */
-					pSrcWork = (UL *)uADDR;	/* 0と2/1と3 */
+					pSrcWork = (uint64_t *)uADDR;	/* 0と2/1と3 */
 
-					uPCG = (UL)*pSrcWork;
+					uPCG = (uint64_t)*pSrcWork;
 					
-					*pBuf = (UC)((uPCG >> 28ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >> 28ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG >> 24ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >> 24ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG >> 20ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >> 20ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG >> 16ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >> 16ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG >> 12ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >> 12ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG >>  8ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >>  8ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG >>  4ul) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG >>  4ul) & 0x0Fu);
 					pBuf++;
-					*pBuf = (UC)((uPCG        ) & 0x0Fu);
+					*pBuf = (uint8_t)((uPCG        ) & 0x0Fu);
 					pBuf++;
 					
 					uPointer_ADR_subX += 0x40ul;
@@ -161,12 +161,12 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	/* 画像処理 */
 #if 0
 	/* 更に領域を拡張する機能を実装しようとしたが断念 */
-	width =  16 * Mmax(((SS)bX_num + bEx_num), 1);
-	height = 16 * Mmax(((SS)bY_num + bEx_num), 1);
-	uMem_size = width * height * sizeof(UC);
+	width =  16 * Mmax(((int16_t)bX_num + bEx_num), 1);
+	height = 16 * Mmax(((int16_t)bY_num + bEx_num), 1);
+	uMem_size = width * height * sizeof(uint8_t);
 #endif
 	
-	pDstBuf = (UC*)MyMalloc( (SI)uMem_size );
+	pDstBuf = (uint8_t*)MyMalloc( (int32_t)uMem_size );
 	if( pDstBuf == NULL )
 	{
 		MyMfree(pSrcBuf);	/* メモリ解放 */
@@ -181,10 +181,10 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	}
 	else
 	{
-		SS	dx, dy;
-		SS	width_h, height_h;
-		SS	cos, sin;
-		UC	*pDstGR, *pSrcGR;
+		int16_t	dx, dy;
+		int16_t	width_h, height_h;
+		int16_t	cos, sin;
+		uint8_t	*pDstGR, *pSrcGR;
 		
 		cos = APL_Cos(rad);
 		sin = APL_Sin(rad);
@@ -219,7 +219,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	/* CG -> PCG */
 	pBuf = pDstBuf;
 
-	uPointer_ADR = (UL)pDst;
+	uPointer_ADR = (uint64_t)pDst;
 	uPointer_ADR_Y = 0ul;
 
 	for(y = 0; y < bY_num; y++)	/* 一行分 */
@@ -238,21 +238,21 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 				{
 					uADDR = uPointer_ADR + uPointer_ADR_Y + uPointer_ADR_subY + uPointer_ADR_X + uPointer_ADR_subX;	/* 原点 */
 				
-					uPCG_ARY[7] = (UL)*pBuf;
+					uPCG_ARY[7] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[6] = (UL)*pBuf;
+					uPCG_ARY[6] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[5] = (UL)*pBuf;
+					uPCG_ARY[5] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[4] = (UL)*pBuf;
+					uPCG_ARY[4] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[3] = (UL)*pBuf;
+					uPCG_ARY[3] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[2] = (UL)*pBuf;
+					uPCG_ARY[2] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[1] = (UL)*pBuf;
+					uPCG_ARY[1] = (uint64_t)*pBuf;
 					pBuf++;
-					uPCG_ARY[0] = (UL)*pBuf;
+					uPCG_ARY[0] = (uint64_t)*pBuf;
 					pBuf++;
 					
 					uPCG = 	((uPCG_ARY[7] << 28ul) & 0xF0000000ul) |
@@ -264,7 +264,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 							((uPCG_ARY[1] <<  4ul) & 0x000000F0ul) |
 							((uPCG_ARY[0]        ) & 0x0000000Ful);
 
-					pDstWork = (UL *) uADDR;
+					pDstWork = (uint64_t *) uADDR;
 					*pDstWork = uPCG;
 
 					uPointer_ADR_subX += 0x40ul;
@@ -279,7 +279,7 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	MyMfree(pDstBuf);	/* メモリ解放 */
 
 	/* PCG -> SP */
-	uPointer_ADR = (UL)pDst;
+	uPointer_ADR = (uint64_t)pDst;
 	uPointer_ADR_Y = 0ul;
 	spNum = *sp_num;
 	
@@ -289,9 +289,9 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 
 		for(x = 0; x < bX_num; x++)	/* 一列分 */
 		{
-			UC	patNum;
-			patNum = (UC)( (UL) ( (uPointer_ADR - 0xEB8000ul) + uPointer_ADR_Y + uPointer_ADR_X ) / 0x80ul); /*0x43*/;
-			code = (UL)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
+			uint8_t	patNum;
+			patNum = (uint8_t)( (uint64_t) ( (uPointer_ADR - 0xEB8000ul) + uPointer_ADR_Y + uPointer_ADR_X ) / 0x80ul); /*0x43*/;
+			code = (uint64_t)( 0xCFFFU & ( ((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((palNum & 0xFU)<<8U) | (patNum & 0xFFU) ) );
 			SP_REGST( spNum++, -1, pos_x + (x * 16), pos_y + (y * 16), code, 3);
 			*sp_num = spNum;
 			uPointer_ADR_X += 0x80ul;
@@ -300,16 +300,16 @@ void PCG_Rotation(US *pDst, US *pSrc, UC bX_num, UC bY_num, SS pos_x, SS pos_y, 
 	}
 }
 
-void BG_TEXT_SET(SC *fname)
+void BG_TEXT_SET(int8_t *fname)
 {
-	US	usV_pat;
-	UI	pal = 0;
-	US	i,j;
-	SI	x,y;
-	US	map_data[64][64];
+	uint16_t	usV_pat;
+	uint32_t	pal = 0;
+	uint16_t	i,j;
+	int32_t	x,y;
+	uint16_t	map_data[64][64];
 
 	/* マップデータ読み込み */
-	File_Load_CSV( fname, (US *)&map_data[0][0], &i, &j);
+	File_Load_CSV( fname, (uint16_t *)&map_data[0][0], &i, &j);
 	
 	for(y=0; y<16; y++)
 	{

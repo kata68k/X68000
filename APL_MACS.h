@@ -7,6 +7,6 @@
 /* externéŒ¾ */
 
 extern void	MOV_INIT(void);
-extern SI	MOV_Play(UC);
+extern int32_t	MOV_Play(uint8_t);
 
 #endif	/* APL_MACS_H */

@@ -34,19 +34,19 @@
 #include "Trap14.h"
 
 /* グローバル変数 */
-SI	g_nSuperchk = 0;
-SI	g_nCrtmod = 0;
-UC	g_mode = 0;
-UC	g_mode_rev = 1;
-US	g_uDebugNum = 0; 
-UC	g_bDebugMode = FALSE;
-SS	g_CpuTime = 0;
-UI	g_unTime_cal = 0u;
-UI	g_unTime_cal_PH = 0u;
+int32_t	g_nSuperchk = 0;
+int32_t	g_nCrtmod = 0;
+uint8_t	g_mode = 0;
+uint8_t	g_mode_rev = 1;
+uint16_t	g_uDebugNum = 0; 
+uint8_t	g_bDebugMode = FALSE;
+int16_t	g_CpuTime = 0;
+uint32_t	g_unTime_cal = 0u;
+uint32_t	g_unTime_cal_PH = 0u;
 #ifdef DEBUG	/* デバッグコーナー */
-UI	g_unTime_Pass[6] = {0u};
+uint32_t	g_unTime_Pass[6] = {0u};
 #endif
-SS	g_Input;
+int16_t	g_Input;
 
 enum{
 	DEBUG_NONE,
@@ -61,35 +61,35 @@ enum{
 /* グローバル構造体 */
 
 /* 関数のプロトタイプ宣言 */
-SS main(void);
+int16_t main(void);
 static void App_Init(void);
 static void App_exit(void);
-SS	BG_main(UC*);
-SS	GetGameMode(UC *);
-SS	SetGameMode(UC);
-SS	GetDebugNum(US *);
-SS	SetDebugNum(US);
-SS	GetDebugMode(UC *);
-SS	SetDebugMode(UC);
+int16_t	BG_main(uint8_t*);
+int16_t	GetGameMode(uint8_t *);
+int16_t	SetGameMode(uint8_t);
+int16_t	GetDebugNum(uint16_t *);
+int16_t	SetDebugNum(uint16_t);
+int16_t	GetDebugMode(uint8_t *);
+int16_t	SetDebugMode(uint8_t);
 
 void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
 
 /* 関数 */
-SS main(void)
+int16_t main(void)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 
-	UI	unTime_cal = 0u;
-	UI	unTime_cal_PH = 0u;
+	uint32_t	unTime_cal = 0u;
+	uint32_t	unTime_cal_PH = 0u;
 	
-	US	uFreeRunCount=0u;
+	uint16_t	uFreeRunCount=0u;
 	
-	SS	loop = 1;
-	SS	RD[1024] = {0};
-	UC	bMode_flag = FALSE;
-	UC	bDebugMode = TRUE;
-	UC	bDebugMode_flag;
-	UC	bFlip = FALSE;
+	int16_t	loop = 1;
+	int16_t	RD[1024] = {0};
+	uint8_t	bMode_flag = FALSE;
+	uint8_t	bDebugMode = TRUE;
+	uint8_t	bDebugMode_flag;
+	uint8_t	bFlip = FALSE;
 	
 	ST_TASK		stTask = {0}; 
 	
@@ -108,16 +108,34 @@ SS main(void)
 	puts("デバッグコーナー 開始");
 	/* ↓自由にコードを書いてね */
 	{
+		uint8_t bFlag = FALSE;
+		
+		Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
+		
 		/* スーパーバイザーモード開始 */
 		g_nSuperchk = SUPER(0);
 
-		CRTC_INIT();
+//		CRTC_INIT();	/* 特殊解像度 */
+		
+		M_SetMusic(0);	/* 初期設定 */
+//		Music_Play(1);	/* 初期化のみ */
 		
 		puts("ＥＳＣキーで終了");
 		loop = 1;
 		do
 		{
-			if( ( BITSNS( 0 ) & 0x02 ) != 0 ) loop = 0;	/* ＥＳＣポーズ */
+			int16_t	input = 0;
+			get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
+			if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
+			{
+				loop = 0;	/* ループ終了 */
+			}
+			
+			if(ChatCancelSW((input & KEY_A)!=0u, &bFlag) == TRUE)	/* Aボタン */
+			{
+				M_Play(0);
+			}
+
 			if(loop == 0)break;
 		}
 		while( loop );
@@ -125,6 +143,9 @@ SS main(void)
 		/*スーパーバイザーモード終了*/
 		SUPER(g_nSuperchk);
 
+		/* 音楽 */
+		Exit_Music();			/* 音楽停止 */
+		
 		_dos_kflushio(0xFF);	/* キーバッファをクリア */
 	}
 	/* ↑自由にコードを書いてね */
@@ -151,7 +172,7 @@ SS main(void)
 	/* 乱数 */
 	{
 		/* 乱数の初期化 */
-		SS a,b,c,d;
+		int16_t a,b,c,d;
 		a = 0;
 		b = 0;
 		c = 0;
@@ -171,10 +192,10 @@ SS main(void)
 	
 	do	/* メインループ処理 */
 	{
-		UI time_st, time_now;
-		SS	input = 0;
+		uint32_t time_st, time_now;
+		int16_t	input = 0;
 #ifdef DEBUG	/* デバッグコーナー */
-		UC	bTimePass = 1;
+		uint8_t	bTimePass = 1;
 #endif
 		
 		/* 時刻設定 */
@@ -197,7 +218,8 @@ SS main(void)
 		}
 		if(loop == 0)	/* 終了処理 */
 		{
-			Music_Play(0);	/* 停止 */
+			Music_Stop();	/* 音楽再生 停止 */
+			
 			/* 動画 */
 			MOV_Play(2);	/* バイバイ */
 			break;
@@ -250,7 +272,7 @@ SS main(void)
 			{
 				if(input == KEY_A)	/* Aボタン */
 				{
-					Music_Play(0);	/* 停止 */
+					Music_Stop();	/* 音楽再生 停止 */
 					
 					ADPCM_Play(10);	/* SE:決定 */
 				
@@ -331,8 +353,9 @@ SS main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
-				Music_Play(1);	/* メインBGM */
-//				Music_Play(0);	/* 停止 */
+				Music_Play(3);	/* メインBGM */
+//				Music_Stop();	/* 音楽再生 停止 */
+				M_SetMusic(0);	/* 効果音再生の設定 */
 
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 				
@@ -343,7 +366,7 @@ SS main(void)
 			{
 				if((input & KEY_b_Q) != 0u)	/* Ｑ */
 				{
-					Music_Play(0);	/* 停止 */
+					Music_Stop();	/* 音楽再生 停止 */
 
 					/* 動画 */
 					MOV_Play(1);	/* うふふ */
@@ -390,8 +413,6 @@ SS main(void)
 				}
 #endif
 				
-				/* コースアウト時の処理 */
-				MyCar_CourseOut();	/* コースアウト時のエフェクト */
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
 				{
@@ -456,7 +477,7 @@ SS main(void)
 
 		if( (ChatCancelSW((input & KEY_b_M)!=0u, &bMode_flag) == TRUE) || (bFlip == TRUE) )	/* Ｍでモード切替 */
 		{
-			SS	x, y;
+			int16_t	x, y;
 			ST_CRT	stCRT = {0};
 			/* モードチェンジ */
 			if(g_mode == 1u)
@@ -500,8 +521,8 @@ SS main(void)
 
 #ifdef DEBUG	/* デバッグコーナー */
 	{
-		UI i=0, j=0;
-		UI st;
+		uint32_t i=0, j=0;
+		uint32_t st;
 		ST_RAS_INFO	stRasInfo;
 		GetRasterInfo(&stRasInfo);
 		
@@ -511,8 +532,8 @@ SS main(void)
 		st = stRasInfo.st;
 		for(i=st; i < stRasInfo.ed; i+=RASTER_NEXT)
 		{
-			US x, y;
-			SS pat;
+			uint16_t x, y;
+			int16_t pat;
 			
 			GetRasterIntPos( &x, &y, &pat, i );
 			
@@ -540,7 +561,7 @@ static void App_Init(void)
 
 	/* 音楽 */
 	Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
-	Music_Play(3);	/* ローディング中 */
+	Music_Play(1);	/* ローディング中 */
 	
 	/* スーパーバイザーモード開始 */
 	g_nSuperchk = SUPER(0);
@@ -602,17 +623,17 @@ static void App_exit(void)
 	puts("App_exit 終了");
 }
 
-SS BG_main(UC* bFlip)
+int16_t BG_main(uint8_t* bFlip)
 {
-	SS	ret = 0;
-	UI	time_now;
-	UI	time_st;
-	US	BGprocces_ct = 0;
-	UC	bNum;
-	UC	bFlipStateOld;
+	int16_t	ret = 0;
+	uint32_t	time_now;
+	uint32_t	time_st;
+	uint16_t	BGprocces_ct = 0;
+	uint8_t	bNum;
+	uint8_t	bFlipStateOld;
 	ST_TASK		stTask = {0}; 
 
-	static UC	bFlipState = Clear_G;
+	static uint8_t	bFlipState = Clear_G;
 	
 	GetStartTime(&time_st);	/* 開始時刻を取得 */
 	GetTaskInfo(&stTask);	/* タスクの情報を得る */
@@ -746,9 +767,9 @@ SS BG_main(UC* bFlip)
 			{
 				if(g_bDebugMode == TRUE)
 				{
-					UC	str[256] = {0};
-					static UC ubDispNum = DEBUG_ENEMYCAR;
-					static UC ubDispNum_flag = 0;
+					uint8_t	str[256] = {0};
+					static uint8_t ubDispNum = DEBUG_CPUTIME;
+					static uint8_t ubDispNum_flag = 0;
 
 					if(ChatCancelSW((g_Input & KEY_b_RLUP)!=0u, &ubDispNum_flag) == TRUE)	/* ロールアップで表示切替 */
 					{
@@ -769,18 +790,18 @@ SS BG_main(UC* bFlip)
 					case DEBUG_COURSE_OBJ:
 						{
 #if 1	/* 障害物情報 */
-							UI	i = 0;
+							uint32_t	i = 0;
 							ST_COURSE_OBJ	stCourse_Obj = {0};
 							i = Mmin(Mmax(g_uDebugNum, 0), COURSE_OBJ_MAX-1);
-							GetCourseObj(&stCourse_Obj, i);	/* ライバル車の情報 */
-							sprintf(str, "C_Obj[%d](%4d,%3d,%d)(%6d,%d),Debug(%3d)", i, stCourse_Obj.x, stCourse_Obj.y, stCourse_Obj.z, stCourse_Obj.uTime, stCourse_Obj.ubAlive, g_uDebugNum);	/* ライバル車の情報 */
+							GetCourseObj(&stCourse_Obj, i);	/* 障害物の情報 */
+							sprintf(str, "C_Obj[%d](%4d,%3d,%d)(%6d,%d),Debug(%3d)", i, stCourse_Obj.x, stCourse_Obj.y, stCourse_Obj.z, stCourse_Obj.uTime, stCourse_Obj.ubAlive, g_uDebugNum);	/* 障害物の情報 */
 #endif
 						}
 						break;
 					case DEBUG_ENEMYCAR:
 						{
 #if 1	/* 敵車情報 */
-							UI	i = 0;
+							uint32_t	i = 0;
 							ST_ENEMYCARDATA	stEnemyCar = {0};
 							i = Mmin(Mmax(g_uDebugNum, 0), ENEMYCAR_MAX-1);
 							GetEnemyCAR(&stEnemyCar, i);	/* ライバル車の情報 */
@@ -816,9 +837,9 @@ SS BG_main(UC* bFlip)
 						{
 
 #if 1	/* ラスター情報 */
-							US x, y;
-							SS pat;
-							SS pos;
+							uint16_t x, y;
+							int16_t pat;
+							int16_t pos;
 							ST_RAS_INFO	stRasInfo;
 							GetRasterInfo(&stRasInfo);
 
@@ -837,7 +858,7 @@ SS BG_main(UC* bFlip)
 						{
 #if 1	/* CPU情報 */
 //							sprintf(str, "CPU Time%2d[ms](MAX%2d[ms]),Debug(%3d)", g_unTime_cal, g_unTime_cal_PH, g_uDebugNum);	/* 処理負荷 */
-							sprintf(str, "%d Time[ms]%2d(M%2d),%2d,%2d,%2d,%2d,%2d", g_CpuTime, g_unTime_cal, g_unTime_cal_PH, 
+							sprintf(str, "%d Time[ms]%2d(Max%2d),%2d,%2d,%2d,%2d,%2d", g_CpuTime, g_unTime_cal, g_unTime_cal_PH, 
 									g_unTime_Pass[1],
 									g_unTime_Pass[2],
 									g_unTime_Pass[3],
@@ -896,44 +917,44 @@ SS BG_main(UC* bFlip)
 	return	ret;
 }
 
-SS	GetGameMode(UC *bMode)
+int16_t	GetGameMode(uint8_t *bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	*bMode = g_mode;
 	return ret;
 }
 
-SS	SetGameMode(UC bMode)
+int16_t	SetGameMode(uint8_t bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	g_mode = bMode;
 	return ret;
 }
 
-SS	GetDebugNum(US *uNum)
+int16_t	GetDebugNum(uint16_t *uNum)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	*uNum = g_uDebugNum;
 	return ret;
 }
 
-SS	SetDebugNum(US uNum)
+int16_t	SetDebugNum(uint16_t uNum)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	g_uDebugNum = uNum;
 	return ret;
 }
 
-SS	GetDebugMode(UC *bMode)
+int16_t	GetDebugMode(uint8_t *bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	*bMode = g_bDebugMode;
 	return ret;
 }
 
-SS	SetDebugMode(UC bMode)
+int16_t	SetDebugMode(uint8_t bMode)
 {
-	SS	ret = 0;
+	int16_t	ret = 0;
 	g_bDebugMode = bMode;
 	return ret;
 }

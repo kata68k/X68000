@@ -12,21 +12,21 @@
 /* ライバル車の構造体 */
 typedef struct
 {
-	UC	ubType;			/* 種類 */
-	SS	x;				/* X座標 */
-	SS	y;				/* Y座標 */
-	SS	z;				/* Z座標(倍率) */
-	US	uTime;			/* 時間 */
-	UC	ubAlive;		/* 表示の状態 */
+	uint8_t	ubType;			/* 種類 */
+	int16_t	x;				/* X座標 */
+	int16_t	y;				/* Y座標 */
+	int16_t	z;				/* Z座標(倍率) */
+	uint16_t	uTime;			/* 時間 */
+	uint8_t	ubAlive;		/* 表示の状態 */
 }	ST_COURSE_OBJ;
 
-extern	SS	InitCourseObj(void);
-extern	SS	GetCourseObj(ST_COURSE_OBJ *, SS);
-extern	SS	SetCourseObj(ST_COURSE_OBJ, SS);
-extern	SS	Course_Obj_main(UC, UC, UC);
-extern	SS	Put_CouseObject(SS, SS, US, UC, UC);
-extern	SS	Sort_Course_Obj(void);
-extern	SS	Load_Course_Data(UC);
-extern	SS	Move_Course_BG(UC);
+extern	int16_t	InitCourseObj(void);
+extern	int16_t	GetCourseObj(ST_COURSE_OBJ *, int16_t);
+extern	int16_t	SetCourseObj(ST_COURSE_OBJ, int16_t);
+extern	int16_t	Course_Obj_main(uint8_t, uint8_t, uint8_t);
+extern	int16_t	Put_CouseObject(int16_t, int16_t, uint16_t, uint8_t, uint8_t);
+extern	int16_t	Sort_Course_Obj(void);
+extern	int16_t	Load_Course_Data(uint8_t);
+extern	int16_t	Move_Course_BG(uint8_t);
 
 #endif	/* OBJECT_H */
