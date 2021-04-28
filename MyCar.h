@@ -8,14 +8,12 @@
 #define MY_CAR_1_W	(256)
 #define MY_CAR_1_H	(224)
 
-enum{
-	OBD_NORMAL,
-	OBD_DAMAGE,
-	OBD_SPIN_L,
-	OBD_SPIN_R,
-	OBD_COURSEOUT,
-	OBD_MAX
-};
+
+#define OBD_NORMAL		(0)
+#define OBD_DAMAGE		Bit_0
+#define OBD_SPIN_L		Bit_1
+#define OBD_SPIN_R		Bit_2
+#define OBD_COURSEOUT	Bit_3
 
 /* 構造体定義 */
 
@@ -23,7 +21,7 @@ enum{
 typedef struct
 {
 	uint8_t	ubCarType;			/* 車の種類 */
-	uint16_t	uEngineRPM;			/* エンジン回転数 */
+	uint16_t	uEngineRPM;		/* エンジン回転数 */
 	int16_t	VehicleSpeed;		/* 車速 */
 	int16_t	Steering;			/* ステア */
 	uint8_t	ubShiftPos;			/* ギア段 */

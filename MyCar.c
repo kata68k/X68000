@@ -1,6 +1,7 @@
 #ifndef	MyCar_C
 #define	MyCar_C
 
+#include <stdio.h>
 #include <limits.h>
 #include <iocslib.h>
 
@@ -188,21 +189,25 @@ static int16_t	MyCar_Steering(void)
 	
 	if((g_Input & KEY_RIGHT) != 0u)
 	{
-		if(g_stMyCar.ubOBD == OBD_SPIN_R)	/* 右スピン */
+		if((g_stMyCar.ubOBD & OBD_SPIN_R) != 0u)	/* 右スピン */
 		{
+			g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_SPIN_R);
+			ADPCM_Stop();	/* 効果音停止 */
 			ADPCM_Play(4);	/* ブレーキ音 */
 		}
-		ret = -30;	/* TorqueDW パワステ駆動減 */
+		ret -= 1;	/* TorqueDW パワステ駆動減 */
 
 		g_stMyCar.Steering += g_speed << 4;	/* 右 */
 	}
 	else if((g_Input & KEY_LEFT) != 0u)
 	{
-		if(g_stMyCar.ubOBD == OBD_SPIN_L)	/* 左スピン */
+		if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
 		{
+			g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_SPIN_L);
+			ADPCM_Stop();	/* 効果音停止 */
 			ADPCM_Play(4);	/* ブレーキ音 */
 		}
-		ret = -30;	/* TorqueDW パワステ駆動減 */
+		ret -= 1;	/* TorqueDW パワステ駆動減 */
 
 		g_stMyCar.Steering -= g_speed << 4;	/* 左 */
 	}
@@ -213,12 +218,16 @@ static int16_t	MyCar_Steering(void)
 	
 	/* スピン中の車両挙動 */
 	/* スピン発生 */
-	if(g_stMyCar.ubOBD == OBD_SPIN_R)	/* 右スピン */
+	if((g_stMyCar.ubOBD & OBD_SPIN_R) != 0u)	/* 右スピン */
 	{
+		ret -= 10;	/* TorqueDW スピン */
+		
 		g_stMyCar.Steering += g_speed << 3;	/* 右 */
 	}
-	else if(g_stMyCar.ubOBD == OBD_SPIN_L)	/* 左スピン */
+	else if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
 	{
+		ret -= 10;	/* TorqueDW スピン */
+
 		g_stMyCar.Steering -= g_speed << 3;	/* 左 */
 	}
 	else
@@ -232,6 +241,8 @@ static int16_t	MyCar_Steering(void)
 	{
 		if(Angle != 0)
 		{
+			ret -= g_speed;	/* TorqueDW ハーフスピン */
+			
 			g_stMyCar.Steering += Angle * g_speed;	/* バランス調整要 */
 		}
 //		else if(Angle < 0)
@@ -308,24 +319,43 @@ static int16_t	MyCar_ShiftPos(void)
 static int16_t	MyCar_Accel(void)
 {
 	int16_t	ret = 0;
+	
+	static int8_t	bThrottleON_Count = 0;
+	static int8_t	bThrottle_Flag = FALSE;
 
 	/* アクセル */
-	if((g_Input & KEY_A) != 0u)		/* Aボタン */
+	if(bThrottle_Flag == FALSE)
 	{
-		if(g_stMyCar.ubThrottle < 255)
+		if((g_Input & KEY_A) != 0u)		/* Aボタン押す */
 		{
-			g_stMyCar.ubThrottle += 1;	/* スロットル開度 */
+			bThrottle_Flag = TRUE;
+			bThrottleON_Count = 8;
 		}
 	}
-	else
+
+	if(bThrottle_Flag == TRUE)
 	{
-		if(g_stMyCar.ubThrottle > 16)
+		if((g_Input & KEY_A) == 0u)		/* Aボタン離す */
 		{
-			g_stMyCar.ubThrottle -= 16;	/* スロットル開度 */
+			ret -= 1;	/* TorqueDW 燃料カット */
+			
+			if(bThrottleON_Count > -8)
+			{
+				bThrottleON_Count -= 1u;
+			}
 		}
-		else
+		
+		g_stMyCar.ubThrottle += bThrottleON_Count;
+
+		if(g_stMyCar.ubThrottle >= 240)
 		{
-			g_stMyCar.ubThrottle = 0;	/* スロットル開度 */
+			g_stMyCar.ubThrottle = 240;
+		}
+		
+		if(g_stMyCar.ubThrottle < 8)
+		{
+			g_stMyCar.ubThrottle = 0u;
+			bThrottle_Flag = FALSE;
 		}
 	}
 	
@@ -349,7 +379,7 @@ static int16_t	MyCar_Brake(void)
 		{
 			ADPCM_Play(4);	/* ブレーキ音 */
 		}
-		ret = 30;	/* TorqueUP マスターバックからの空気 */
+		ret += 10;	/* TorqueUP マスターバックからの空気 */
 		
 		g_stMyCar.ubBrakeLights = TRUE;		/* ブレーキランプ ON */
 	}
@@ -376,115 +406,125 @@ static int16_t	MyCar_EngineSpeed(int16_t Input_Torque)
 	uint32_t	i;
 	uint32_t	time;
 	uint16_t	uTorque_Cal;
+	int16_t		rpm;
+	int16_t		TargetRPM = 0;
+	static uint8_t ubShiftPos_N = FALSE;
+	static uint8_t ubShiftPos_UP = FALSE;
 	static uint8_t ubShiftPos_old = 0;
-	static uint16_t uEngSound = 0u;
+	static	uint32_t	unExplosion_time = 0xFFFFFFFFu;
 
+#ifdef DEBUG	/* デバッグコーナー */
+	uint8_t	bDebugMode;
+	uint16_t	uDebugNum;
+	GetDebugMode(&bDebugMode);
+	GetDebugNum(&uDebugNum);
+#endif
+	
 	GetStartTime(&time);	/* 開始時刻を取得 */
 
-	/* シフトチェンジによるエンジン回転数の更新 */
-	if(g_stMyCar.ubShiftPos != ubShiftPos_old) 
-	{
-		/* 車速からエンジン回転数を算出 */
-		g_stMyCar.uEngineRPM = (g_stMyCar.VehicleSpeed * uTM[g_stMyCar.ubShiftPos]) / 26;
-	}
-	ubShiftPos_old = g_stMyCar.ubShiftPos;
-	
-	/* ブレーキ中エンジン回転数の更新 */
 	if(g_stMyCar.ubBrakeLights == TRUE)
 	{
-		/* 車速からエンジン回転数を算出 */
-		g_stMyCar.uEngineRPM = (g_stMyCar.VehicleSpeed * uTM[g_stMyCar.ubShiftPos] ) / 26u;	
+		ubShiftPos_N = TRUE;	/* ニュートラルポジション */
+	}
+	else if(g_stMyCar.ubShiftPos != ubShiftPos_old) 	/* シフトチェンジによるエンジン回転数の更新 */
+	{
+		ubShiftPos_N = TRUE;	/* ニュートラルポジション */
+	}
+	else if(g_stMyCar.ubShiftPos == 0u)	/* ニュートラルポジション */
+	{
+		ubShiftPos_N = TRUE;	/* ニュートラルポジション */
+	}
+	else
+	{
+		/* 何もしない */
+	}
+	ubShiftPos_old = g_stMyCar.ubShiftPos;	/* 前回値更新 */
+	
+	if(ubShiftPos_N == TRUE)
+	{
+		TargetRPM = (g_stMyCar.VehicleSpeed * uTM[g_stMyCar.ubShiftPos]) / 26;	/* 車速からエンジン回転数を算出 */
+
+		if(TargetRPM < g_stMyCar.uEngineRPM)
+		{
+			ubShiftPos_UP = TRUE;
+		}
+		else
+		{
+			ubShiftPos_UP = FALSE;
+		}
+	}
+	else
+	{
+		ubShiftPos_UP = FALSE;
 	}
 	
 	/* 回転数軸算出 */
 	bAxis = 10;
 	for( i=0; i<10; i++ )
 	{
-		if( g_stMyCar.uEngineRPM <= (uRPM[i] + ((uRPM[i+1] - uRPM[i]) >> 1)) )
+		if( g_stMyCar.uEngineRPM <= (uRPM[i] + Mdiv2(uRPM[i+1] - uRPM[i])) )
 		{
 			bAxis = i;
 			break;
 		}
 	}
-	uTorque_Cal = (uint16_t)Mmax((int16_t)uTRQ[bAxis] + Input_Torque, 0);
+	/* 最終トルク */
+	uTorque_Cal = (uint16_t)Mmax((int16_t)Mdiv256(uTRQ[bAxis] * g_stMyCar.ubThrottle) + Input_Torque, 1);
+	g_stMyCar.ubWiper = (uint8_t)uTRQ[bAxis];	/* 仮 */
+	g_stMyCar.bTire = (int8_t)uTorque_Cal;	/* 仮 */
 	
-	/* アクセル */
-	if(g_stMyCar.ubThrottle > 0)
+	if(ubShiftPos_N == TRUE)	/* ニュートラルポジション */
 	{
-		if(g_stMyCar.ubShiftPos == 0u)
+		if(g_stMyCar.ubShiftPos == 0u)	/* ニュートラルポジション */
 		{
-			g_stMyCar.uEngineRPM += (uTM[g_stMyCar.ubShiftPos] + uTRQ[bAxis]);		/* 回転数 */
-		}
-		else
-		{
-			g_stMyCar.uEngineRPM += (uTM[g_stMyCar.ubShiftPos] + uTorque_Cal) >> 7;		/* 回転数 */
-		}
-
-		/* エンジンの音 */
-		{
-			static	uint32_t	unExplosion_time = 0;
-			int16_t	rpm;
-
-			rpm	= Mmax(g_stMyCar.uEngineRPM, 1);
-			
-			if( (time - unExplosion_time) >  (150 - Mdiv64(rpm)) )	/* 回転数のエンジン音(60000 / rpm) */
+			if( g_stMyCar.ubThrottle > 0 )		/* アクセルON中 */
 			{
-				unExplosion_time = time;
-				if(uEngSound == 0u)
-				{
-					M_Play(rpm / 100);
-	//				SE_Play_Fast(6);	/* FM効果音再生(高速) */
-	//				SE_Play(7);	/* FM効果音再生 */
-	//				SE_Play(6);	/* FM効果音再生 */
-//					uEngSound = 8u;
-				}
+				g_stMyCar.uEngineRPM += (uTM[g_stMyCar.ubShiftPos] + uTRQ[bAxis]);		/* 回転数 */
 			}
 			else
 			{
-				/* 何もしない */
+				if(g_stMyCar.uEngineRPM > uTRQ[bAxis])
+				{
+					g_stMyCar.uEngineRPM -= Mmax(uTRQ[bAxis], 0);	/* 回転数 */
+				}
 			}
-		}
-	}
-	else{
-		static	uint32_t	unFuelCut_time = 0;
-		int16_t	rpm;
-		rpm	= Mmax(g_stMyCar.uEngineRPM, 1);
-		
-		if(g_stMyCar.ubShiftPos == 0u)
-		{
-			g_stMyCar.uEngineRPM -= uTRQ[bAxis];	/* 回転数 */
+			ubShiftPos_N = FALSE;
 		}
 		else
 		{
-			g_stMyCar.uEngineRPM -= uTorque_Cal;	/* 回転数 */
-		}
-		
-		/* エンジンの音(燃料カット) */
-		if( (time - unFuelCut_time) >  (150 - Mdiv64(rpm)) )	/* 回転数のエンジン音(60000 / rpm) */
-		{
-			unFuelCut_time = time;
-			if(g_stMyCar.ubThrottle > 0)
+			if(ubShiftPos_UP == TRUE)	/* シフトアップによる回転数下降 */
 			{
-				if(uEngSound == 0u)
+				if(g_stMyCar.uEngineRPM > uTRQ[bAxis])
 				{
-					M_Play(rpm / 100);
-	//				SE_Play(6);	/* FM効果音再生 */
-	//				SE_Play(7);	/* FM効果音再生 */
-//					uEngSound = 8u;
+					g_stMyCar.uEngineRPM -= Mmax(uTRQ[bAxis], 0);	/* 回転数 */
+				}
+				if(TargetRPM > g_stMyCar.uEngineRPM)
+				{
+					ubShiftPos_N = FALSE;
 				}
 			}
-			else
+			else	/* シフトダウンによる回転数上昇 */
 			{
-				if(uEngSound == 0u)
+				g_stMyCar.uEngineRPM += (uTM[g_stMyCar.ubShiftPos] + uTRQ[bAxis]);		/* 回転数 */
+				
+				if(TargetRPM < g_stMyCar.uEngineRPM)
 				{
-					M_Play(rpm / 100);
-	//				SE_Play(8);	/* FM効果音再生 */
-//					uEngSound = 8u;
+					ubShiftPos_N = FALSE;
 				}
 			}
 		}
 	}
-	uEngSound = Mdec((uint16_t)uEngSound, 1u);
+	else if( g_stMyCar.ubThrottle > 0 )		/* アクセルON中 */
+	{
+		g_stMyCar.uEngineRPM += (uTM[g_stMyCar.ubShiftPos] + uTorque_Cal) >> 7;	/* 回転数 */
+	}
+	else	/* アクセルOFF */
+	{
+		if(g_stMyCar.uEngineRPM > uTorque_Cal)
+		{
+			g_stMyCar.uEngineRPM -= Mmax(uTorque_Cal, 100);	/* 回転数 */
+		}
+	}
 	
 	/* 回転数クリップ */
 	g_stMyCar.uEngineRPM = Mmax(Mmin(9000, g_stMyCar.uEngineRPM), 750);
@@ -499,6 +539,49 @@ static int16_t	MyCar_EngineSpeed(int16_t Input_Torque)
 			g_stMyCar.uEngineRPM = 8700;
 		}
 	}
+	
+	/* エンジンの音 */
+	{
+		uint32_t uInterval;
+		rpm	= Mmax(g_stMyCar.uEngineRPM, 1);
+		uInterval = Mmax(Mmin( (40 - Mdiv256(rpm)), 5), 50);
+//		uInterval = 10000 - rpm;
+		
+		if(g_stMyCar.ubThrottle > 0)	/* アクセルON */
+		{
+			if( GetPassTime( uInterval, &unExplosion_time ) != 0u )	/* 回転数のエンジン音(60000 / rpm) */
+	//		if( GetPassTime( 40, &unExplosion_time ) != 0u )	/* 回転数のエンジン音(60000 / rpm) */
+			{
+				M_Play(rpm);
+			}
+		}
+		else	/* アクセルOFF */
+		{
+			if( GetPassTime( uInterval, &unExplosion_time ) != 0u )	/* 回転数のエンジン音(60000 / rpm) */
+			{
+				M_Play(rpm);
+			}
+		}
+	}
+#ifdef DEBUG	/* デバッグコーナー */
+	if(bDebugMode == TRUE)
+	{
+#if 0
+		uint8_t	bMode;
+		uint8_t	str[80];
+		int16_t	x, y;
+		ST_CRT	stCRT = {0};
+		GetGameMode(&bMode);
+		GetCRT(&stCRT, bMode);	/* 画面情報を取得 */
+		
+		/* 座標設定 */
+		x = stCRT.hide_offset_x;
+		y = stCRT.hide_offset_y + 128;
+		sprintf(str, "Base(%3d), Input(%3d), Cal(%d)", uTRQ[bAxis], Input_Torque, uTorque_Cal);
+		PutGraphic_To_Symbol(str, x, y, 20);	/* メッセージエリア 描画 */
+#endif
+	}
+#endif
 	
 	return ret;
 }
@@ -534,6 +617,7 @@ static int16_t	MyCar_Crash(void)
 	myCarSy = Y_MAX_WINDOW - 32;
 	myCarEy = myCarSy + 16;
 
+	
 	/* 衝突判定 */
 	if(		(g_stMyCar.VehicleSpeed != 0) 		/* 車速あり */
 		&&  (g_stMyCar.ubOBD == OBD_NORMAL) )	/* 正常 */
@@ -555,11 +639,13 @@ static int16_t	MyCar_Crash(void)
 					/* ステアリングの状態でスピン */
 					if((myCarSx - stEnemyCar.sx) >= (stEnemyCar.ex - myCarEx) )
 					{
-						g_stMyCar.ubOBD = OBD_SPIN_R;	/* 右スピン */
+						ADPCM_Play(15);	/* スキール音 */
+						g_stMyCar.ubOBD |= OBD_SPIN_R;	/* 右スピン */
 					}
 					else
 					{
-						g_stMyCar.ubOBD = OBD_SPIN_L;	/* 左スピン */
+						ADPCM_Play(15);	/* スキール音 */
+						g_stMyCar.ubOBD |= OBD_SPIN_L;	/* 左スピン */
 					}
 				}
 			}
@@ -569,7 +655,8 @@ static int16_t	MyCar_Crash(void)
 	/* 衝突後の車両状態更新 */
 	if( bHit == TRUE )
 	{
-		g_stMyCar.ubOBD = OBD_DAMAGE;	/* 故障 */
+		ADPCM_Play(12);	/* SE：クラッシュ */
+		g_stMyCar.ubOBD |= OBD_DAMAGE;	/* 故障 */
 		g_stMyCar.uEngineRPM = g_stMyCar.uEngineRPM >> 1;		/* 1/2 */
 	}
 
@@ -743,13 +830,16 @@ int16_t	MyCar_CourseOut(void)
 		
 		g_stMyCar.uEngineRPM -= (rpm>>3);	/* 減速処理 */
 
-		g_stMyCar.ubOBD = OBD_COURSEOUT;	/* コースアウト */
+		g_stMyCar.ubOBD |= OBD_COURSEOUT;	/* コースアウト */
+
+//		ADPCM_Play(11);	/* SE：コース外 */
+
 	}
 	else
 	{
-		if(g_stMyCar.ubOBD == OBD_COURSEOUT)
+		if((g_stMyCar.ubOBD & OBD_COURSEOUT) != 0u)
 		{
-			g_stMyCar.ubOBD = OBD_NORMAL;	/* 通常 */
+			g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_COURSEOUT);	/* コースアウト解除 */
 		}
 	}
 	
@@ -954,14 +1044,12 @@ static int16_t	MyCar_Vibration(void)
 	{
 		if(ubOBD_old == OBD_NORMAL)
 		{
-			if( g_stMyCar.ubOBD == OBD_DAMAGE )
+			if( (g_stMyCar.ubOBD & OBD_DAMAGE) != 0u )
 			{
-				ADPCM_Play(12);	/* SE：クラッシュ */
 				CrashCount = 30;
 			}
-			else if( g_stMyCar.ubOBD == OBD_COURSEOUT )
+			else if( (g_stMyCar.ubOBD & OBD_COURSEOUT) != 0u )
 			{
-				ADPCM_Play(11);	/* SE：コース外 */
 				CrashCount = 15;
 			}
 			else
@@ -969,37 +1057,16 @@ static int16_t	MyCar_Vibration(void)
 				/* 何もしない */
 			}
 		}
-		
-		if( g_stMyCar.ubOBD == OBD_DAMAGE )
-		{
-			if(CrashCount == 22)	/* 次のSEへ */
-			{
-				ADPCM_Play(15);	/* スキール音 */
-			}
-			CrashCount = Mdec((int16_t)CrashCount, 1u);	/* カウンタデクリメント */
-
-		}
-		else if( g_stMyCar.ubOBD == OBD_COURSEOUT )
-		{
-			if((CrashCount % 2) == 0)	/* 次のSEへ */
-			{
-				ADPCM_Play(11);	/* SE：コース外 */
-			}
-			CrashCount = Mdec((int16_t)CrashCount, 1u);	/* カウンタデクリメント */
-		}
-		else
-		{
-			CrashCount = Mdec((int16_t)CrashCount, 1u);	/* カウンタデクリメント */
-		}
 
 		if(CrashCount == 0)
 		{
-			/* 動画 */
-			//MOV_Play(3);	/* 嘘をつくな */
+			g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, (OBD_DAMAGE|OBD_COURSEOUT));
 			Vibration = 0;
 		}
 		else
 		{
+			CrashCount = Mdec((int16_t)CrashCount, 1u);	/* カウンタデクリメント */
+			
 			Vibration = (VibrationCT == 0)?8:0;	/* 画面の振動 */
 		}
 	}
@@ -1026,9 +1093,10 @@ static int16_t	MyCar_Vibration(void)
 static int16_t	MyCar_Mascot(int16_t Vibration)
 {
 	int16_t ret = 0;
-	
-	int16_t	x, y;
+
 	uint16_t	nRatio = 0x80;
+#if 0
+	int16_t	x, y;
 	uint8_t	palNum = 0;
 	uint8_t	sp_num=0;
 	
@@ -1037,11 +1105,13 @@ static int16_t	MyCar_Mascot(int16_t Vibration)
 
 	static	uint16_t	rad = 180;
 	static	uint8_t	ubRadFlag = TRUE;
+#endif
 
 #ifdef	DEBUG
 	GetDebugNum(&nRatio);
 #endif
 
+#if 0
 	/* マスコットが揺れる */
 	if(g_stMyCar.VehicleSpeed == 0)
 	{
@@ -1084,6 +1154,8 @@ static int16_t	MyCar_Mascot(int16_t Vibration)
 
 	PCG_Rotation((uint16_t *)PCG_dst, (uint16_t *)PCG_src, 3, 3, x, y, &sp_num, palNum, (nRatio-0x80), 180-rad);
 
+#endif
+	
 	return ret;
 }
 

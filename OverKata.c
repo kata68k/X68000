@@ -109,6 +109,8 @@ int16_t main(void)
 	/* ↓自由にコードを書いてね */
 	{
 		uint8_t bFlag = FALSE;
+		uint8_t bHit = FALSE;
+		int16_t	count = 0;
 		
 		Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
 		
@@ -117,7 +119,7 @@ int16_t main(void)
 
 //		CRTC_INIT();	/* 特殊解像度 */
 		
-		M_SetMusic(0);	/* 初期設定 */
+//		M_SetMusic(0);	/* 初期設定 */
 //		Music_Play(1);	/* 初期化のみ */
 		
 		puts("ＥＳＣキーで終了");
@@ -133,8 +135,29 @@ int16_t main(void)
 			
 			if(ChatCancelSW((input & KEY_A)!=0u, &bFlag) == TRUE)	/* Aボタン */
 			{
-				M_Play(0);
+				M_Play(count);
+				bHit = TRUE;
 			}
+			else
+			{
+				bHit = FALSE;
+			}
+			
+			if((input & KEY_B) != 0u)	/* Bボタン */
+			{
+				if(count < 9000)
+				{
+					count++;
+				}
+			}
+			else
+			{
+				if(count > 0)
+				{
+					count--;
+				}
+			}
+			printf("Count = %6d, %d\r", count, bHit);
 
 			if(loop == 0)break;
 		}
@@ -353,9 +376,9 @@ int16_t main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
-				Music_Play(3);	/* メインBGM */
+//				Music_Play(3);	/* メインBGM */
 //				Music_Stop();	/* 音楽再生 停止 */
-				M_SetMusic(0);	/* 効果音再生の設定 */
+//				M_SetMusic(0);	/* 効果音再生の設定 */
 
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 				
@@ -768,7 +791,7 @@ int16_t BG_main(uint8_t* bFlip)
 				if(g_bDebugMode == TRUE)
 				{
 					uint8_t	str[256] = {0};
-					static uint8_t ubDispNum = DEBUG_CPUTIME;
+					static uint8_t ubDispNum = DEBUG_MYCAR;
 					static uint8_t ubDispNum_flag = 0;
 
 					if(ChatCancelSW((g_Input & KEY_b_RLUP)!=0u, &ubDispNum_flag) == TRUE)	/* ロールアップで表示切替 */
@@ -820,8 +843,9 @@ int16_t BG_main(uint8_t* bFlip)
 #if 1	/* 自車情報 */
 							ST_CARDATA	stMyCar;
 							GetMyCar(&stMyCar);	/* 自車 */
-							sprintf(str, "Car[%d](%4d,%3d,%d,%d,%d,%d,%d)",
+							sprintf(str, "Car[%d](%4d,%4d,%3d,%d,%d,%3d,%4d,%d)",
 									stMyCar.ubCarType,			/* 車の種類 */
+									stMyCar.uEngineRPM,			/* エンジン回転数 */
 									stMyCar.Steering,			/* ステア */
 									stMyCar.ubThrottle,			/* スロットル開度 */
 									stMyCar.ubBrakeLights,		/* ブレーキライト */

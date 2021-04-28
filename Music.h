@@ -12,6 +12,7 @@ extern	int32_t Music_Stop(void);
 extern	int32_t SE_Play(uint8_t);
 extern	int32_t SE_Play_Fast(uint8_t);
 extern	int32_t ADPCM_Play(uint8_t);
+extern	int32_t ADPCM_Stop(void);
 extern	int32_t M_SetMusic(uint32_t);
-extern	int32_t M_Play(int32_t);
+extern	int32_t M_Play(int16_t);
 #endif	/* MUSIC_H */
