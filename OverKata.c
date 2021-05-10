@@ -376,9 +376,9 @@ int16_t main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
-//				Music_Play(3);	/* メインBGM */
+				Music_Play(3);	/* メインBGM */
 //				Music_Stop();	/* 音楽再生 停止 */
-//				M_SetMusic(0);	/* 効果音再生の設定 */
+				M_SetMusic(0);	/* 効果音再生の設定 */
 
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 				

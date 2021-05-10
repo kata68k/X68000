@@ -14,7 +14,8 @@
 
 #define FM_CH_MAX	(8)
 #define FM_USE_CH	(4)
-#define MML_BUF	(80)
+#define MML_BUF	(32)
+#define MML_BUF_N	(2048)
 
 #define ZM_V2	1
 #define ZM_V3	0
@@ -73,27 +74,6 @@ static int8_t	adpcm_list[ADPCM_MAX][256]	=	{0};
 static int8_t	adpcm_dat[ADPCM_MAX][32768]	=	{0};
 static int32_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
 static uint32_t	p_list_max	=	0u;
-
-uint8_t	v[] = {
-#if 1
-/* エンジン音 */
-/*	AF  OM  WF  SY  SP PMD AMD PMS AMS PAN DUMMY	*/
-	60,  3,  0,  0,  0,  0,  0,  0,  0,  3,  0,
-/*	AR  DR  SR  RR  SL  OL  KS  ML DT1 DT2 AME	*/
-	18, 16,  0,  0,  0, 20,  0,  1,  0,  0,  0,
-	16,  8,  0, 10,  0,  0,  0,  5,  0,  0,  0,
-	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-	 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-#else
-/*	AF  OM  WF  SY  SP PMD AMD PMS AMS PAN DUMMY	*/
-	59, 15,  2,  1,200,127,  0,  0,  0,  3,  0,
-/*	AR  DR  SR  RR  SL  OL  KS  ML DT1 DT2 AME */
-	31,  8,  1,  8,  7, 20,  2,  1,  5,  3,  0,
-	31,  8,  8,  7,  5, 24,  1,  2,  1,  1,  0,
-	31,  3,  7,  8,  1, 21,  1,  1,  3,  0,  0,
-	31,  0,  0,  9,  0,  0,  2,  8,  5,  2,  0
-#endif
-};
 
 uint8_t	SE_Data[] = {	/* 構造体にした方がよい？ */
 //		0x01,										/* (+1)ZMDの構造 */
@@ -212,6 +192,27 @@ void Init_Music(void)
 #if		ZM_V2 == 1
 	m_init();		/* 初期化 */
 	m_ch("fm");		/* FM */
+	for(i = 0; i < 8; i++)
+	{
+		int32_t	err = 0;
+		uint16_t uCh, uTrk;
+
+		uCh = i + 1;
+		uTrk = i + 1;
+		
+		/* トラックバッファ設定 */
+		err = m_alloc( uTrk, MML_BUF_N );	/* trk(1-80) */
+		if(err != 0)
+		{
+			printf("m_alloc error %d-(%d,%d)\n", err, uTrk, MML_BUF_N);
+		}
+		/* チャンネルとトラックの割り付け */
+		err = m_assign( uCh, uTrk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
+		if(err != 0)
+		{
+			printf("m_assign error %d\n", err);
+		}
+	}
 #elif	ZM_V3 == 1
 	ret = zm_init(0);		/* 初期化 */
 	printf("zm_init = %d\n", ret);
@@ -642,35 +643,25 @@ int32_t	Get_ZMD_Trak_Head(uint8_t *dat, int16_t size)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-/* エンジン音 */
 int32_t	M_SetMusic(uint32_t uNum)
 {
 	int32_t	ret = 0;
 #if		ZM_V2 == 1
-	uint8_t	uMML[MML_BUF];
 	uint32_t	i = 0u;
 	int32_t	err = 0;
-	int32_t	buf = MML_BUF;
 	
-//	Music_Play(uNum);
-
-	err = m_vset( 129, v );
-	if(err != 0)
-	{
-		printf("m_vset error %d\n", err);
-	}
-	
+	/* トラックの割り付け変更 */
 	for(i = 0; i < FM_USE_CH; i++)
 	{
 		int32_t	ch, trk;
 		
 		ch = (FM_CH_MAX - FM_USE_CH + 1) + i;
-		trk = ch;
+		trk = 60 + ch;
 		
-		err = m_alloc( trk, buf );
+		err = m_alloc( trk, MML_BUF );
 		if(err != 0)
 		{
-			printf("m_alloc error %d\n", err);
+			printf("m_alloc error %d-(%d,%d)\n", err, trk, MML_BUF);
 		}
 		
 		err = m_assign( ch, trk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
@@ -678,22 +669,7 @@ int32_t	M_SetMusic(uint32_t uNum)
 		{
 			printf("m_assign error %d\n", err);
 		}
-		
-//		sprintf(uMML, "@129@v127o2k0@R1d+", uNum);
-		sprintf(uMML, "@129v15o5l4q1", uNum);
-
-		err = m_trk( trk, uMML );	/* 設定時トラック内のデータはクリアされる */
-		if(err != 0)
-		{
-			printf("m_trk error %d\n", err);
-		}
 	}
-	
-//	err = m_tempo(100);
-//	if(err != 0)
-//	{
-//		printf("m_tempo error %d\n", err);
-//	}
 
 #endif	
 	return ret;
@@ -706,51 +682,51 @@ int32_t	M_SetMusic(uint32_t uNum)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
+/* エンジン音 */
 int32_t	M_Play(int16_t Key)
 {
 	int32_t	ret = 0;
 	
 #if		ZM_V2 == 1
+	
 	uint8_t	uMML[MML_BUF];
 	int32_t	err = 0;
 	int32_t	uCh = 0;
 	int32_t	uTrk = 0;
 	static uint8_t ubChanel = 0u;
+	static uint8_t ubCount = 0u;
 
-	uCh = (FM_CH_MAX - FM_USE_CH + 1) + ubChanel;
-	uTrk = uCh;
-	
+	uCh = (FM_CH_MAX - FM_USE_CH + 1u) + ubChanel;
+	uTrk = 60 + uCh;
+	if(ubChanel < FM_USE_CH - 1u)
+	{
+		ubChanel++;
+	}
+	else
+	{
+		ubChanel = 0u;
+	}
+
 	err = m_alloc( uTrk, MML_BUF );	/* trk(1-80) */
 	if(err != 0)
 	{
-		printf("m_alloc error %d\n", err);
+		printf("m_alloc error %d-(%d,%d)\n", err, uTrk, MML_BUF);
 	}
-	
-	err = m_assign( uCh, uTrk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
+	sprintf(uMML, "@137v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
+	err = m_trk( uTrk, uMML );	
 	if(err != 0)
 	{
-		printf("m_assign error %d\n", err);
+		printf("m_trk error %d-(%d,%s,%d)\n", err, uTrk, uMML, ubCount);
 	}
-	
-//	sprintf(uMML, "@129 k %d @k %d d+&", Mdiv128(Key), Mdiv16(Key) );
-//	sprintf(uMML, "@129 k%d d+&", Mdiv128(Key) );	/* ERROR */
-//	sprintf(uMML, "@129 @k %d d+&", Mdiv16(Key) );	/* OK */
-	sprintf(uMML, "@129v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
-//	sprintf(uMML, "@k%d d+&", Mdiv16(Key) );	/* NG */
-	err = m_trk( uCh, uMML );	
+	/* 注意：X-BASICのm_playの引数は、チャンネル。Z-MUSICは、トラック番号 */
+	/* 10個の引数はチャンネルを示すので再生したいトラックNoを設定する */
+	err = m_play(uTrk,'NASI','NASI','NASI','NASI','NASI','NASI','NASI','NASI','NASI');	/* 1 */
 	if(err != 0)
 	{
-		printf("m_trk error %d\n", err);
+		printf("m_play error %d %d %d\n", err, uCh, uTrk);
 	}
 	
-	err = m_play(uTrk,0,0,0,0,0,0,0,0,0);	/* 10個の引数はチャンネルを示すので再生したいトラックNoを設定する */
-	if(err != 0)
-	{
-		printf("m_play error %d\n", err);
-	}
-	
-	ubChanel++;
-	ubChanel &= 0x03u;	/* 0-4 */
+	ubCount++;
 	
 #endif	
 	return ret;
