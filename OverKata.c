@@ -112,15 +112,18 @@ int16_t main(void)
 		uint8_t bHit = FALSE;
 		int16_t	count = 0;
 		
-		Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
+		/* リストファイルの読み込み */
+		Init_FileList_Load();
 		
 		/* スーパーバイザーモード開始 */
 		g_nSuperchk = SUPER(0);
+		/* 画面 */
+		g_nCrtmod = CRT_INIT();
+		/* グラフィック */
+		G_INIT();			/* 画面の初期設定 */
+		G_Palette_INIT();	/* グラフィックパレットの初期化 */
 
 //		CRTC_INIT();	/* 特殊解像度 */
-		
-//		M_SetMusic(0);	/* 初期設定 */
-//		Music_Play(1);	/* 初期化のみ */
 		
 		puts("ＥＳＣキーで終了");
 		loop = 1;
@@ -135,7 +138,7 @@ int16_t main(void)
 			
 			if(ChatCancelSW((input & KEY_A)!=0u, &bFlag) == TRUE)	/* Aボタン */
 			{
-				M_Play(count);
+				CG_File_Load(0);
 				bHit = TRUE;
 			}
 			else
@@ -157,17 +160,17 @@ int16_t main(void)
 					count--;
 				}
 			}
-			printf("Count = %6d, %d\r", count, bHit);
+//			printf("Count = %6d, %d\r", count, bHit);
 
 			if(loop == 0)break;
 		}
 		while( loop );
 
+		/* 画面 */
+		CRTMOD(g_nCrtmod);		/* モードをもとに戻す */
+		
 		/*スーパーバイザーモード終了*/
 		SUPER(g_nSuperchk);
-
-		/* 音楽 */
-		Exit_Music();			/* 音楽停止 */
 		
 		_dos_kflushio(0xFF);	/* キーバッファをクリア */
 	}
@@ -237,15 +240,7 @@ int16_t main(void)
 		g_Input = input;
 		if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
 		{
-			loop = 0;	/* ループ終了 */
-		}
-		if(loop == 0)	/* 終了処理 */
-		{
-			Music_Stop();	/* 音楽再生 停止 */
-			
-			/* 動画 */
-			MOV_Play(2);	/* バイバイ */
-			break;
+			SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
 		}
 #ifdef DEBUG	/* デバッグコーナー */
 		if(ChatCancelSW((input & KEY_b_SP)!=0u, &bDebugMode_flag) == TRUE)	/* スペースでデバッグON/OFF */
@@ -267,7 +262,7 @@ int16_t main(void)
 				g_mode_rev = 2u;
 				g_uDebugNum = 0x80;
 				uFreeRunCount = 0;
-
+				
 				/* グラフィック */
 				G_HOME();			/* グラフィック標準位置 */
 				/* スプライト＆ＢＧ */
@@ -283,7 +278,8 @@ int16_t main(void)
 			{
 				Music_Play(2);	/* タイトル曲 */
 				
-				G_Load_Mem( 8, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
+				CG_File_Load(TITLE_CG);	/* グラフィックの読み込み */
+				G_Load_Mem( TITLE_CG, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
 			
 				BG_TextPut("OVER KATA", 96, 128);		/* タイトル文字 */
 				BG_TextPut("PUSH A BUTTON", 80, 160);	/* ボタン押してね */
@@ -334,6 +330,7 @@ int16_t main(void)
 			{
 				/* 動画 */
 				MOV_Play(0);	/* スタート */
+				Music_Play(1);	/* ローディング中 */
 
 				SetTaskInfo(SCENE_START_E);	/* ゲームスタートタスクへ設定 */
 			}
@@ -389,11 +386,6 @@ int16_t main(void)
 			{
 				if((input & KEY_b_Q) != 0u)	/* Ｑ */
 				{
-					Music_Stop();	/* 音楽再生 停止 */
-
-					/* 動画 */
-					MOV_Play(1);	/* うふふ */
-
 					SetTaskInfo(SCENE_GAME_E);	/* ゲームシーン(終了処理)へ設定 */
 				}
 				
@@ -460,6 +452,11 @@ int16_t main(void)
 			break;
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
 			{
+				Music_Stop();	/* 音楽再生 停止 */
+
+				/* 動画 */
+				MOV_Play(1);	/* うふふ */
+
 				/* スプライト＆ＢＧ */
 				PCG_VIEW(FALSE);	/* スプライト＆ＢＧ非表示 */
 				
@@ -488,12 +485,17 @@ int16_t main(void)
 			break;
 			case SCENE_EXIT:		/* 終了シーン */
 			{
+				Music_Stop();	/* 音楽再生 停止 */
+
+				/* 動画 */
+				MOV_Play(2);	/* バイバイ */
 				
+				loop = 0;	/* ループ終了 */
 			}
 			break;
 			default:	/* 異常シーン */
 			{
-				
+				loop = 0;	/* ループ終了 */
 			}
 			break;
 		}
@@ -520,6 +522,11 @@ int16_t main(void)
 			/* 画面の位置 */
 			HOME(0b01, x, y );	/* Screen 0(TPS/FPS) */
 			T_Scroll( 0, y  );	/* テキスト画面 */
+		}
+
+		if(loop == 0)	/* 終了処理 */
+		{
+			break;
 		}
 
 		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
@@ -582,10 +589,16 @@ static void App_Init(void)
 	/* MFP */
 	g_CpuTime = TimerD_INIT();	/* タイマーD初期化 */
 
+	/* リストファイルの読み込み */
+	Init_FileList_Load();
+	
 	/* 音楽 */
 	Init_Music();	/* 初期化(スーパーバイザーモードより前)	*/
 	Music_Play(1);	/* ローディング中 */
-	
+
+	/* 動画 */
+	MOV_INIT();	/* 初期化処理 */
+
 	/* スーパーバイザーモード開始 */
 	g_nSuperchk = SUPER(0);
 	if( g_nSuperchk < 0 ) {
@@ -601,12 +614,6 @@ static void App_Init(void)
 	G_INIT();			/* 画面の初期設定 */
 	G_Palette_INIT();	/* グラフィックパレットの初期化 */
 
-	/* データの読み込み */
-	CG_File_Load();		/* グラフィックデータ読み込み */
-
-	/* 動画 */
-	MOV_INIT();	/* 初期化処理 */
-
 	/* スプライト／ＢＧ */
 	PCG_INIT();	/* スプライト／ＢＧの初期化 */
 
@@ -620,25 +627,33 @@ static void App_exit(void)
 {
 	puts("App_exit 開始");
 	
-	/* MFP */
-	MFP_EXIT();				/* MFP関連の解除 */
-	TimerD_EXIT();			/* Timer-Dの解除 */
-
-	/* 音楽 */
-	Exit_Music();			/* 音楽停止 */
-	
-	/* テキスト */
-	T_EXIT();				/* テキスト終了処理 */
-
 	/* スプライト＆ＢＧ */
 	PCG_VIEW(FALSE);		/* スプライト＆ＢＧ非表示 */
+	puts("App_exit スプライト");
 
 	/* 画面 */
 	CRTMOD(g_nCrtmod);		/* モードをもとに戻す */
+	puts("App_exit 画面");
+
+	/* 音楽 */
+	Exit_Music();			/* 音楽停止 */
+	puts("App_exit 音楽");
+	
+	/* MFP */
+	TimerD_EXIT();			/* Timer-Dの解除 */
+	puts("App_exit Timer-D");
+	MFP_EXIT();				/* MFP関連の解除 */
+	puts("App_exit MFP");
+
+	/* テキスト */
+	T_EXIT();				/* テキスト終了処理 */
+	puts("App_exit テキスト");
 
 	MyMfree(0);				/* 全てのメモリを解放 */
+	puts("App_exit メモリ");
 	
 	_dos_kflushio(0xFF);	/* キーバッファをクリア */
+	puts("App_exit キーバッファ");
 
 	/*スーパーバイザーモード終了*/
 	SUPER(g_nSuperchk);

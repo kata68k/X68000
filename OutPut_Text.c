@@ -700,7 +700,7 @@ int16_t Put_Message_To_Graphic(uint8_t *str, uint8_t bMode)
 	Draw_Fill( x, y, x + WIDTH, y + 16, 0x01);	/* Screen0 指定パレットで塗りつぶし */
 	
 	/* メッセージエリア 描画 */
-	PutGraphic_To_Symbol(str, x, y, 20);
+	PutGraphic_To_Symbol(str, x, y, 0x03);
 	
 	return ret;
 }

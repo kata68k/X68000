@@ -1,6 +1,7 @@
 #ifndef	MFP_C
 #define	MFP_C
 
+#include <stdio.h>
 #include <iocslib.h>
 #include <interrupt.h>
 
@@ -93,12 +94,19 @@ int16_t MFP_EXIT(void)
 	g_bRasterSET = FALSE;
 
 	CRTCRAS((void *)0, 0);		/* stop */
+	puts("MFP_EXIT CRTCRAS");
+	
 	HSYNCST((void *)0);			/* stop */
+	puts("MFP_EXIT HSYNCST");
+
 #ifdef 	MACS_MOON
 	vdispst = MACS_Vsync_R(Vsync_Func);	/* stop */
+	puts("MFP_EXIT MACS_Vsync_R");
 #else	/* MACS_MOON */
 	vdispst = VDISPST((void *)0, 0, 0);	/* stop */
+	puts("MFP_EXIT VDISPST");
 #endif	/* MACS_MOON */
+	
 //	Message_Num(&vdispst,  6, 10, 2, MONI_Type_SI, "%4d");
 
 	return vdispst;

@@ -8,6 +8,8 @@
 #define PINETREE_0_H	(56)
 #define PINETREE_1_W	(62)
 #define PINETREE_1_H	(112)
+#define	COURSE_OBJ_PAT_MAX	(9)
+#define	COURSE_OBJ_TYP_MAX	(4)
 
 /* ÉâÉCÉoÉãé‘ÇÃç\ë¢ëÃ */
 typedef struct
@@ -24,8 +26,9 @@ extern	int16_t	InitCourseObj(void);
 extern	int16_t	GetCourseObj(ST_COURSE_OBJ *, int16_t);
 extern	int16_t	SetCourseObj(ST_COURSE_OBJ, int16_t);
 extern	int16_t	Course_Obj_main(uint8_t, uint8_t, uint8_t);
-extern	int16_t	Put_CouseObject(int16_t, int16_t, uint16_t, uint8_t, uint8_t);
+extern	int16_t	Put_CouseObject(int16_t, int16_t, uint16_t, uint8_t, uint8_t, uint8_t);
 extern	int16_t	Sort_Course_Obj(void);
+extern	int16_t	Load_Course_Obj(int16_t);
 extern	int16_t	Load_Course_Data(uint8_t);
 extern	int16_t	Move_Course_BG(uint8_t);
 

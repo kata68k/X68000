@@ -9,7 +9,6 @@
 #include "inc/usr_macro.h"
 #include "APL_MACS.h"
 
-#include "Moon.h"
 #include "OverKata.h"
 #include "FileManager.h"
 #include "Graphic.h"
@@ -17,12 +16,9 @@
 
 #ifdef 	MACS_MOON
 
-/* define定義 */
-#define	MACS_MAX	(16)
-
 /* グローバル変数 */
-static int8_t	mov_list[MACS_MAX][256]	=	{0};
-static uint32_t	mov_list_max	=	0u;
+int8_t		g_mov_list[MACS_MAX][256]	=	{0};
+uint32_t	g_mov_list_max	=	0u;
 /* 構造体定義 */
 
 #endif	/* MACS_MOON */
@@ -33,6 +29,13 @@ int32_t MOV_Play(uint8_t);
 static uint32_t moon_check(void);
 
 /* 関数 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void MOV_INIT(void)
 {
 #ifdef 	MACS_MOON
@@ -46,33 +49,38 @@ void MOV_INIT(void)
 		exit(0);
 	}
 	
-	/* グラフィックリスト */
-	Load_MACS_List("data\\mov\\", "mov_list.txt", mov_list, &mov_list_max);
-	for(i = 0; i < mov_list_max; i++)
+	/* リストからMoon.xでメモリ登録 */
+	for(i = 0; i < g_mov_list_max; i++)
 	{
-		moon_chk = MoonRegst(mov_list[i]);	/* メモリへ登録 */
-		if(moon_chk != 0)
+		moon_chk = MoonRegst(g_mov_list[i]);	/* メモリへ登録 */
+		if(moon_chk < 0)
 		{
 			printf("MoonRegst = %d\n", moon_chk);
 		}
-		printf("MACS File %2d = %s\n", i, mov_list[i] );
 	}
 #endif	/* MACS_MOON */
 }
 
 /* 動画再生 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int32_t MOV_Play(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
 
-	if(bPlayNum >= mov_list_max)return ret;
+	if(bPlayNum >= g_mov_list_max)return ret;
 
 #ifdef 	MACS_MOON
 #if 1	/* MOONを使う場合 */
 	{
 		int32_t	moon_stat = 0;
 
-		moon_stat = MoonPlay(mov_list[bPlayNum]);	/* 再生 */
+		moon_stat = MoonPlay(g_mov_list[bPlayNum]);	/* 再生 */
 		if(moon_stat != 0)
 		{
 			//printf("MoonPlay  = %d\n", moon_stat);
@@ -88,12 +96,12 @@ int32_t MOV_Play(uint8_t bPlayNum)
 		int8_t	*pBuff = NULL;
 		int32_t	FileSize = 0;
 
-		GetFileLength(mov_list[bPlayNum], &FileSize);	/* ファイルのサイズ取得 */
+		GetFileLength(g_mov_list[bPlayNum], &FileSize);	/* ファイルのサイズ取得 */
 		printf("MacsData = %d\n", FileSize);
 		pBuff = (int8_t*)MyMalloc(FileSize);	/* メモリ確保 */
 		if(pBuff != NULL)
 		{
-			File_Load(mov_list[bPlayNum], pBuff, sizeof(uint8_t), FileSize );	/* ファイル読み込みからメモリへ保存 */
+			File_Load(g_mov_list[bPlayNum], pBuff, sizeof(uint8_t), FileSize );	/* ファイル読み込みからメモリへ保存 */
 			MACS_Play(pBuff);	/* 再生 */
 			MyMfree(pBuff);	/* メモリ解放 */
 		}
@@ -104,6 +112,13 @@ int32_t MOV_Play(uint8_t bPlayNum)
 	return	ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 static uint32_t moon_check(void)
 {
 	uint32_t	ret = 0;

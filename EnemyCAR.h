@@ -8,6 +8,8 @@
 #define ENEMY_CAR_0_H	(45)
 #define ENEMY_CAR_1_W	(140)
 #define ENEMY_CAR_1_H	(105)
+#define	ENEMYCAR_PAT_MAX	(11)
+#define	ENEMYCAR_TYP_MAX	(8)
 
 /* ç\ë¢ëÃíËã` */
 
@@ -34,7 +36,7 @@ extern	int16_t	GetEnemyCAR(ST_ENEMYCARDATA *, int16_t);
 extern	int16_t	SetEnemyCAR(ST_ENEMYCARDATA, int16_t);
 extern	int16_t	EnemyCAR_main(uint8_t, uint8_t, uint8_t);
 extern	int16_t	SetAlive_EnemyCAR(void);
-extern	int16_t	Put_EnemyCAR(uint16_t, uint16_t, uint16_t, uint8_t);
+extern	int16_t	Put_EnemyCAR(uint16_t, uint16_t, uint16_t, uint8_t, uint8_t);
 extern	int16_t	Sort_EnemyCAR(void);
 
 #endif	/* ENEMYCAR_H */

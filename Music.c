@@ -8,18 +8,15 @@
 #include <interrupt.h>
 
 #include "inc/usr_macro.h"
+#include "OverKata.h"
 #include "MUSIC.h"
 #include "FileManager.h"
 #include "Output_Text.h"
 
 #define FM_CH_MAX	(8)
-#define FM_USE_CH	(4)
-#define MML_BUF	(32)
+#define FM_USE_CH	(1)
+#define MML_BUF		(32)
 #define MML_BUF_N	(2048)
-
-#define ZM_V2	1
-#define ZM_V3	0
-#define MC_DRV	0
 
 #if		ZM_V2 == 1
 #elif	ZM_V3 == 1
@@ -42,13 +39,10 @@
 #define ZM_NUM_V3	(0x03)
 #define MC_DRV_NUM	(0x00600000)
 
-#define	MUSIC_MAX	(32)
-#define	SOUND_MAX	(32)
-#define	ADPCM_MAX	(32)
-
 /* グローバル変数 */
-static int8_t	music_list[MUSIC_MAX][256]	=	{0};
-static uint32_t	m_list_max	=	0u;
+int8_t	music_list[MUSIC_MAX][256]	=	{0};
+uint32_t	m_list_max	=	0u;
+
 #if		ZM_V2 == 1
 #elif	ZM_V3 == 1
 	static int8_t	music_dat[MUSIC_MAX][4096]	=	{0};
@@ -60,20 +54,21 @@ static uint32_t	m_list_max	=	0u;
 
 #if		ZM_V2 == 1
 #elif	ZM_V3 == 1
-	static int8_t	se_list[SOUND_MAX][256]	=	{0};
+int8_t		se_list[SOUND_MAX][256]	=	{0};
+uint32_t	s_list_max	=	0u;
 	static int8_t	se_dat[SOUND_MAX][4096]	=	{0};
 	static int16_t	se_dat_size[SOUND_MAX]	=	{0};
 	static int32_t	se_dat_addr[SOUND_MAX]	=	{0};
-	static uint32_t	s_list_max	=	0u;
 #elif	MC_DRV == 1
 #else
 	#error "No Music Lib"
 #endif
 
-static int8_t	adpcm_list[ADPCM_MAX][256]	=	{0};
+int8_t	adpcm_list[ADPCM_MAX][256]	=	{0};
+uint32_t	p_list_max	=	0u;
+
 static int8_t	adpcm_dat[ADPCM_MAX][32768]	=	{0};
 static int32_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
-static uint32_t	p_list_max	=	0u;
 
 uint8_t	SE_Data[] = {	/* 構造体にした方がよい？ */
 //		0x01,										/* (+1)ZMDの構造 */
@@ -175,6 +170,7 @@ void Init_Music(void)
 		exit(0);
 	}
 #elif	MC_DRV == 1
+	/* 何もしない */
 #else
 	#error "No Music Lib"
 #endif
@@ -217,6 +213,7 @@ void Init_Music(void)
 	ret = zm_init(0);		/* 初期化 */
 	printf("zm_init = %d\n", ret);
 #elif	MC_DRV == 1
+	/* 何もしない */
 #else
 	#error "No Music Lib"
 #endif
@@ -225,39 +222,33 @@ void Init_Music(void)
 
 	/* BGM */
 #if		ZM_V2 == 1
-	Load_Music_List("data\\music\\", "m_list.txt", music_list, &m_list_max);
-	for(i = 0; i < m_list_max; i++)
-	{
-		printf("%s\n", music_list[i]);
-	}
+	/* 何もしない */
 #elif	ZM_V3 == 1
-	Load_Music_List("data\\music\\", "m_list_V3.txt", music_list, &m_list_max);
 	for(i = 0; i < m_list_max; i++)
 	{
+		/* メモリに登録 */
 		music_dat_size[i] = File_Load(music_list[i], music_dat[i], sizeof(uint8_t), 0);
 		printf("Music File %2d = %s = size(%d[byte])\n", i, music_list[i], music_dat_size[i]);
 	}
 #elif	MC_DRV == 1
-	Load_Music_List("data\\music\\", "m_list_MC.txt", music_list, &m_list_max);
-	for(i = 0; i < m_list_max; i++)
-	{
-		printf("%s\n", music_list[i]);
-	}
+	/* 何もしない */
 #else
 	#error "No Music Lib"
 #endif
 	
 	/* 効果音(FM) */
 #if		ZM_V2 == 1
+	/* 何もしない */
 #elif	ZM_V3 == 1
-	Load_SE_List("data\\seFM\\", "s_list_V3.txt", se_list, &s_list_max);
 	for(i = 0; i < s_list_max; i++)
 	{
+		/* メモリに登録 */
 		se_dat_size[i] = File_Load(se_list[i], se_dat[i], sizeof(uint8_t), 0);
 		se_dat_addr[i] = Get_ZMD_Trak_Head(se_dat[i], se_dat_size[i]);
 		printf("Sound Effect File %2d = %s = size(%d[byte](Head[0x%x]))\n", i, se_list[i], se_dat_size[i], se_dat_addr[i]);
 	}
 #elif	MC_DRV == 1
+	/* 何もしない */
 #else
 	#error "No Music Lib"
 #endif
@@ -275,17 +266,10 @@ void Init_Music(void)
 #endif
 
 	/* 効果音(ADPCM) */
-#if		ZM_V2 == 1
-#elif	ZM_V3 == 1
-#elif	MC_DRV == 1
-#else
-	#error "No Music Lib"
-#endif
-	Load_SE_List("data\\se\\", "p_list_V3.txt", adpcm_list, &p_list_max);
-
 	for(i = 0; i < p_list_max; i++)
 	{
 #if 1
+		/* メモリに登録 */
 	 	adpcm_dat_size[i] = (int32_t)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(uint8_t), 0);
 		printf("ADPCM File %2d = %s = size(%d[byte])\n", i, adpcm_list[i], adpcm_dat_size[i]);
 #else
@@ -696,6 +680,13 @@ int32_t	M_Play(int16_t Key)
 	static uint8_t ubChanel = 0u;
 	static uint8_t ubCount = 0u;
 
+#ifdef DEBUG	/* デバッグコーナー */
+	uint8_t	bDebugMode;
+	uint16_t	uDebugNum;
+	GetDebugMode(&bDebugMode);
+	GetDebugNum(&uDebugNum);
+#endif
+	
 	uCh = (FM_CH_MAX - FM_USE_CH + 1u) + ubChanel;
 	uTrk = 60 + uCh;
 	if(ubChanel < FM_USE_CH - 1u)
@@ -712,7 +703,16 @@ int32_t	M_Play(int16_t Key)
 	{
 		printf("m_alloc error %d-(%d,%d)\n", err, uTrk, MML_BUF);
 	}
-	sprintf(uMML, "@137v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
+#ifdef DEBUG	/* デバッグコーナー */
+	if(bDebugMode == TRUE)
+	{
+		sprintf(uMML, "@%dv15o2l4q1@k%d d+&", uDebugNum, Mdiv8(Key) );	/* OK */
+	}
+	else
+#endif
+	{
+		sprintf(uMML, "@137v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
+	}
 	err = m_trk( uTrk, uMML );	
 	if(err != 0)
 	{

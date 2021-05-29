@@ -3,8 +3,24 @@
 
 #include "inc/usr_define.h"
 
+#define ZM_V2	1
+#define ZM_V3	0
+#define MC_DRV	0
+
+#define	MUSIC_MAX	(32)
+#define	SOUND_MAX	(32)
+#define	ADPCM_MAX	(32)
+
 /* \‘¢‘Ì’è‹` */
+
 /* externéŒ¾ */
+extern	int8_t		music_list[MUSIC_MAX][256];
+extern	uint32_t	m_list_max;
+extern	int8_t		se_list[SOUND_MAX][256];
+extern	uint32_t	s_list_max;
+extern	int8_t		adpcm_list[ADPCM_MAX][256];
+extern	uint32_t	p_list_max;
+
 extern	void Init_Music(void);
 extern	void Exit_Music(void);
 extern	int32_t Music_Play(uint8_t);

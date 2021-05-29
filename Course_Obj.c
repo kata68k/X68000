@@ -17,21 +17,31 @@
 #include "Raster.h"
 
 /* 変数定義 */
+uint8_t		*g_pCG_Course_ObjImageBuf[COURSE_OBJ_TYP_MAX][COURSE_OBJ_PAT_MAX];
 
 /* 構造体定義 */
 static ST_COURSE_OBJ	g_stCourse_Obj[COURSE_OBJ_MAX] = {0};
+PICIMAGE	g_stPicCourse_ObjImage[COURSE_OBJ_TYP_MAX][COURSE_OBJ_PAT_MAX];
 
 /* 関数のプロトタイプ宣言 */
 int16_t	InitCourseObj(void);
 int16_t	GetCourseObj(ST_COURSE_OBJ *, int16_t);
 int16_t	SetCourseObj(ST_COURSE_OBJ, int16_t);
 int16_t	Course_Obj_main(uint8_t, uint8_t, uint8_t);
-int16_t	Put_CouseObject(int16_t, int16_t, uint16_t, uint8_t, uint8_t);
+int16_t	Put_CouseObject(int16_t, int16_t, uint16_t, uint8_t, uint8_t, uint8_t);
 int16_t	Sort_Course_Obj(void);
+int16_t	Load_Course_Obj(int16_t);
 int16_t	Load_Course_Data(uint8_t);
 int16_t	Move_Course_BG(uint8_t);
 
 /* 関数 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	InitCourseObj(void)
 {
 	int16_t ret = 0;
@@ -50,6 +60,13 @@ int16_t	InitCourseObj(void)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	GetCourseObj(ST_COURSE_OBJ *stDat, int16_t Num)
 {
 	int16_t	ret = 0;
@@ -64,6 +81,13 @@ int16_t	GetCourseObj(ST_COURSE_OBJ *stDat, int16_t Num)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	SetCourseObj(ST_COURSE_OBJ stDat, int16_t Num)
 {
 	int16_t	ret = 0;
@@ -79,6 +103,13 @@ int16_t	SetCourseObj(ST_COURSE_OBJ stDat, int16_t Num)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 {
 	int16_t	ret = 0;
@@ -95,6 +126,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		uint16_t	ras_x, ras_y, ras_pat, ras_num;
 		uint8_t	bEven;
 		int16_t	Out_Of_Disp;
+		uint8_t	ubType;
 		uint16_t	uTime;
 
 		ST_CRT	stCRT;
@@ -123,6 +155,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		x = g_stCourse_Obj[bNum].x;
 		y = g_stCourse_Obj[bNum].y;
 		z = g_stCourse_Obj[bNum].z;
+		ubType = g_stCourse_Obj[bNum].ubType;
 		uTime = g_stCourse_Obj[bNum].uTime;	/* 共通カウンタの前回値 */
 		if(uTime == 0xFFFF)
 		{
@@ -194,6 +227,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 											stCRT.hide_offset_y + dy,
 											dz,
 											bMode_rev,
+											ubType,
 											bEven);
 			x = dx;
 			z = dz;
@@ -210,7 +244,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			if( bDebugMode == TRUE )
 			{
 				Draw_Pset(	stCRT.hide_offset_x + dx,
-							stCRT.hide_offset_y + ras_y, 0xC2);	/* デバッグ用座標位置 */
+							stCRT.hide_offset_y + ras_y, 0x03);	/* デバッグ用座標位置 */
 			}
 #endif
 		}
@@ -232,7 +266,11 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 	}
 	else
 	{
-		g_stCourse_Obj[bNum].ubType = 0;
+		g_stCourse_Obj[bNum].ubType++;
+		if(g_stCourse_Obj[bNum].ubType >= COURSE_OBJ_TYP_MAX)
+		{
+			g_stCourse_Obj[bNum].ubType = 0u;
+		}
 		g_stCourse_Obj[bNum].x = 0;
 		g_stCourse_Obj[bNum].y = 0;
 		g_stCourse_Obj[bNum].z = 0;
@@ -243,9 +281,41 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 	return ret;
 }
 
-int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uint8_t ubPos)
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uint8_t ubType, uint8_t ubPos)
 {
 	int16_t	ret = 0;
+#if 1
+	uint16_t	*pSrcBuf = NULL;
+	uint32_t	uWidth=0, uHeight=0;
+	uint8_t		ubPos_H;
+	BITMAPINFOHEADER *pInfo;
+	
+	if(ubType >= COURSE_OBJ_TYP_MAX)return -1;
+	if(Size >= COURSE_OBJ_PAT_MAX)return -1;
+	
+	pSrcBuf = g_stPicCourse_ObjImage[ubType][Size].pImageData;
+	pInfo 	= g_stPicCourse_ObjImage[ubType][Size].pBMi;
+
+	uWidth	= pInfo->biWidth;
+	uHeight	= pInfo->biHeight;
+	
+	if(ubPos == TRUE)	/* 左 */
+	{
+		ubPos_H = POS_RIGHT;
+	}
+	else				/* 右 */
+	{
+		ubPos_H = POS_LEFT;
+	}
+	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_CENTER);
+#else
 	int16_t	i;
 	uint16_t	w, h;
 	uint8_t	ubType;
@@ -258,29 +328,8 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 	
 	ubType = g_stCourse_Obj[0].ubType;
 	
-	switch(ubType)
-	{
-	case 0:
-		{
-			/* COURSE_OBJ_CG(4) */
-			Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-			/* 9 */
-			//Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-		}
-		break;
-	case 1:
-		{
-			/* COURSE_OBJ_CG(4) */
-			Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-		}
-		break;
-	default:
-		{
-			/* COURSE_OBJ_CG(4) */
-			Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-		}
-		break;
-	}
+	Get_PicImageInfo( COURSE_OBJ_CG + ubType, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+
 	uWidth_o = uWidth;
 	uHeight_o = uHeight;
 	
@@ -314,10 +363,18 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 	ret = G_BitBlt(	x,		w,			y,	h,	0,
 					140,	w,	height_sum,	h,	0,
 					ubMode, ubPos_H, POS_CENTER);
+#endif
 	
 	return	ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	Sort_Course_Obj(void)
 {
 	int16_t	ret = 0;
@@ -350,12 +407,167 @@ int16_t	Sort_Course_Obj(void)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	Load_Course_Obj(int16_t Num)
+{
+	int16_t	ret = 0;
+	
+	int16_t PatNumber;
+	uint16_t height_sum = 0u;
+	uint16_t height_sum_o = 0u;
+	uint32_t i=0u;
+	uint32_t uWidth, uHeight, uFileSize;
+	uint32_t uWidth_dst, uHeight_dst;
+//	uint32_t uOffset_X = 0u;
+	uint16_t *pSrcBuf = NULL;
+#if 1
+	int32_t	Size;
+	uint32_t	uSize8x = 0;
+	uint16_t	*pDstBuf = NULL;
+	BITMAPFILEHEADER *pFile;
+	BITMAPINFOHEADER *pInfo;
+	
+#endif
+	if(Num >= COURSE_OBJ_TYP_MAX)return -1;
+	PatNumber = COURSE_OBJ_CG + Num;
+
+	CG_File_Load( PatNumber );	/* グラフィックの読み込み */
+//	ret = G_Load_Mem( PatNumber, uOffset_X,	0,	0);	/* ヤシの木 */
+	pSrcBuf = Get_PicImageInfo( PatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+	uWidth_dst = uWidth;
+	uHeight_dst = uHeight;
+#ifdef DEBUG
+//	printf("debug1(0x%p)=(%d,%d)\n", pSrcBuf, uWidth, uHeight );
+#endif
+
+#if 1
+	/* PICヘッダにメモリ割り当て */
+	g_stPicCourse_ObjImage[Num][i].pBMf = (BITMAPFILEHEADER*)MyMalloc( FILE_HEADER_SIZE );
+	g_stPicCourse_ObjImage[Num][i].pBMi = (BITMAPINFOHEADER*)MyMalloc( INFO_HEADER_SIZE );
+	pFile = g_stPicCourse_ObjImage[Num][i].pBMf;
+	pInfo = g_stPicCourse_ObjImage[Num][i].pBMi;
+	pInfo->biWidth = uWidth;
+	pInfo->biHeight = uHeight;
+	/* メモリのサイズ演算 */
+	uSize8x = ((((pInfo->biWidth)+7)/8) * 8);	/* 8の倍数 */
+	Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
+	pFile->bfSize = Size;		/* メモリサイズ設定 */
+	/* メモリ確保 */
+	g_stPicCourse_ObjImage[Num][i].pImageData = NULL;							/* ポインタ初期化 */
+	g_stPicCourse_ObjImage[Num][i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
+	memset(g_stPicCourse_ObjImage[Num][i].pImageData, 0, Size);					/* メモリクリア */
+//	memcpy(g_stPicCourse_ObjImage[Num][i].pImageData, pSrcBuf, Size);			/* マスターからヤシの木車用のバッファにコピー */
+	ret = G_Copy_Pict_To_Mem(	g_stPicCourse_ObjImage[Num][i].pImageData, uWidth, uHeight, pSrcBuf, uWidth, uHeight);	/* マスターからヤシの木用のバッファにコピー */
+#ifdef DEBUG
+//	printf("debug2(0x%p)=(%d,%d)\n", g_stPicCourse_ObjImage[Num][0].pImageData, uWidth, uHeight );
+//	ret = G_BitBlt_From_Mem( 0, 0, 0, g_stPicCourse_ObjImage[Num][0].pImageData, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+	
+#endif	
+
+	if(ret >= 0)
+	{
+		/* COURSE_OBJ_PAT_MAXパターンを作る */
+		uint32_t	uW_tmp, uH_tmp;
+		
+		height_sum = 0;
+		height_sum_o = 0;
+
+		for(i=1; i<COURSE_OBJ_PAT_MAX; i++)
+		{
+#if 1
+			/* PICヘッダにメモリ割り当て */
+			g_stPicCourse_ObjImage[Num][i].pBMf = (BITMAPFILEHEADER*)MyMalloc( FILE_HEADER_SIZE );
+			g_stPicCourse_ObjImage[Num][i].pBMi = (BITMAPINFOHEADER*)MyMalloc( INFO_HEADER_SIZE );
+			pFile = g_stPicCourse_ObjImage[Num][i].pBMf;
+			pInfo = g_stPicCourse_ObjImage[Num][i].pBMi;
+#else
+			/* 縮小先のサイズ */
+			height_sum_o += uHeight_o;
+#endif
+			/* 縮小先のサイズ(W) */
+			uW_tmp = uWidth_dst << 3;
+			uWidth_dst = Mmul_p1(uW_tmp);
+			uWidth_dst = Mmax(uWidth_dst, 8);
+
+			/* 縮小先のサイズ(H) */
+			uH_tmp = uHeight_dst << 3;
+			uHeight_dst = Mmul_p1(uH_tmp);
+			uHeight_dst = Mmax(uHeight_dst, 1);
+#if 1
+			pInfo->biWidth = uWidth_dst;
+			pInfo->biHeight = uHeight_dst;
+			/* メモリのサイズ演算 */
+			uSize8x = ((((pInfo->biWidth)+7)/8) * 8);	/* 8の倍数 */
+			Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
+			pFile->bfSize = Size;		/* メモリサイズ設定 */
+			/* メモリ確保 */
+			g_stPicCourse_ObjImage[Num][i].pImageData = NULL;							/* ポインタ初期化 */
+			g_stPicCourse_ObjImage[Num][i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
+			memset(g_stPicCourse_ObjImage[Num][i].pImageData, 0, Size);				/* メモリクリア */
+#ifdef DEBUG
+//			printf("debug1(%d,0x%p)=(%d,%d)\n", i, g_stPicCourse_ObjImage[Num][i].pBMi, pInfo->biWidth, pInfo->biHeight );
+//			KeyHitESC();	/* デバッグ用 */
+//			printf("debug2(%d,0x%p)=%d\n", i, g_stPicCourse_ObjImage[Num][i].pBMf, pFile->bfSize);
+//			KeyHitESC();	/* デバッグ用 */
+#endif
+			
+			pDstBuf = g_stPicCourse_ObjImage[Num][i].pImageData;		/* 作業用のポインタにセット */
+			pSrcBuf = g_stPicCourse_ObjImage[Num][i-1].pImageData;	/* 作業用のポインタにセット */
+#ifdef DEBUG
+//			printf("debug3(%d,0x%p)(%d,%d)\n", i, pDstBuf, uWidth_dst, uHeight_dst);
+//			printf("debug4(%d,0x%p)(%d,%d)\n", i-1, pSrcBuf, uWidth, uHeight);
+//			KeyHitESC();	/* デバッグ用 */
+#endif
+			/* 縮小コピー */
+			G_Stretch_Pict_To_Mem(	pDstBuf,	uWidth_dst,	uHeight_dst,
+									pSrcBuf,	uWidth,		uHeight);
+#else
+			/* 描画 */
+			G_Stretch_Pict(
+							0 + uOffset_X,	uWidth_o + uOffset_X,
+							height_sum_o,	uHeight_o,
+							0,
+							0 + uOffset_X,	uWidth + uOffset_X,
+							height_sum,		uHeight,
+							0);
+#endif
+			/* 次の縮小元 */
+			height_sum += uHeight;
+#ifdef DEBUG
+//			ret = G_BitBlt_From_Mem( 0, height_sum, 0, g_stPicCourse_ObjImage[Num][i].pImageData, uWidth_dst, uHeight_dst, 0xFF, POS_TOP, POS_LEFT);
+//			KeyHitESC();	/* デバッグ用 */
+#endif
+			uWidth = uWidth_dst;
+			uHeight = uHeight_dst;
+		}
+	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	Load_Course_Data(uint8_t bCourseNum)
 {
 	int16_t	ret = 0;
 	int8_t	str[256];
 	uint16_t	x, y;
 	ST_ROADDATA *p_stRoadData;
+	
+	if(bCourseNum == 0u)bCourseNum = 1u;
 	
 	/* コースデータ読み込み */
 	p_stRoadData = (ST_ROADDATA *)GetRoadDataAddr();
@@ -365,6 +577,13 @@ int16_t	Load_Course_Data(uint8_t bCourseNum)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	Move_Course_BG(uint8_t bMode)
 {
 	int16_t	ret = 0;

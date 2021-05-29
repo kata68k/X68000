@@ -7,6 +7,7 @@
 #include "Graphic.h"
 #include "Raster.h"
 
+extern int16_t Init_FileList_Load(void);
 extern int16_t File_Load(int8_t *, void *, size_t, size_t);
 extern int16_t File_Load_CSV(int8_t *, uint16_t *, uint16_t *, uint16_t *);
 extern int16_t File_Load_Course_CSV(int8_t *, ST_ROADDATA *, uint16_t *, uint16_t *);

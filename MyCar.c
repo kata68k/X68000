@@ -58,7 +58,6 @@ int16_t	MyCar_Interior(uint8_t);
 int16_t	MyCar_CourseOut(void);
 int16_t	GetMyCarSpeed(int16_t *);
 void MyCar_Image(void);
-void MyCar_Background(void);
 static int16_t	MyCar_Vibration(void);
 static int16_t	MyCar_Mascot(int16_t);
 static int16_t	MyCar_Tachometer(int16_t);
@@ -75,8 +74,6 @@ int16_t	MyCar_G_Load(void)
 {
 	int16_t	ret = 0;
 	
-	MyCar_Background();	/* 背景の表示 */
-
 	MyCar_Image();		/* 自車の表示 */
 
 	return ret;
@@ -578,7 +575,7 @@ static int16_t	MyCar_EngineSpeed(int16_t Input_Torque)
 		x = stCRT.hide_offset_x;
 		y = stCRT.hide_offset_y + 128;
 		sprintf(str, "Base(%3d), Input(%3d), Cal(%d)", uTRQ[bAxis], Input_Torque, uTorque_Cal);
-		PutGraphic_To_Symbol(str, x, y, 20);	/* メッセージエリア 描画 */
+		PutGraphic_To_Symbol(str, x, y, 0x03);	/* メッセージエリア 描画 */
 #endif
 	}
 #endif
@@ -680,28 +677,28 @@ static int16_t	MyCar_Crash(void)
 		{
 			case OBD_NORMAL:
 			{
-				color = 0x03;
+				color = 0x0B;
 				break;
 			}
 			case OBD_DAMAGE:
 			{
-				color = 0x13;
+				color = 0x0A;
 				break;
 			}
 			case OBD_SPIN_L:
 			case OBD_SPIN_R:
 			{
-				color = 0x19;
+				color = 0x0C;
 				break;
 			}
 			case OBD_COURSEOUT:
 			{
-				color = 0x08;
+				color = 0x0E;
 				break;
 			}
 			default:
 			{
-				color = 0x14;
+				color = 0x00;
 				break;
 			}
 		}
@@ -871,10 +868,13 @@ int16_t	GetMyCarSpeed(int16_t *speed)
 /*===========================================================================================*/
 void MyCar_Image(void)
 {
+	
+	CG_File_Load(MYCAR_CG);	/* グラフィックの読み込み */
+
 	/* FPS */
 #if 1	/* テキスト */
-	PutGraphic_To_Text( 0, 0, 0			);	/* インテリア */
-	PutGraphic_To_Text( 0, 0, Y_OFFSET	);	/* インテリア */
+	PutGraphic_To_Text( MYCAR_CG, 0, 0			);	/* インテリア */
+	PutGraphic_To_Text( MYCAR_CG, 0, Y_OFFSET	);	/* インテリア */
 
 	T_Fill( 90,        0 + 180, 32, 31, 0, 0);		/* メーター穴（上） */
 	T_Fill( 90, Y_OFFSET + 180, 32, 31, 0, 0);		/* メーター穴（下） */
@@ -884,8 +884,8 @@ void MyCar_Image(void)
 #else
 	int16_t x;
 
-	G_Load_Mem( 0, X_OFFSET,	0,			0);	/* インテリア */
-	G_Load_Mem( 0, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
+	G_Load_Mem( MYCAR_CG, X_OFFSET,	0,			0);	/* インテリア */
+	G_Load_Mem( MYCAR_CG, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
 	/* メーターの穴 */
 	for(x = 0; x < 17; x++)
 	{
@@ -904,106 +904,6 @@ void MyCar_Image(void)
 #if 0	/* TPS */
 #else
 #endif
-}
-
-/*===========================================================================================*/
-/* 関数名	：	*/
-/* 引数		：	*/
-/* 戻り値	：	*/
-/*-------------------------------------------------------------------------------------------*/
-/* 機能		：	*/
-/*===========================================================================================*/
-void MyCar_Background(void)
-{
-	int16_t ret;
-	uint16_t height_sum = 0u;
-	uint16_t height_sum_o = 0u;
-	uint32_t i;
-	uint32_t uWidth, uHeight, uFileSize;
-	uint32_t uWidth_o, uHeight_o;
-	uint32_t uOffset_X = 0u;
-	
-	ret = G_Load_Mem( ENEMYCAR_CG, uOffset_X,	0,	0);	/* ライバル車 */
-	Get_PicImageInfo( ENEMYCAR_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-	uWidth_o = uWidth;
-	uHeight_o = uHeight;
-
-	if(ret >= 0)
-	{
-		/* 11パターンを作る */
-		uint32_t	uW_tmp, uH_tmp;
-		
-		height_sum = 0;
-		height_sum_o = 0;
-
-		for(i=1; i<=11u; i++)
-		{
-			/* 縮小先のサイズ */
-			height_sum_o += uHeight_o;
-			uW_tmp = uWidth_o << 3;
-			uWidth_o = Mmul_p1(uW_tmp);
-			uH_tmp = uHeight_o << 3;
-			uHeight_o = Mmul_p1(uH_tmp);
-			
-			/* 描画 */
-			G_Stretch_Pict(
-							0 + uOffset_X,	uWidth_o + uOffset_X,
-							height_sum_o,	uHeight_o,
-							0,
-							0 + uOffset_X,	uWidth + uOffset_X,
-							height_sum,		uHeight,
-							0);
-			/* 次の縮小元 */
-			height_sum += uHeight;
-			uWidth = uWidth_o;
-			uHeight = uHeight_o;
-		}
-	}
-	
-	uOffset_X = 140;
-	ret = G_Load_Mem( COURSE_OBJ_CG, uOffset_X,	0,	0);	/* ヤシの木 */
-	Get_PicImageInfo( COURSE_OBJ_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-	uWidth_o = uWidth;
-	uHeight_o = uHeight;
-	
-	if(ret >= 0)
-	{
-		/* 9パターンを作る */
-		uint32_t	uW_tmp, uH_tmp;
-		
-		height_sum = 0;
-		height_sum_o = 0;
-
-		for(i=1; i<9; i++)
-		{
-			/* 縮小先のサイズ */
-			height_sum_o += uHeight_o;
-			uW_tmp = uWidth_o << 3;
-			uWidth_o = Mmul_p1(uW_tmp);
-			uH_tmp = uHeight_o << 3;
-			uHeight_o = Mmul_p1(uH_tmp);
-
-			/* 描画 */
-			G_Stretch_Pict(
-							0 + uOffset_X,	uWidth_o + uOffset_X,
-							height_sum_o,	uHeight_o,
-							0,
-							0 + uOffset_X,	uWidth + uOffset_X,
-							height_sum,		uHeight,
-							0);
-
-			/* 次の縮小元 */
-			height_sum += uHeight;
-			uWidth = uWidth_o;
-			uHeight = uHeight_o;
-		}
-	}
-
-	Get_PicImageInfo( BG_CG, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-	G_Load_Mem( BG_CG, 		0,		Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + 8,	1);	/* 背景 */
-	G_Load_Mem( BG_CG, X_OFFSET+16,	Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + 8,	1);	/* 背景 */
-	G_Load_Mem( BG_CG, 		0,		Y_MIN_DRAW + Y_OFFSET + Y_HORIZON_1 - uHeight + 8,	1);	/* 背景 */
-	G_Load_Mem( BG_CG, X_OFFSET+16,	Y_MIN_DRAW + Y_OFFSET + Y_HORIZON_1 - uHeight + 8,	1);	/* 背景 */
 }
 
 /*===========================================================================================*/
