@@ -3,6 +3,7 @@ rem 開発用
 cp -u OverKata.x D:\超電動開発室\OverKata\
 D:
 cd D:\超電動開発室\OverKata
+JOYDRV3.X data\SAMPLE.CNF
 MACSDRV.x
 MOON.x -f10 -m300
 PCM8A.X
@@ -19,5 +20,6 @@ ZMUSIC.X -R
 PCM8A.X -R
 MOON.x -r
 MACSDRV.x -r
+JOYDRV3.X -R
 L:
 

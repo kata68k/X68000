@@ -8,7 +8,8 @@ LD		= hlk
 LKFLAGS	=	-z-stack=131072
 
 INC		= 
-LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
+#LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
+LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L LIB/JOYLIB3.L
 #LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMSC3LIB.L
 #LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/mcclib.a
 LZH		= OverKata001
@@ -27,7 +28,7 @@ clean:
 	inc/*.bak
 
 execonly:
-	$(RM) *.ind *.bak *.s *.o \
+	$(RM) *.ind *.bak *.s *.o
 
 OverKata.x:	OverKata.o APL_MACS.o APL_Math.o CRTC.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
 			FileManager.o Graphic.o Input.o MFP.o Moon.o Music.o MyCar.o OutPut_Text.o \

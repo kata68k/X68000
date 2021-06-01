@@ -826,7 +826,10 @@ int16_t G_Stretch_Pict(
 		for(x = dst_x; x < dst_ex; x++)
 		{
 			pSrcGR = pSrcGR_tmp + Mmul_1p25(x-dst_x);
-			*pDstGR = *pSrcGR;
+			if(*pSrcGR != 0)
+			{
+				*pDstGR = *pSrcGR;
+			}
 			pDstGR++;
 		}
 	}
@@ -887,7 +890,10 @@ int16_t G_Stretch_Pict_To_Mem(	uint16_t *pDstBuf, uint16_t dst_w, uint16_t dst_h
 			if(sx < src_w)
 			{
 				pSrcGR = pSrcGR_tmp + sx;
-				*pDstGR = *pSrcGR;
+				if(*pSrcGR != 0)
+				{
+					*pDstGR = *pSrcGR;
+				}
 			}
 			pDstGR++;
 		}

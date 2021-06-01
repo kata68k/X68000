@@ -30,7 +30,30 @@
 #define KEY_TRUE	1
 #define KEY_FALSE	0
 
+/* アナログスティック */
+#define AJOY_SELECT		(0x0001)
+#define AJOY_START		(0x0002)
+#define AJOY_E2			(0x0004)
+#define AJOY_E1			(0x0008)
+#define AJOY_D			(0x0010)
+#define AJOY_C			(0x0020)
+#define AJOY_B_B_DASH	(0x0040)
+#define AJOY_A_A_DASH	(0x0080)
+#define AJOY_B_DASH		(0x0100)
+#define AJOY_A_DASH		(0x0200)
+#define AJOY_B			(0x0400)
+#define AJOY_A			(0x0800)
+
+typedef struct tagANALOG {
+	uint16_t	r_stk_ud;	/* 右スティックUP/DOWN */
+	uint16_t	r_stk_lr;	/* 右スティックLEFT/RIGHT */
+	uint16_t	l_stk_ud;	/* 左スティックUP/DOWN */
+	uint16_t	l_stk_lr;	/* 左スティックLEFT/RIGHT */
+	uint16_t	btn_data;	/* ボタンデータ */
+} JOY_ANALOG_BUF;
+
 extern uint16_t	get_key(uint16_t *, uint8_t, uint8_t );
+extern uint16_t	get_ajoy( uint16_t *, uint8_t, uint8_t );
 extern uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
 extern uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 extern int16_t	KeyHitESC(void);

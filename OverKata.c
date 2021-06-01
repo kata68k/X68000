@@ -236,7 +236,16 @@ int16_t main(void)
 		GetTaskInfo(&stTask);	/* タスクの情報を得る */
 
 		/* 入力処理 */
-		get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
+#ifdef DEBUG	/* デバッグコーナー */
+		if(bDebugMode == TRUE)
+		{
+			get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
+		}
+		else
+#endif
+		{
+			get_ajoy(&input, 0, 1);	/* アナログジョイスティック入力 */
+		}
 		g_Input = input;
 		if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
 		{

@@ -1,6 +1,7 @@
 #ifndef	INPUT_C
 #define	INPUT_C
 
+#include <stdio.h>
 #include <doslib.h>
 #include <iocslib.h>
 
@@ -8,45 +9,55 @@
 #include "Input.h"
 #include "Music.h"
 
-
 /* 関数のプロトタイプ宣言 */
+uint32_t	get_analog_data(uint32_t, JOY_ANALOG_BUF *);
 uint16_t	get_key(uint16_t *, uint8_t, uint8_t );
+uint16_t	get_ajoy( uint16_t *, uint8_t, uint8_t );
 uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
 uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 int16_t	KeyHitESC(void);
 
 /* 関数 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 {
-	uint32_t kd_k1,kd_k2_1,kd_k2_2,kd_b,kd_b2,kd_b3,kd_b4,kd_b5,kd_b6,kd_b7;
+	uint16_t ret = 0;
+	uint32_t uKeyBoard[16] = {0u};
+	uint32_t uJoyStick = 0u;
 	static int16_t repeat_flag_a = KEY_TRUE;
 	static int16_t repeat_flag_b = KEY_TRUE;
-	uint16_t ret = 0;
 	
-	kd_b4	= BITSNS( 0 );
-	kd_b3	= BITSNS( 2 );
-	kd_b5	= BITSNS( 3 );
-	kd_b6	= BITSNS( 4 );
-	kd_b2	= BITSNS( 5 );
-	kd_b7	= BITSNS( 6 );
-	kd_k1	= BITSNS( 7 );
-	kd_k2_1	= BITSNS( 8 );
-	kd_k2_2	= BITSNS( 9 );
-	kd_b	= BITSNS(10 );
+	uJoyStick 		= JOYGET(bPlayer);
+	uKeyBoard[0]	= BITSNS( 0 );
+	uKeyBoard[2]	= BITSNS( 2 );
+	uKeyBoard[3]	= BITSNS( 3 );
+	uKeyBoard[4]	= BITSNS( 4 );
+	uKeyBoard[5]	= BITSNS( 5 );
+	uKeyBoard[6]	= BITSNS( 6 );
+	uKeyBoard[7]	= BITSNS( 7 );
+	uKeyBoard[8]	= BITSNS( 8 );
+	uKeyBoard[9]	= BITSNS( 9 );
+	uKeyBoard[10]	= BITSNS(10 );
 	
-	if( (kd_b3  & 0x02 ) != 0 ) *key |= KEY_b_Q;		/* Ｑ */
-	if( (kd_b4  & 0x02 ) != 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
-	if( (kd_b7  & 0x01 ) != 0 ) *key |= KEY_b_M;		/* Ｍ */
-	if( (kd_b7  & 0x20 ) != 0 ) *key |= KEY_b_SP;	/* スペースキー */
-	if( (kd_k1  & 0x01 ) != 0 ) *key |= KEY_b_RLUP;	/* ロールアップ */
-	if( (kd_k1  & 0x02 ) != 0 ) *key |= KEY_b_RLDN;	/* ロールダウン */
+	if( (uKeyBoard[2]  & Bit_1 ) != 0 ) *key |= KEY_b_Q;	/* Ｑ */
+	if( (uKeyBoard[0]  & Bit_1 ) != 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
+	if( (uKeyBoard[6]  & Bit_0 ) != 0 ) *key |= KEY_b_M;	/* Ｍ */
+	if( (uKeyBoard[6]  & Bit_5 ) != 0 ) *key |= KEY_b_SP;	/* スペースキー */
+	if( (uKeyBoard[7]  & Bit_0 ) != 0 ) *key |= KEY_b_RLUP;	/* ロールアップ */
+	if( (uKeyBoard[7]  & Bit_1 ) != 0 ) *key |= KEY_b_RLDN;	/* ロールダウン */
 
-	if( !( JOYGET( bPlayer ) & UP    ) || ( kd_k1 & 0x10 ) || ( kd_k2_1 & 0x10 ) || ( kd_b3 & 0x04 ) ) *key |= KEY_UPPER;	/* 上 ↑ 8 w */
-	if( !( JOYGET( bPlayer ) & DOWN  ) || ( kd_k1 & 0x40 ) || ( kd_k2_2 & 0x10 ) || ( kd_b5 & 0x80 ) ) *key |= KEY_LOWER;	/* 下 ↓ 2 s */
-	if( !( JOYGET( bPlayer ) & LEFT  ) || ( kd_k1 & 0x08 ) || ( kd_k2_1 & 0x80 ) || ( kd_b5 & 0x40 ) ) *key |= KEY_LEFT;	/* 左 ← 4 a */
-	if( !( JOYGET( bPlayer ) & RIGHT ) || ( kd_k1 & 0x20 ) || ( kd_k2_2 & 0x02 ) || ( kd_b6 & 0x01 ) ) *key |= KEY_RIGHT;	/* 右 → 6 d */
+	if( !( uJoyStick & UP    ) || ( uKeyBoard[7] & Bit_4 ) || ( uKeyBoard[8] & Bit_4 ) || ( uKeyBoard[2] & Bit_2 ) ) *key |= KEY_UPPER;	/* 上 ↑ 8 w */
+	if( !( uJoyStick & DOWN  ) || ( uKeyBoard[7] & Bit_6 ) || ( uKeyBoard[9] & Bit_4 ) || ( uKeyBoard[3] & Bit_7 ) ) *key |= KEY_LOWER;	/* 下 ↓ 2 s */
+	if( !( uJoyStick & LEFT  ) || ( uKeyBoard[7] & Bit_3 ) || ( uKeyBoard[8] & Bit_7 ) || ( uKeyBoard[3] & Bit_6 ) ) *key |= KEY_LEFT;		/* 左 ← 4 a */
+	if( !( uJoyStick & RIGHT ) || ( uKeyBoard[7] & Bit_5 ) || ( uKeyBoard[9] & Bit_1 ) || ( uKeyBoard[4] & Bit_0 ) ) *key |= KEY_RIGHT;	/* 右 → 6 d */
 	
-	if( !( JOYGET( bPlayer ) & JOYA  ) || ( kd_b  & 0x20 ) || ( kd_b2   & 0x04 ) )	/* Ａボタン or XF1 or z */
+	if( !( uJoyStick & JOYA  ) || ( uKeyBoard[10]  & Bit_5 ) || ( uKeyBoard[5]   & Bit_2 ) )	/* Ａボタン or XF1 or z */
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
@@ -59,7 +70,7 @@ uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 		repeat_flag_a = KEY_TRUE;
 	}
 	
-	if( !( JOYGET( bPlayer ) & JOYB  ) || ( kd_b  & 0x40 ) || ( kd_b2   & 0x08 ) )	/* Ｂボタン or XF2 or x  */
+	if( !( uJoyStick & JOYB  ) || ( uKeyBoard[10]  & 0x40 ) || ( uKeyBoard[5]   & 0x08 ) )	/* Ｂボタン or XF2 or x  */
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
@@ -74,6 +85,91 @@ uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+uint16_t get_ajoy( uint16_t *key, uint8_t bPlayer, uint8_t mode )
+{
+	uint16_t ret = 0;
+	int32_t AnalogJoyStick = 0;
+	uint32_t uKeyBoard[16] = {0u};
+	static int16_t repeat_flag_a = KEY_TRUE;
+	static int16_t repeat_flag_b = KEY_TRUE;
+
+	JOY_ANALOG_BUF	analog_buf;
+	
+	AnalogJoyStick	= get_analog_data(bPlayer + 1, &analog_buf);
+	if(AnalogJoyStick < 0)return -1;
+	else
+#ifdef DEBUG
+	{
+//		printf("JOYDRV3(%d) =0x%2x,0x%2x,0x%2x,0x%2x,0x%b\r", bPlayer + 1, 
+//			analog_buf.l_stk_ud,
+//			analog_buf.l_stk_lr,
+//			analog_buf.r_stk_ud,
+//			analog_buf.r_stk_lr,
+//			analog_buf.btn_data);
+//		KeyHitESC();	/* デバッグ用 */
+	}
+#endif
+	
+	uKeyBoard[0]	= BITSNS( 0 );
+	uKeyBoard[6]	= BITSNS( 6 );
+	if( (uKeyBoard[0]  & Bit_1 ) != 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
+	if( (uKeyBoard[6]  & Bit_5 ) != 0 ) *key |= KEY_b_SP;	/* スペースキー */
+	
+	if( (analog_buf.btn_data  & AJOY_SELECT	 ) == 0 ) *key |= KEY_b_Q;		/* Ｑ */
+	if( (analog_buf.btn_data  & AJOY_START	 ) == 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
+	if( (analog_buf.btn_data  & AJOY_E2		 ) == 0 ) *key |= KEY_b_M;		/* Ｍ */
+	if( (analog_buf.btn_data  & AJOY_D		 ) == 0 ) *key |= KEY_b_SP;		/* スペースキー */
+	if( (analog_buf.btn_data  & AJOY_E2		 ) == 0 ) *key |= KEY_b_RLUP;	/* ロールアップ */
+	if( (analog_buf.btn_data  & AJOY_E1		 ) == 0 ) *key |= KEY_b_RLDN;	/* ロールダウン */
+	
+	if( analog_buf.l_stk_ud > 0xC0 ) *key |= KEY_UPPER;	/* 上 */
+	if( analog_buf.l_stk_ud < 0x40 ) *key |= KEY_LOWER;	/* 下 */
+	if( analog_buf.r_stk_lr < 0x40 ) *key |= KEY_LEFT;	/* 左 */
+	if( analog_buf.r_stk_lr > 0xC0 ) *key |= KEY_RIGHT;	/* 右 */
+
+	if( !( analog_buf.btn_data & AJOY_A  ))	/* Ａボタン */
+	{
+		if( repeat_flag_a || (mode != 0u))
+		{
+			*key |= KEY_A;
+			repeat_flag_a = KEY_FALSE;
+		}
+	}
+	else
+	{
+		repeat_flag_a = KEY_TRUE;
+	}
+	
+	if( !( analog_buf.btn_data & AJOY_B  ))	/* Ｂボタン */
+	{
+		if( repeat_flag_b || (mode != 0u))
+		{
+			*key |= KEY_B;
+			repeat_flag_b = KEY_FALSE;
+		}
+	}
+	else
+	{
+		repeat_flag_b = KEY_TRUE;
+	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 {
 	uint16_t ret = 0;
@@ -189,6 +285,13 @@ uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 /* チャタリング防止SW */
 uint8_t	ChatCancelSW(uint8_t bJudge, uint8_t *bFlag)
 {
@@ -247,6 +350,13 @@ uint8_t	ChatCancelSW(uint8_t bJudge, uint8_t *bFlag)
 #endif
 #endif
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	KeyHitESC(void)
 {
 	int16_t	ret = 0;
