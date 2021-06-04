@@ -19,7 +19,7 @@ typedef struct
 }	ST_CRT;
 
 /* externêÈåæ */
-extern	void CRTC_INIT(void);
+extern	void CRTC_INIT(uint8_t);
 extern	void CRTC_INIT_Manual(void);
 extern	int16_t	GetCRT(ST_CRT *, int16_t);
 extern	int16_t	SetCRT(ST_CRT, int16_t);

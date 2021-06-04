@@ -38,7 +38,9 @@ uint8_t GetPassTime(uint32_t, uint32_t *);	/* 経過タイマー */
 int16_t SetRasterIntData(void *, size_t);
 int16_t GetRasterIntPos(uint16_t *, uint16_t *, uint16_t *, uint16_t);
 static void interrupt Timer_D_Func(void);
+#if 0
 static void interrupt Hsync_Func(void);
+#endif
 static void interrupt Raster_Func(void);
 static void interrupt Vsync_Func(void);
 int16_t vwait(int16_t);
@@ -343,13 +345,14 @@ static void interrupt Timer_D_Func(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
+#if 0
 static void interrupt Hsync_Func(void)
 {
 	HSYNCST((void *)0);			/* stop */
 	Hsync_count++;
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
-
+#endif
 /*===========================================================================================*/
 /* 関数名	：	*/
 /* 引数		：	*/
@@ -423,7 +426,8 @@ static void interrupt Vsync_Func(void)
 //	volatile uint16_t *BGCTRL		  = (uint16_t *)0xEB0808;
 	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
 	volatile uint16_t *CRTC_R06 = (uint16_t *)0xE8000Cu;	/* 垂直表示開始位置-1 */
-	
+//	volatile uint16_t *CRTC_R09 = (uint16_t *)0xE80012u;
+
 	/* V-Sync割り込み処理 */
 #ifdef 	MACS_MOON
 	/* 何もしない */
@@ -450,11 +454,15 @@ static void interrupt Vsync_Func(void)
 	CRTCRAS((void *)0, 0);	/* stop */
 	if(g_bRasterSET == TRUE)
 	{
+		/* ノンインターレースモードの場合 */
 		/* モニタの表示開始位置はCRTC_R06が最初の位置となる */
 		/* ラスタ配列の要素番号＝画面のY座標 */
 		/* ただしSP/BGは、X+16,Y+16のオフセットがあるので */
 		/* ラスタ配列からオフセット分を足す必要がある */
 		g_uRas_Count = *CRTC_R06 + g_stRasterInt[0].y + SP_Y_OFFSET;	/* 割り込み開始位置 */	/* 初回は0で始まること */
+
+		/* インターレースモードの場合 */
+//		g_uRas_Count = ((*CRTC_R09 - *CRTC_R06) * 2) + g_stRasterInt[0].y + SP_Y_OFFSET;	/* 割り込み開始位置 */	/* 初回は0で始まること */
 		CRTCRAS( Raster_Func, g_uRas_Count );	/* ラスター割り込み */
 	}
 #if 0

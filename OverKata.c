@@ -87,8 +87,16 @@ int16_t main(void)
 	int16_t	loop = 1;
 	int16_t	RD[1024] = {0};
 	uint8_t	bMode_flag = FALSE;
+	
 	uint8_t	bDebugMode = TRUE;
 	uint8_t	bDebugMode_flag;
+	
+	uint8_t	bAnalogStickMode = FALSE;
+	uint8_t	bAnalogStickMode_flag;
+	
+	uint8_t	bCRTMode = FALSE;
+	uint8_t	bCRTMode_flag;
+	
 	uint8_t	bFlip = FALSE;
 	
 	ST_TASK		stTask = {0}; 
@@ -236,21 +244,43 @@ int16_t main(void)
 		GetTaskInfo(&stTask);	/* タスクの情報を得る */
 
 		/* 入力処理 */
-#ifdef DEBUG	/* デバッグコーナー */
-		if(bDebugMode == TRUE)
-		{
-			get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
-		}
-		else
-#endif
+		if(bAnalogStickMode == TRUE)
 		{
 			get_ajoy(&input, 0, 1);	/* アナログジョイスティック入力 */
 		}
+		else
+		{
+			get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
+		}
 		g_Input = input;
+		
+		/* 終了 */
 		if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
 		{
 			SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
 		}
+		/* アナログスティック／デジタルスティック切替 */
+		if(ChatCancelSW((input & KEY_b_TAB)!=0u, &bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
+		{
+			if(bAnalogStickMode == FALSE)	bAnalogStickMode = TRUE;
+			else							bAnalogStickMode = FALSE;
+		}
+		/* アナログスティック／デジタルスティック切替 */
+		if(ChatCancelSW((input & KEY_b_HELP)!=0u, &bCRTMode_flag) == TRUE)	/* HELPで31kHz/15kHz切替 */
+		{
+			if(bCRTMode == FALSE)	bCRTMode = TRUE;
+			else					bCRTMode = FALSE;
+			
+			if(bCRTMode == TRUE)
+			{
+				CRTC_INIT(0);	/* 31kHz*/
+			}
+			else
+			{
+				CRTC_INIT(1);	/* 15kHz*/
+			}
+		}
+		
 #ifdef DEBUG	/* デバッグコーナー */
 		if(ChatCancelSW((input & KEY_b_SP)!=0u, &bDebugMode_flag) == TRUE)	/* スペースでデバッグON/OFF */
 		{
@@ -615,10 +645,10 @@ static void App_Init(void)
 	} else {
 		puts("スーパーバイザーモード開始");
 	}
-	
+
 	/* 画面 */
 	g_nCrtmod = CRT_INIT();
-
+	
 	/* グラフィック */
 	G_INIT();			/* 画面の初期設定 */
 	G_Palette_INIT();	/* グラフィックパレットの初期化 */

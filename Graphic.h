@@ -129,6 +129,7 @@ extern	int16_t	Set_PicImagePallet(uint8_t);
 extern	int16_t Set_PicImagePalletALL(void);
 extern	int16_t CG_File_Load(uint16_t);
 extern	void	G_INIT(void);
+extern	void	G_VIDEO_INIT(void);
 extern	void	G_HOME(void);
 extern	void	G_VIEW(uint8_t);
 extern	void	G_Palette_INIT(void);

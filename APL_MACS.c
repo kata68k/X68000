@@ -10,6 +10,7 @@
 #include "APL_MACS.h"
 
 #include "OverKata.h"
+#include "CRTC.h"
 #include "FileManager.h"
 #include "Graphic.h"
 #include "PCG.h"
@@ -108,6 +109,9 @@ int32_t MOV_Play(uint8_t bPlayNum)
 	}
 #endif
 #endif	/* MACS_MOON */
+
+	/* 画面モード再設定 */
+	CRTC_INIT();	/* 384 x 256 モード */
 
 	return	ret;
 }

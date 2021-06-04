@@ -57,6 +57,7 @@ int16_t CG_File_Load(uint16_t);
 int16_t CG_File_Load_to_Mem(uint16_t);
 int16_t CG_Mem_Convert_Type(uint16_t);
 void G_INIT(void);
+void G_VIDEO_INIT(void);
 void G_HOME(void);
 void G_VIEW(uint8_t);
 void G_Palette_INIT(void);
@@ -604,13 +605,25 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 /*===========================================================================================*/
 void G_INIT(void)
 {
+	G_CLR_ON();				/* グラフィックのクリア */
+	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
+	
+	G_VIDEO_INIT();			/* ビデオコントローラーの初期化 */
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void G_VIDEO_INIT(void)
+{
 	volatile uint16_t *VIDEO_REG1 = (uint16_t *)0xE82400;
 	volatile uint16_t *VIDEO_REG2 = (uint16_t *)0xE82500;
 	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
-	volatile uint16_t *V_Sync_end = (uint16_t *)0xE8000E;
 
-	G_CLR_ON();				/* グラフィックのクリア */
-	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
 //											   210
 	*VIDEO_REG1 = Mbset(*VIDEO_REG1,   0x07, 0b001);	/* 512x512 256color 2men */
 //											   ||+--------------bit0 
@@ -662,7 +675,6 @@ void G_INIT(void)
 //											   ||+--------------bitD VHT	
 //											   |+---------------bitE AH		
 //											   +----------------bitF Ys		
-	*V_Sync_end = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
 }
 
 /*===========================================================================================*/

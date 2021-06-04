@@ -8,6 +8,7 @@
 
 #include "inc/usr_macro.h"
 #include "CRTC.h"
+#include "Input.h"
 
 /* グローバル変数 */
 
@@ -34,27 +35,47 @@ uint8_t	keybuf[128];
 int32_t	stack;
 int8_t	g_CRT_Contrast = -1;
 
-volatile uint16_t  *crtc = (uint16_t *)0xE80000u;
-volatile uint16_t  *vcon = (uint16_t *)0xE82400u;
-volatile uint16_t  *scon = (uint16_t *)0xEB080Au;
-volatile uint16_t  *sysp = (uint16_t *)0xE8E007u;
-volatile uint16_t  *CRTC_R0  = (uint16_t *)0xE80000u;
-volatile uint16_t  *CRTC_R1  = (uint16_t *)0xE80002u;
-volatile uint16_t  *CRTC_R2  = (uint16_t *)0xE80004u;
-volatile uint16_t  *CRTC_R3  = (uint16_t *)0xE80006u;
-volatile uint16_t  *CRTC_R4  = (uint16_t *)0xE80008u;
-volatile uint16_t  *CRTC_R5  = (uint16_t *)0xE8000Au;
-volatile uint16_t  *CRTC_R6  = (uint16_t *)0xE8000Cu;
-volatile uint16_t  *CRTC_R7  = (uint16_t *)0xE8000Eu;
-volatile uint16_t  *CRTC_R8  = (uint16_t *)0xE80010u;
-volatile uint16_t  *CRTC_R20 = (uint16_t *)0xE8002Eu;
+volatile uint16_t	*crtc = (uint16_t *)0xE80000u;
+volatile uint16_t	*vcon = (uint16_t *)0xE82400u;
+volatile uint16_t	*scon = (uint16_t *)0xEB080Au;
+volatile uint8_t	*sysp =  (uint8_t *)0xE8E007u;
+
+volatile uint16_t	*CRTC_R00 = (uint16_t *)0xE80000u;
+volatile uint16_t	*CRTC_R01 = (uint16_t *)0xE80002u;
+volatile uint16_t	*CRTC_R02 = (uint16_t *)0xE80004u;
+volatile uint16_t	*CRTC_R03 = (uint16_t *)0xE80006u;
+volatile uint16_t	*CRTC_R04 = (uint16_t *)0xE80008u;
+volatile uint16_t	*CRTC_R05 = (uint16_t *)0xE8000Au;
+volatile uint16_t	*CRTC_R06 = (uint16_t *)0xE8000Cu;
+volatile uint16_t	*CRTC_R07 = (uint16_t *)0xE8000Eu;
+volatile uint16_t	*CRTC_R08 = (uint16_t *)0xE80010u;
+volatile uint16_t	*CRTC_R09 = (uint16_t *)0xE80012u;
+volatile uint16_t	*CRTC_R10 = (uint16_t *)0xE80014u;
+volatile uint16_t	*CRTC_R11 = (uint16_t *)0xE80016u;
+volatile uint16_t	*CRTC_R12 = (uint16_t *)0xE80018u;
+volatile uint16_t	*CRTC_R13 = (uint16_t *)0xE8001Au;
+volatile uint16_t	*CRTC_R14 = (uint16_t *)0xE8001Cu;
+volatile uint16_t	*CRTC_R15 = (uint16_t *)0xE8001Eu;
+volatile uint16_t	*CRTC_R16 = (uint16_t *)0xE80020u;
+volatile uint16_t	*CRTC_R17 = (uint16_t *)0xE80022u;
+volatile uint16_t	*CRTC_R18 = (uint16_t *)0xE80024u;
+volatile uint16_t	*CRTC_R19 = (uint16_t *)0xE80026u;
+volatile uint16_t	*CRTC_R20 = (uint16_t *)0xE80028u;
+volatile uint16_t	*CRTC_R21 = (uint16_t *)0xE8002Au;
+volatile uint16_t	*CRTC_R22 = (uint16_t *)0xE8002Cu;
+volatile uint16_t	*CRTC_R23 = (uint16_t *)0xE8002Eu;
+
+volatile uint16_t	*SP_CRTC_0A = (uint16_t *)0xEB080Au;
+volatile uint16_t	*SP_CRTC_0C = (uint16_t *)0xEB080Cu;
+volatile uint16_t	*SP_CRTC_0E = (uint16_t *)0xEB080Eu;
+volatile uint16_t	*SP_CRTC_10 = (uint16_t *)0xEB0810u;
 
 /* 構造体定義 */
 ST_CRT		g_stCRT[CRT_MAX] = {0};
 
 
 /* 関数のプロトタイプ宣言 */
-void CRTC_INIT(void);
+void CRTC_INIT(uint8_t);
 void CRTC_INIT_Manual(void);
 void get_value(int8_t *, uint32_t *, uint32_t, uint32_t);
 void cal_regs(void);
@@ -68,36 +89,88 @@ int16_t	Set_CRT_Contrast(int8_t);
 
 
 /* 関数 */
-void CRTC_INIT(void)
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void CRTC_INIT(uint8_t uNum)
 {
-	hl		= 3 - 1;
+#if 1
+	/* CRTC_レジスタの結果を反映したもの */
+	uint32_t i;
+	uint32_t pat;
+	uint16_t crtcdata[5][9] = {   69,    6, 11+8, 59-8,   567,    5,   40,   552, 0x111,	/* otoko */
+								0x44, 0x06, 0x10, 0x36, 0x237, 0x05, 0x48, 0x208, 0x111,	/* pacland 31kHz */
+								0x42, 0x06, 0x10, 0x36, 0x103, 0x02, 0x18, 0x0F8, 0x114,	/* pacland 15kHz */
+								0x45, 0x06, 0x12, 0x32, 0x237, 0x05, 0x28, 0x228, 0x111,	/* 超連射68k 31kHz */
+								0x25, 0x01, 0x00, 0x20, 0x103, 0x02, 0x10, 0x100, 0x100};	/* 超連射68k 15kHz */
+
+	CRTMOD(0x100 + 10 + uNum);	/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+
+	return;	/* 今は使わない */
+
+	pat = 1 + uNum;
 	
-	clk		= 2 - 1;
+	for(i=0; i<8; i++)
+	{
+		ir[i] = (uint32_t)crtcdata[pat][i];
+	}
+	ir20 = (uint32_t)crtcdata[pat][8];
+	hl = 2;
+	hres = (ir[3] - ir[2]) * 8;
+	vres = ir[7] - ir[6];
+
+	scanmode = 2;	/* 走査モード 0:ノン・インターレース 1:インターレース 2:二度読み */
+	
+	if(scanmode == 1)
+	{
+		vres *= 2;
+	}
+	if(scanmode == 2)
+	{
+		vres /= 2;
+	}
+	
+#else
+	/* CRTC_INIT_Manual をダイレクトに入力したもの */
+	hl		= 3 - 1;	/* Middle */
+	
+	clk		= 2 - 1;	/* 512 */
 	if( (hl == 0) && (clk == 2) )
 	{
 		clk = 0;
 	}
 	
-	freq	= 1 - 1;
+	freq	= 1 - 1;	/* 31kHz */
 	
 	do
 	{
-		scanmode= 3 - 1;
+		scanmode= 3 - 1;	/* 二度読み */
 	}
 	while( (hl == 0) && (scanmode == 2) );
 	
-	size	= 1 - 1;
+	size	= 1 - 1;	/* 512 x 512 */
 	
-	colmode	= 2 - 1;
+	colmode	= 3 - 1;	/* 256色 */
 
 	cal_regs();
 
 	dsp_regs();
+#endif
 
 	set_regs();
-}	
+}
 
-
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void CRTC_INIT_Manual(void)
 {
 	get_value("ドットクロック 1:Low 2:High 3:Middle =", &hl,	1,	3);
@@ -134,6 +207,13 @@ void CRTC_INIT_Manual(void)
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void get_value(int8_t *s, uint32_t *i, uint32_t l, uint32_t h)
 {
 	do
@@ -149,6 +229,13 @@ void get_value(int8_t *s, uint32_t *i, uint32_t l, uint32_t h)
 	(*i)--;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void cal_regs(void)
 {
 	uint32_t	i, hilo;
@@ -220,8 +307,16 @@ void cal_regs(void)
 	}
 }
 
-void dsp_regs()
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void dsp_regs(void)
 {
+#ifdef DEBUG
 	printf("R0   = %5d ($%04X)\n", ir[0], ir[0]);
 	printf("R1   = %5d ($%04X)\n", ir[1], ir[1]);
 	printf("R2   = %5d ($%04X)\n", ir[2], ir[2]);
@@ -232,13 +327,24 @@ void dsp_regs()
 	printf("R7   = %5d ($%04X)\n", ir[7], ir[7]);
 	printf("R20  = %5d ($%04X)\n", ir20, ir20);
 	printf("[%4d]x[%4d]\n", hres, vres);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void set_regs(void)
 {
 	uint32_t	i;
 	uint16_t	r20;
+	
 //	stack = SUPER(0);
+
 	r20 = *(crtc + 20) & 0x13;
 	
 	if(ir20 >= r20)
@@ -259,39 +365,53 @@ void set_regs(void)
 		*crtc = ir[0];
 	}
 	
+	/* システムポート#4 */
 	if(hl == 2)
 	{
-		*sysp |= 0x2;
+		*sysp |= 0x2;	/* ドットクロック HRL ビット */
 	}
 	else
 	{
-		*sysp &= ~0x2;
+		*sysp &= ~0x2;	/* ドットクロック HRL ビット */
 	}
 	
-	*vcon = (ir20 >> 8) & 0x07;
+	/* ビデオコントローラー */
+	*vcon = (ir20 >> 8) & 0x07;	/* CRTC_R20と同じ */
 	
-	*(scon + 1) = ir[2] + 4;
+	/* スプライト・画面モード・レジスタ 水平表示開始位置 */
+	*(scon + 1) = ir[2] + 4;	/* CRTC_R02に+4したもの */
 
 	for(i=0; i<0x200; i++)
 	{
 		/* 何もしない */
 	}
 	
+	/* スプライト・画面モード・レジスタ 水平トータル */
 	if( (ir20 & 0x1F) == 0 )
 	{
-		*scon = ir[0];
+		*scon = ir[0];	/* CRTC_R00と同じ */
 	}
 	else
 	{
 		*scon = 0xFF;
 	}
 	
-	*(scon + 2) = ir[6];
-	*(scon + 3) = ir20 & 0xFF;
+	/* スプライト・画面モード・レジスタ 垂直表示開始位置 */
+	*(scon + 2) = ir[6];		/* CRTC_R06と同じ */
+
+	/* スプライト・画面モード・レジスタ 解像度 */
+	*(scon + 3) = ir20 & 0xFF;	/* CRTC_R20と同じ(ここを工夫すると8x8のＢＧが表示可能) */
 	
 //	SUPER(stack);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	GetCRT(ST_CRT *stDat, int16_t Num)
 {
 	int16_t	ret = 0;
@@ -308,6 +428,13 @@ int16_t	GetCRT(ST_CRT *stDat, int16_t Num)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	SetCRT(ST_CRT stDat, int16_t Num)
 {
 	int16_t	ret = 0;
@@ -324,13 +451,27 @@ int16_t	SetCRT(ST_CRT stDat, int16_t Num)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t CRT_INIT(void)
 {
 	int16_t	ret = 0;
+#if 1
+#else
 	volatile uint16_t *CRTC_R21 = (uint16_t *)0xE8002Au;
+#endif
 	
 	ret = CRTMOD(-1);	/* 現在のモードを返す */
-	CRTMOD(11);			/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+	
+#if 1
+//	CRTC_INIT_Manual();
+	CRTC_INIT(1);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+#else
 
 //										   FEDCBA9876543210
 	*CRTC_R21 = Mbset(*CRTC_R21, 0x03FF, 0b0000000000000000);	/* CRTC R21 */
@@ -344,7 +485,8 @@ int16_t CRT_INIT(void)
 //										   ||||||||+--------bit7 AP3	同時アクセス
 //										   |||||||+---------bit8 SA		同時アクセス
 //										   ||||||+----------bit9 MEN	同時アクセスマスク
-
+	*CRTC_R07 = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
+#endif
 	/* CRTの設定 */
 	g_stCRT[0].view_offset_x	= X_OFFSET;
 	g_stCRT[0].view_offset_y	= Y_MIN_DRAW;
@@ -372,6 +514,13 @@ int16_t CRT_INIT(void)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t Get_CRT_Contrast(int8_t *pbContrast)
 {
 	int16_t	ret = 0;
@@ -381,6 +530,13 @@ int16_t Get_CRT_Contrast(int8_t *pbContrast)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t Set_CRT_Contrast(int8_t bContrast)
 {
 	int16_t ret = 0;
