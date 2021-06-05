@@ -9,10 +9,16 @@
 #include "Input.h"
 #include "Music.h"
 
+int16_t		g_AnalogMode = 0xFFFF;
+JOY_ANALOG_BUF	g_Analog_Info;
+
 /* 関数のプロトタイプ宣言 */
 uint32_t	get_analog_data(uint32_t, JOY_ANALOG_BUF *);
-uint16_t	get_key(uint16_t *, uint8_t, uint8_t );
-uint16_t	get_ajoy( uint16_t *, uint8_t, uint8_t );
+uint16_t	get_keyboard( uint16_t *, uint8_t , uint8_t );
+uint16_t	get_djoy(uint16_t *, uint8_t, uint8_t );
+uint16_t	get_ajoy(uint16_t *, uint8_t, uint8_t, uint8_t );
+int16_t		GetAnalog_Info(JOY_ANALOG_BUF *);
+int16_t		SetAnalog_Info(JOY_ANALOG_BUF);
 uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
 uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 int16_t	KeyHitESC(void);
@@ -25,15 +31,13 @@ int16_t	KeyHitESC(void);
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
+uint16_t get_keyboard( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 {
 	uint16_t ret = 0;
 	uint32_t uKeyBoard[16] = {0u};
-	uint32_t uJoyStick = 0u;
 	static int16_t repeat_flag_a = KEY_TRUE;
 	static int16_t repeat_flag_b = KEY_TRUE;
 	
-	uJoyStick 		= JOYGET(bPlayer);
 	uKeyBoard[0]	= BITSNS( 0 );
 	uKeyBoard[2]	= BITSNS( 2 );
 	uKeyBoard[3]	= BITSNS( 3 );
@@ -54,13 +58,12 @@ uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	if( (uKeyBoard[10] & Bit_4 ) != 0 ) *key |= KEY_b_HELP;	/* HELP */
 	if( (uKeyBoard[2]  & Bit_0 ) != 0 ) *key |= KEY_b_TAB;	/* TAB */
 	
-
-	if( !( uJoyStick & UP    ) || ( uKeyBoard[7] & Bit_4 ) || ( uKeyBoard[8] & Bit_4 ) || ( uKeyBoard[2] & Bit_2 ) ) *key |= KEY_UPPER;	/* 上 ↑ 8 w */
-	if( !( uJoyStick & DOWN  ) || ( uKeyBoard[7] & Bit_6 ) || ( uKeyBoard[9] & Bit_4 ) || ( uKeyBoard[3] & Bit_7 ) ) *key |= KEY_LOWER;	/* 下 ↓ 2 s */
-	if( !( uJoyStick & LEFT  ) || ( uKeyBoard[7] & Bit_3 ) || ( uKeyBoard[8] & Bit_7 ) || ( uKeyBoard[3] & Bit_6 ) ) *key |= KEY_LEFT;		/* 左 ← 4 a */
-	if( !( uJoyStick & RIGHT ) || ( uKeyBoard[7] & Bit_5 ) || ( uKeyBoard[9] & Bit_1 ) || ( uKeyBoard[4] & Bit_0 ) ) *key |= KEY_RIGHT;	/* 右 → 6 d */
+	if( ( uKeyBoard[7] & Bit_4 ) || ( uKeyBoard[8] & Bit_4 ) || ( uKeyBoard[2] & Bit_2 ) ) *key |= KEY_UPPER;	/* 上 ↑ 8 w */
+	if( ( uKeyBoard[7] & Bit_6 ) || ( uKeyBoard[9] & Bit_4 ) || ( uKeyBoard[3] & Bit_7 ) ) *key |= KEY_LOWER;	/* 下 ↓ 2 s */
+	if( ( uKeyBoard[7] & Bit_3 ) || ( uKeyBoard[8] & Bit_7 ) || ( uKeyBoard[3] & Bit_6 ) ) *key |= KEY_LEFT;		/* 左 ← 4 a */
+	if( ( uKeyBoard[7] & Bit_5 ) || ( uKeyBoard[9] & Bit_1 ) || ( uKeyBoard[4] & Bit_0 ) ) *key |= KEY_RIGHT;	/* 右 → 6 d */
 	
-	if( !( uJoyStick & JOYA  ) || ( uKeyBoard[10]  & Bit_5 ) || ( uKeyBoard[5]   & Bit_2 ) )	/* Ａボタン or XF1 or z */
+	if( ( uKeyBoard[10]  & Bit_5 ) || ( uKeyBoard[5]   & Bit_2 ) )	/* Ａボタン or XF1 or z */
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
@@ -73,7 +76,56 @@ uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 		repeat_flag_a = KEY_TRUE;
 	}
 	
-	if( !( uJoyStick & JOYB  ) || ( uKeyBoard[10]  & 0x40 ) || ( uKeyBoard[5]   & 0x08 ) )	/* Ｂボタン or XF2 or x  */
+	if( ( uKeyBoard[10]  & 0x40 ) || ( uKeyBoard[5]   & 0x08 ) )	/* Ｂボタン or XF2 or x  */
+	{
+		if( repeat_flag_b || (mode != 0u))
+		{
+			*key |= KEY_B;
+			repeat_flag_b = KEY_FALSE;
+		}
+	}
+	else
+	{
+		repeat_flag_b = KEY_TRUE;
+	}
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+uint16_t get_djoy( uint16_t *key, uint8_t bPlayer, uint8_t mode )
+{
+	uint16_t ret = 0;
+	uint32_t uJoyStick = 0u;
+	static int16_t repeat_flag_a = KEY_TRUE;
+	static int16_t repeat_flag_b = KEY_TRUE;
+	
+	uJoyStick 		= JOYGET(bPlayer);
+	g_AnalogMode = 0xFFFF;	/* アナログモードはOFF */
+	
+	if( !( uJoyStick & UP    ) ) *key |= KEY_UPPER;	/* 上 */
+	if( !( uJoyStick & DOWN  ) ) *key |= KEY_LOWER;	/* 下 */
+	if( !( uJoyStick & LEFT  ) ) *key |= KEY_LEFT;	/* 左 */
+	if( !( uJoyStick & RIGHT ) ) *key |= KEY_RIGHT;	/* 右 */
+	
+	if( !( uJoyStick & JOYA  ) )	/* Ａボタン */
+	{
+		if( repeat_flag_a || (mode != 0u))
+		{
+			*key |= KEY_A;
+			repeat_flag_a = KEY_FALSE;
+		}
+	}
+	else
+	{
+		repeat_flag_a = KEY_TRUE;
+	}
+	
+	if( !( uJoyStick & JOYB  )  )	/* Ｂボタン */
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
@@ -95,11 +147,10 @@ uint16_t get_key( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-uint16_t get_ajoy( uint16_t *key, uint8_t bPlayer, uint8_t mode )
+uint16_t get_ajoy( uint16_t *key, uint8_t bPlayer, uint8_t mode, uint8_t ubConfig )
 {
 	uint16_t ret = 0;
 	int32_t AnalogJoyStick = 0;
-	uint32_t uKeyBoard[16] = {0u};
 	static int16_t repeat_flag_a = KEY_TRUE;
 	static int16_t repeat_flag_b = KEY_TRUE;
 
@@ -120,11 +171,6 @@ uint16_t get_ajoy( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	}
 #endif
 	
-	uKeyBoard[0]	= BITSNS( 0 );
-	uKeyBoard[6]	= BITSNS( 6 );
-	if( (uKeyBoard[0]  & Bit_1 ) != 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
-	if( (uKeyBoard[6]  & Bit_5 ) != 0 ) *key |= KEY_b_SP;	/* スペースキー */
-	
 	if( (analog_buf.btn_data  & AJOY_SELECT	 ) == 0 ) *key |= KEY_b_Q;		/* Ｑ */
 	if( (analog_buf.btn_data  & AJOY_START	 ) == 0 ) *key |= KEY_b_ESC;	/* ＥＳＣ */
 	if( (analog_buf.btn_data  & AJOY_E2		 ) == 0 ) *key |= KEY_b_M;		/* Ｍ */
@@ -132,10 +178,26 @@ uint16_t get_ajoy( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	if( (analog_buf.btn_data  & AJOY_E2		 ) == 0 ) *key |= KEY_b_RLUP;	/* ロールアップ */
 	if( (analog_buf.btn_data  & AJOY_E1		 ) == 0 ) *key |= KEY_b_RLDN;	/* ロールダウン */
 	
-	if( analog_buf.l_stk_ud > 0xC0 ) *key |= KEY_UPPER;	/* 上 */
-	if( analog_buf.l_stk_ud < 0x40 ) *key |= KEY_LOWER;	/* 下 */
-	if( analog_buf.r_stk_lr < 0x40 ) *key |= KEY_LEFT;	/* 左 */
-	if( analog_buf.r_stk_lr > 0xC0 ) *key |= KEY_RIGHT;	/* 右 */
+	if(ubConfig == 0u)
+	{
+		/* X680x0 */
+	}
+	else
+	{
+		/* Windows -> USB -> XM6 */
+		JOY_ANALOG_BUF	analog_buf_tmp;
+		analog_buf_tmp = analog_buf;
+		
+		/* LスティックとRスティック入れ替え */
+		analog_buf.l_stk_ud = analog_buf_tmp.r_stk_ud;
+		analog_buf.l_stk_lr = analog_buf_tmp.r_stk_lr;
+		analog_buf.r_stk_ud = analog_buf_tmp.l_stk_ud;
+		analog_buf.r_stk_lr = analog_buf_tmp.l_stk_lr;
+	}
+	if( analog_buf.l_stk_ud > 0x90 ) *key |= KEY_UPPER;	/* 上 */
+	if( analog_buf.l_stk_ud < 0x70 ) *key |= KEY_LOWER;	/* 下 */
+	if( analog_buf.r_stk_lr < 0x70 ) *key |= KEY_LEFT;	/* 左 */
+	if( analog_buf.r_stk_lr > 0x90 ) *key |= KEY_RIGHT;	/* 右 */
 
 	if( !( analog_buf.btn_data & AJOY_A  ))	/* Ａボタン */
 	{
@@ -162,9 +224,42 @@ uint16_t get_ajoy( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	{
 		repeat_flag_b = KEY_TRUE;
 	}
+
+	SetAnalog_Info(analog_buf);	/* アナログ情報更新 */
 	
 	return ret;
 }
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	GetAnalog_Info(JOY_ANALOG_BUF *p_stAnalog_Info)
+{
+	int16_t	ret = 0;
+	*p_stAnalog_Info = g_Analog_Info;
+	ret = g_AnalogMode;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	SetAnalog_Info(JOY_ANALOG_BUF stAnalog_Info)
+{
+	int16_t	ret = 0;
+	g_Analog_Info = stAnalog_Info;
+	g_AnalogMode = 0;
+	return ret;
+}
+
 
 /*===========================================================================================*/
 /* 関数名	：	*/

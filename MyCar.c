@@ -29,7 +29,7 @@
 /* グローバル変数 */
 int16_t	g_speed = 0;
 static int16_t g_Input;
-static 
+static int16_t g_SteeringDiff;
 
 /* グローバルデータ */
 uint16_t	uTM[6] = { 0, 2857, 1950, 1444, 1096, 761 };/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 */
@@ -179,10 +179,19 @@ static int16_t	MyCar_Steering(void)
 	int16_t	ret = 0;
 
 	int16_t	Angle;
+	int16_t	SteeringDiff = 0;
+	int16_t	ExtFctDiff = 0;
+	int16_t	Steering_old;
+	int16_t	AnalogMode = 0;
+
 	ST_ROAD_INFO	stRoadInfo;
+	JOY_ANALOG_BUF stAnalog_Info;
+	
+	AnalogMode = GetAnalog_Info(&stAnalog_Info);	/* アナログ情報取得 */
 	
 	GetRoadInfo(&stRoadInfo);
 	Angle = stRoadInfo.angle;
+	Steering_old = g_stMyCar.Steering;
 	
 	if((g_Input & KEY_RIGHT) != 0u)
 	{
@@ -194,7 +203,14 @@ static int16_t	MyCar_Steering(void)
 		}
 		ret -= 1;	/* TorqueDW パワステ駆動減 */
 
-		g_stMyCar.Steering += g_speed << 4;	/* 右 */
+		if(AnalogMode == 0)	/* アナログモード */
+		{
+			SteeringDiff += (stAnalog_Info.r_stk_lr - 0x80);
+		}
+		else
+		{
+			SteeringDiff += Mmul16(g_speed);	/* 右 */
+		}
 	}
 	else if((g_Input & KEY_LEFT) != 0u)
 	{
@@ -206,12 +222,20 @@ static int16_t	MyCar_Steering(void)
 		}
 		ret -= 1;	/* TorqueDW パワステ駆動減 */
 
-		g_stMyCar.Steering -= g_speed << 4;	/* 左 */
+		if(AnalogMode == 0)	/* アナログモード */
+		{
+			SteeringDiff -= (0x80 - stAnalog_Info.r_stk_lr);
+		}
+		else
+		{
+			SteeringDiff -= Mmul16(g_speed);	/* 左 */
+		}
 	}
 	else
 	{
 		
 	}
+	g_SteeringDiff = SteeringDiff;
 	
 	/* スピン中の車両挙動 */
 	/* スピン発生 */
@@ -219,13 +243,13 @@ static int16_t	MyCar_Steering(void)
 	{
 		ret -= 10;	/* TorqueDW スピン */
 		
-		g_stMyCar.Steering += g_speed << 3;	/* 右 */
+		ExtFctDiff += Mmul8(g_speed);	/* 右 */
 	}
 	else if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
 	{
 		ret -= 10;	/* TorqueDW スピン */
 
-		g_stMyCar.Steering -= g_speed << 3;	/* 左 */
+		ExtFctDiff -= Mmul8(g_speed);	/* 左 */
 	}
 	else
 	{
@@ -240,11 +264,11 @@ static int16_t	MyCar_Steering(void)
 		{
 			ret -= g_speed;	/* TorqueDW ハーフスピン */
 			
-			g_stMyCar.Steering += Angle * g_speed;	/* バランス調整要 */
+			ExtFctDiff += Angle * g_speed;	/* バランス調整要 */
 		}
 //		else if(Angle < 0)
 //		{
-//			g_stMyCar.Steering -= Angle * g_speed;	/* バランス調整要 */
+//			ExtFctDiff -= Angle * g_speed;	/* バランス調整要 */
 //		}
 		else
 		{
@@ -256,6 +280,8 @@ static int16_t	MyCar_Steering(void)
 	}
 #endif
 	
+	/* 外部要因 */
+	g_stMyCar.Steering = Steering_old + SteeringDiff + ExtFctDiff;
 	/* ステアリングクリップ */
 	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 3800), -3800);
 	
@@ -1129,6 +1155,31 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 	patNum = 0x57;
 	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
 
+	/* ステアリング位置 */
+	
+	x = 16 + Mdiv16(g_SteeringDiff) + 16;
+	y = 96 + Mabs(Mdiv16(g_SteeringDiff)) + 16;
+	V = 0;
+	H = 0;
+	palNum = 0x0C;
+	patNum = 0x4A;
+	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
+	
+	/* ステアリング */
+	x = 0+16;
+	y = 96+16;
+	V = 0;
+	H = 0;
+	palNum = 0x0B;
+	patNum = 0x48;
+	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
+	patNum = 0x49;
+	SP_REGST( sp_num++, -1, x + 16, y + 0, SetBGcode(V, H, palNum, patNum), 3);
+	patNum = 0x58;
+	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+	patNum = 0x59;
+	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+	
 	return ret;
 }
 

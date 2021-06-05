@@ -54,6 +54,7 @@ enum{
 	DEBUG_ENEMYCAR,
 	DEBUG_MYCAR,
 	DEBUG_RASTER,
+	DEBUG_INPUT,
 	DEBUG_CPUTIME,
 	DEBUG_MAX,
 };
@@ -244,13 +245,14 @@ int16_t main(void)
 		GetTaskInfo(&stTask);	/* タスクの情報を得る */
 
 		/* 入力処理 */
+		get_keyboard(&input, 0, 1);		/* キーボード入力 */
 		if(bAnalogStickMode == TRUE)
 		{
-			get_ajoy(&input, 0, 1);	/* アナログジョイスティック入力 */
+			get_ajoy(&input, 0, 1, 1);	/* アナログジョイスティック入力 0:X680x0 1:etc */
 		}
 		else
 		{
-			get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
+			get_djoy(&input, 0, 1);		/* ジョイスティック入力 */
 		}
 		g_Input = input;
 		
@@ -929,6 +931,40 @@ int16_t BG_main(uint8_t* bFlip)
 								stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size,
 								x, y, pat
 							);	/* ラスター情報 */
+#endif
+						}
+						break;
+					case DEBUG_INPUT:
+						{
+#if 1	/* 入力情報 */
+							int16_t	AnalogMode = 0;
+							JOY_ANALOG_BUF stAnalog_Info;
+
+							AnalogMode = GetAnalog_Info(&stAnalog_Info);	/* アナログ情報取得 */
+							
+							if(AnalogMode == 0)	/* アナログモード */
+							{
+								sprintf(str,"R(0x%02x 0x%02x)L(0x%02x 0x%02x)B(%04b|%04b|%04b)",
+									stAnalog_Info.r_stk_ud,
+									stAnalog_Info.r_stk_lr,
+									stAnalog_Info.l_stk_ud,
+									stAnalog_Info.l_stk_lr,
+									(stAnalog_Info.btn_data & 0xF00) >> 8,
+									(stAnalog_Info.btn_data & 0x0F0) >> 4,
+									(stAnalog_Info.btn_data & 0x00F)
+								);
+							}
+							else
+							{
+								sprintf(str,"U(%d)D(%d)L(%d)R(%d)B(%d)A(%d)",
+									g_Input & KEY_UPPER,
+									g_Input & KEY_LOWER,
+									g_Input & KEY_LEFT,
+									g_Input & KEY_RIGHT,
+									g_Input & KEY_B,
+									g_Input & KEY_A
+								);
+							}
 #endif
 						}
 						break;

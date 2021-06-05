@@ -47,15 +47,18 @@
 #define AJOY_A			(0x0800)
 
 typedef struct tagANALOG {
-	uint16_t	r_stk_ud;	/* 右スティックUP/DOWN */
-	uint16_t	r_stk_lr;	/* 右スティックLEFT/RIGHT */
 	uint16_t	l_stk_ud;	/* 左スティックUP/DOWN */
 	uint16_t	l_stk_lr;	/* 左スティックLEFT/RIGHT */
+	uint16_t	r_stk_ud;	/* 右スティックUP/DOWN */
+	uint16_t	r_stk_lr;	/* 右スティックLEFT/RIGHT */
 	uint16_t	btn_data;	/* ボタンデータ */
 } JOY_ANALOG_BUF;
 
-extern uint16_t	get_key(uint16_t *, uint8_t, uint8_t );
-extern uint16_t	get_ajoy( uint16_t *, uint8_t, uint8_t );
+extern uint16_t	get_keyboard( uint16_t *, uint8_t , uint8_t );
+extern uint16_t	get_djoy(uint16_t *, uint8_t, uint8_t );
+extern uint16_t	get_ajoy(uint16_t *, uint8_t, uint8_t, uint8_t );
+extern int16_t	GetAnalog_Info(JOY_ANALOG_BUF *);
+extern int16_t	SetAnalog_Info(JOY_ANALOG_BUF);
 extern uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
 extern uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 extern int16_t	KeyHitESC(void);
