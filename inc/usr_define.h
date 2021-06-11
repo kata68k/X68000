@@ -82,7 +82,7 @@
 /* グラフィックテキスト max 1 */
 #define MYCAR_CG		(16)	/* 自車(t) */
 /* フルグラフィック */
-#define TITLE_CG		(17)	/* タイトル */
+#define TITLE_CG		(19)	/* タイトル */
 
 /* 構造体 */
 

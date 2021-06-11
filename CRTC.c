@@ -473,6 +473,7 @@ int16_t CRT_INIT(void)
 	CRTC_INIT(1);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
 #else
 
+	*CRTC_R07 = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
 //										   FEDCBA9876543210
 	*CRTC_R21 = Mbset(*CRTC_R21, 0x03FF, 0b0000000000000000);	/* CRTC R21 */
 //										   |||||||||||||||+-bit0 CP0	
@@ -485,7 +486,6 @@ int16_t CRT_INIT(void)
 //										   ||||||||+--------bit7 AP3	同時アクセス
 //										   |||||||+---------bit8 SA		同時アクセス
 //										   ||||||+----------bit9 MEN	同時アクセスマスク
-	*CRTC_R07 = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
 #endif
 	/* CRTの設定 */
 	g_stCRT[0].view_offset_x	= X_OFFSET;

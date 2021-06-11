@@ -8,6 +8,7 @@
 #define MY_CAR_1_W	(256)
 #define MY_CAR_1_H	(224)
 
+#define MYCAR_IMAGE_MAX	(3)
 
 #define OBD_NORMAL		(0)
 #define OBD_DAMAGE		Bit_0

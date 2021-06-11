@@ -27,13 +27,23 @@ void T_Score(void);
 void T_Speed(void);
 void T_Gear(void);
 void T_Main(uint8_t);
+int16_t T_PutTextInfo(ST_TEXTINFO);
 int16_t T_Scroll(uint32_t, uint32_t);
 int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 int32_t T_Fill(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 int32_t T_xLine(int16_t, int16_t, int16_t w, uint16_t, uint8_t);
 int32_t T_yLine(int16_t, int16_t, int16_t h, uint16_t, uint8_t);
+int16_t T_Get_TextInfo(ST_TEXTINFO *);
+int16_t T_Set_TextInfo(ST_TEXTINFO);
 
 /* 関数 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_INIT(void)
 {
 	B_CUROFF();			/* カーソルを消します */
@@ -44,12 +54,26 @@ void T_INIT(void)
 	g_stTextInfo.uScoreMax = 10000;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_EXIT(void)
 {
 	B_CURON();	/* カーソルを表示します */
 	T_Clear();	/* テキストクリア */
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_Clear(void)
 {
 	struct _txfillptr stTxFill;
@@ -61,7 +85,7 @@ void T_Clear(void)
 	stTxFill.y1= 1023;
 	stTxFill.fill_patn = 0;
 	
-	_iocs_scroll(8, 0, 0);	/* テキスト画面 */
+	_iocs_scroll(8, 0, 0);	/* 8:テキスト画面 */
 //	_iocs_txrascpy(256 / 4 * 256, 256 / 4, 0b1111);	/* テキスト画面クリア */
 	_iocs_txfill(&stTxFill);
 	stTxFill.vram_page = 1;
@@ -72,6 +96,13 @@ void T_Clear(void)
 	_iocs_txfill(&stTxFill);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_PALET(void)
 {
 	/* テキストパレットの初期化(Pal0はSPと共通) */
@@ -89,122 +120,209 @@ void T_PALET(void)
 	TPALET2(15, SetRGB(31, 31, 31));	/* White */
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_SetBG_to_Text(void)
 {
 	int16_t	i;
 	uint16_t	x, y;
 
 	/* テキストエリアに作業データ展開1 */
-	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 256, 0);//232
+	x = 0;
+	y = 256;
+	BG_TextPut("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", x, y);//232
+	
 	/* テキストエリアに作業データ展開2 */
+	x = 0;
+	y += 8;//240	248+8=256以降はNG
 	for(i=0; i < 10; i++)
 	{
-		x = 256;
-		y = 8;//240	248+8=256以降はNG
 		BG_PutToText(   0x80+ (i<<1) + 0, x + BG_WIDTH * i,	y,				BG_Normal, TRUE);	/* 数字大（上側）*/
 		BG_PutToText(   0x80+ (i<<1) + 1, x + BG_WIDTH * i,	y+BG_HEIGHT,	BG_Normal, TRUE);	/* 数字大（下側）*/
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_TopScore(void)
 {
 	uint32_t	i,e;
-	for(i=0; i<2; i++)
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	x = 0, y = 0;
+	
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+	
+	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* TOP */
-		BG_PutToText(  1, (BG_WIDTH * 0),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左上 */
-		BG_PutToText(  2, (BG_WIDTH * 1),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 2),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 3),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  3, (BG_WIDTH * 4),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 右上 */
+		BG_PutToText(  1, (BG_WIDTH * 0) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 左上 */
+		BG_PutToText(  2, (BG_WIDTH * 1) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 2) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 3) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  3, (BG_WIDTH * 4) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 右上 */
 		for(e = 0; e < 5; e++)
 		{
-			BG_PutToText(e+4, (BG_WIDTH * e),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);
+			BG_PutToText(e+4, (BG_WIDTH * e) + (uWidth * x),  8 + (Y_OFFSET * y) , BG_Normal, FALSE);
 		}
-		BG_PutToText(  1, (BG_WIDTH * 0),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 左下 */
-		BG_PutToText(  2, (BG_WIDTH * 1),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 2),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 3),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  3, (BG_WIDTH * 4),  16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 右下 */
+		BG_PutToText(  1, (BG_WIDTH * 0) + (uWidth * x),  16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 左下 */
+		BG_PutToText(  2, (BG_WIDTH * 1) + (uWidth * x),  16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 2) + (uWidth * x),  16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 3) + (uWidth * x),  16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  3, (BG_WIDTH * 4) + (uWidth * x),  16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 右下 */
+		
+		x++;
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_Time(void)
 {
 	uint32_t	i,e;
-	for(i=0; i<2; i++)
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	x = 0, y = 0;
+	
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+
+	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* TIME */
-		BG_PutToText(  1, (BG_WIDTH * 12),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左上 */
-		BG_PutToText(  2, (BG_WIDTH * 13),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 14),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 15),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 16),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  3, (BG_WIDTH * 17),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 右上 */
-		BG_PutToText(  4, (BG_WIDTH * 12),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左 */
+		BG_PutToText(  1, (BG_WIDTH * 12) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 左上 */
+		BG_PutToText(  2, (BG_WIDTH * 13) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 14) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 15) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 16) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  3, (BG_WIDTH * 17) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 右上 */
+		BG_PutToText(  4, (BG_WIDTH * 12) + (uWidth * x),  8 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 左 */
 		for(e = 0; e < 5; e++)
 		{
-			BG_PutToText(e+10, (BG_WIDTH * (13 + e)),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);
+			BG_PutToText(e+10, (BG_WIDTH * (13 + e)) + (uWidth * x),  8 + (Y_OFFSET * y) , BG_Normal, FALSE);
 		}
-		BG_PutToText(  1, (BG_WIDTH * 12), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 左下 */
-		BG_PutToText(  2, (BG_WIDTH * 13), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 14), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 15), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 16), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  3, (BG_WIDTH * 17), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 右下 */
+		BG_PutToText(  1, (BG_WIDTH * 12) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 左下 */
+		BG_PutToText(  2, (BG_WIDTH * 13) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 14) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 15) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 16) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  3, (BG_WIDTH * 17) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 右下 */
+
+		x++;
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_Score(void)
 {
 	uint32_t	i,e;
-	for(i=0; i<2; i++)
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	x = 0, y = 0;
+	
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+
+	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* SCORE */
-		BG_PutToText(  1, (BG_WIDTH * 17),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左上 */
-		BG_PutToText(  2, (BG_WIDTH * 18),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 19),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 20),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 21),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText(  2, (BG_WIDTH * 22),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 上 */
-		BG_PutToText( 15, (BG_WIDTH * 23),  0 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 右上 */
-		BG_PutToText(  4, (BG_WIDTH * 17),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);	/* 左 */
+		BG_PutToText(  1, (BG_WIDTH * 17) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 左上 */
+		BG_PutToText(  2, (BG_WIDTH * 18) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 19) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 20) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 21) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText(  2, (BG_WIDTH * 22) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 上 */
+		BG_PutToText( 15, (BG_WIDTH * 23) + (uWidth * x),  0 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 右上 */
+		BG_PutToText(  4, (BG_WIDTH * 17) + (uWidth * x),  8 + (Y_OFFSET * y) , BG_Normal, FALSE);	/* 左 */
 		for(e = 0; e < 6; e++)
 		{
-			BG_PutToText(e+16, (BG_WIDTH * (18 + e)),  8 + (Y_OFFSET * i) , BG_Normal, FALSE);
+			BG_PutToText(e+16, (BG_WIDTH * (18 + e)) + (uWidth * x),  8 + (Y_OFFSET * y) , BG_Normal, FALSE);
 		}
-		BG_PutToText(  1, (BG_WIDTH * 17), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 左下 */
-		BG_PutToText(  2, (BG_WIDTH * 18), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 19), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 20), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 21), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText(  2, (BG_WIDTH * 22), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 下 */
-		BG_PutToText( 15, (BG_WIDTH * 23), 16 + (Y_OFFSET * i) , BG_H_rev, FALSE);	/* 右下 */
+		BG_PutToText(  1, (BG_WIDTH * 17) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 左下 */
+		BG_PutToText(  2, (BG_WIDTH * 18) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 19) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 20) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 21) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText(  2, (BG_WIDTH * 22) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 下 */
+		BG_PutToText( 15, (BG_WIDTH * 23) + (uWidth * x), 16 + (Y_OFFSET * y) , BG_H_rev, FALSE);	/* 右下 */
+
+		x++;
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_Speed(void)
 {
 	uint32_t	i;
-	for(i=0; i<2; i++)
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	x = 0, y = 0;
+	
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+
+	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* SPEED */
-		BG_TextPut("SPEED", 164, 24 + (Y_OFFSET * i) );
+		BG_TextPut("SPEED", 164 + (uWidth * x), 24 + (Y_OFFSET * y) );
 		/* KM */
-		BG_TextPut("KM", 232, 24 + (Y_OFFSET * i) );
+		BG_TextPut("KM",    232 + (uWidth * x), 24 + (Y_OFFSET * y) );
+
+		x++;
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_Gear(void)
 {
 	uint32_t	i;
-	for(i=0; i<2; i++)
+	uint32_t	uWidth, uHeight, uFileSize;
+	uint16_t	x = 0, y = 0;
+	
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+
+	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* GEAR */
-		BG_TextPut("GEAR", 172, 32 + (Y_OFFSET * i) );
+		BG_TextPut("GEAR", 172 + (uWidth * x), 32 + (Y_OFFSET * y) );
+
+		x++;
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void T_Main(uint8_t bMode)
 {
 	uint32_t time_now;
@@ -253,15 +371,51 @@ void T_Main(uint8_t bMode)
 	
 	/* Gear */
 	g_stTextInfo.uShiftPos = (uint16_t)stMyCar.ubShiftPos;
-
-	/* 座標 */
-	g_stTextInfo.uPosX = 0u;	/* X座標 */
-	g_stTextInfo.uPosY = stCRT.view_offset_y;	/* Y座標 */
 	
 	/* 描画 */
-	PutTextInfo(g_stTextInfo);
+	T_PutTextInfo(g_stTextInfo);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t T_PutTextInfo(ST_TEXTINFO stTextInfo)
+{
+	int16_t	ret = 0;
+	
+	uint16_t	x, y;
+	uint32_t	uWidth, uHeight, uFileSize;
+
+	x = stTextInfo.uPosX;
+	y = stTextInfo.uPosY;
+
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+	
+	/* Top Score */
+	Text_To_Text2(stTextInfo.uScoreMax,		(uWidth * x) +  40, (Y_OFFSET * y) +  8, FALSE, "%7d");
+	/* Score */
+	Text_To_Text2(stTextInfo.uScore,		(uWidth * x) + 192, (Y_OFFSET * y) +  8, FALSE, "%7d");
+	/* Time Count */
+	Text_To_Text2(stTextInfo.uTimeCounter,	(uWidth * x) + 112, (Y_OFFSET * y) + 24,  TRUE, "%3d");
+	/* Speed */
+	Text_To_Text2(stTextInfo.uVs,			(uWidth * x) + 208, (Y_OFFSET * y) + 24, FALSE, "%3d");
+	/* Gear */
+	Text_To_Text2(stTextInfo.uShiftPos,		(uWidth * x) + 224, (Y_OFFSET * y) + 32, FALSE,  "%d");
+
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t T_Scroll(uint32_t uPosX, uint32_t uPosY)
 {
 	int16_t	ret = 0;
@@ -274,6 +428,13 @@ int16_t T_Scroll(uint32_t uPosX, uint32_t uPosY)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int32_t T_Box(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_style, uint8_t color)
 {
 	int32_t	ret = 0;
@@ -313,6 +474,13 @@ int32_t T_Box(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_styl
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int32_t T_Fill(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_style, uint8_t color)
 {
 	int32_t	ret = 0;
@@ -352,6 +520,13 @@ int32_t T_Fill(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_sty
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int32_t T_xLine(int16_t x1, int16_t y1, int16_t w, uint16_t line_style, uint8_t color)
 {
 	int32_t	ret = 0;
@@ -390,6 +565,13 @@ int32_t T_xLine(int16_t x1, int16_t y1, int16_t w, uint16_t line_style, uint8_t 
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int32_t T_yLine(int16_t x1, int16_t y1, int16_t h, uint16_t line_style, uint8_t color)
 {
 	int32_t	ret = 0;
@@ -427,7 +609,37 @@ int32_t T_yLine(int16_t x1, int16_t y1, int16_t h, uint16_t line_style, uint8_t 
 	}
 	return ret;
 }
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t T_Get_TextInfo(ST_TEXTINFO *pTextInfo)
+{
+	int16_t	ret = 0;
 
+	*pTextInfo = g_stTextInfo;	/* 現情報を取得 */
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t T_Set_TextInfo(ST_TEXTINFO TextInfo)
+{
+	int16_t	ret = 0;
+
+	g_stTextInfo = TextInfo;	/* 更新 */
+	
+	return ret;
+}
 
 #endif	/* TEXT_C */
 

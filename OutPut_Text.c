@@ -21,11 +21,17 @@ int16_t BG_PutToText(int16_t, int16_t, int16_t, int16_t, uint8_t);
 int16_t BG_TimeCounter(uint32_t, uint16_t, uint16_t);
 int16_t BG_Number(uint32_t, uint16_t, uint16_t);
 int16_t Text_To_Text(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
-int16_t PutTextInfo(ST_TEXTINFO);
+int16_t Text_To_Text2(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
 int16_t Put_Message_To_Graphic(uint8_t *, uint8_t);
 
 /* 関数 */
-
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, uint8_t *sFormat)
 {
 	char str[64];
@@ -121,20 +127,27 @@ void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, 
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 {
-	uint16_t *BG_HEAD 		= (uint16_t *)0xEB8000;
-	uint16_t *BG_TEXT_HEAD = (uint16_t *)0xEB8800;
-//	uint16_t *BG_NUM_HEAD  = (uint16_t *)0xEB8600;
+	uint16_t *BG_HEAD		= (uint16_t *)0xEB8000;
+	uint16_t *BG_TEXT_HEAD	= (uint16_t *)0xEB8800;
+//	uint16_t *BG_NUM_HEAD	= (uint16_t *)0xEB8600;
 	uint8_t *T0_HEAD = (uint8_t *)0xE00000;
 	uint8_t *T1_HEAD = (uint8_t *)0xE20000;
 	uint8_t *T2_HEAD = (uint8_t *)0xE40000;
 	uint8_t *T3_HEAD = (uint8_t *)0xE60000;
-	uint16_t	*pStPAT;
-	uint8_t	*pDst0;
-	uint8_t	*pDst1;
-	uint8_t	*pDst2;
-	uint8_t	*pDst3;
+	uint16_t *pStPAT;
+	uint8_t *pDst0;
+	uint8_t *pDst1;
+	uint8_t *pDst2;
+	uint8_t *pDst3;
 	int16_t ret = 0;
 #if 1
 #else
@@ -152,7 +165,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 		{
 			case 0x09:	/* HT(水平タブ) */
 			{
-				x += 32;		/* 4TAB分動かす */
+				x += 32;		/* TAB(4)分動かす(8dot x 4word) */
 				break;
 			}
 			case 0x30:	/* 0 */
@@ -217,7 +230,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 					pStPAT = BG_TEXT_HEAD + (uint16_t)(0x10 * j);
 				}
 
-				k = (y * 0x80) + (x >> 3);
+				k = Mmul128(y) + Mdiv8(x);	/* 8bit */
 				if( (k < 0) || ((k+8) > 0x1FFFF) ) break;
 				pDst0   = T0_HEAD + k;
 				pDst1   = T1_HEAD + k;
@@ -239,7 +252,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 					nBuff[1] = (nTmp[0] & 0b0000000100000000) >> 6;
 					nBuff[2] = (nTmp[0] & 0b0000000000010000) >> 3;
 					nBuff[3] = (nTmp[0] & 0b0000000000000001);
-					*pDst0 = (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
+					*pDst0 |= (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
 					nBuff[0] = (nTmp[1] & 0b0001000000000000) >> 9;
 					nBuff[1] = (nTmp[1] & 0b0000000100000000) >> 6;
 					nBuff[2] = (nTmp[1] & 0b0000000000010000) >> 3;
@@ -250,7 +263,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 					nBuff[1] = (nTmp[0] & 0b0000001000000000) >> 7;
 					nBuff[2] = (nTmp[0] & 0b0000000000100000) >> 4;
 					nBuff[3] = (nTmp[0] & 0b0000000000000010) >> 1;
-					*pDst1 = (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
+					*pDst1 |= (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
 					nBuff[0] = (nTmp[1] & 0b0010000000000000) >> 10;
 					nBuff[1] = (nTmp[1] & 0b0000001000000000) >> 7;
 					nBuff[2] = (nTmp[1] & 0b0000000000100000) >> 4;
@@ -261,7 +274,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 					nBuff[1] = (nTmp[0] & 0b0000010000000000) >> 8;
 					nBuff[2] = (nTmp[0] & 0b0000000001000000) >> 5;
 					nBuff[3] = (nTmp[0] & 0b0000000000000100) >> 2;
-					*pDst2 = (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
+					*pDst2 |= (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
 					nBuff[0] = (nTmp[1] & 0b0100000000000000) >> 11;
 					nBuff[1] = (nTmp[1] & 0b0000010000000000) >> 8;
 					nBuff[2] = (nTmp[1] & 0b0000000001000000) >> 5;
@@ -272,7 +285,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 					nBuff[1] = (nTmp[0] & 0b0000100000000000) >> 9;
 					nBuff[2] = (nTmp[0] & 0b0000000010000000) >> 6;
 					nBuff[3] = (nTmp[0] & 0b0000000000001000) >> 3;
-					*pDst3 = (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
+					*pDst3 |= (nBuff[0] | nBuff[1] | nBuff[2] | nBuff[3]) << 4;
 					nBuff[0] = (nTmp[1] & 0b1000000000000000) >> 12;
 					nBuff[1] = (nTmp[1] & 0b0000100000000000) >> 9;
 					nBuff[2] = (nTmp[1] & 0b0000000010000000) >> 6;
@@ -313,7 +326,7 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 						}
 					}
 #endif
-					pDst0 += 0x80;
+					pDst0 += 0x80;	/* byte x 64 x 2 = 1024 dot */
 					pDst1 += 0x80;
 					pDst2 += 0x80;
 					pDst3 += 0x80;
@@ -332,6 +345,13 @@ int16_t BG_TextPut(int8_t *sString, int16_t x, int16_t y)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t BG_PutToText(int16_t nPatNum, int16_t x, int16_t y, int16_t mode, uint8_t bClr)
 {
 	uint16_t *BG_HEAD = (uint16_t *)0xEB8000;
@@ -452,6 +472,13 @@ int16_t BG_PutToText(int16_t nPatNum, int16_t x, int16_t y, int16_t mode, uint8_
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t BG_TimeCounter(uint32_t unTime, uint16_t x, uint16_t y)
 {
 	int16_t ret = 0;
@@ -482,6 +509,13 @@ int16_t BG_TimeCounter(uint32_t unTime, uint16_t x, uint16_t y)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t BG_Number(uint32_t unNum, uint16_t x, uint16_t y)
 {
 	int16_t ret = 0;
@@ -516,6 +550,13 @@ int16_t BG_Number(uint32_t unNum, uint16_t x, uint16_t y)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 /* TEXT-RAMに展開したデータから数字情報を作る */	/* 処理負荷改善@kunichikoさんのアドバイス */
 int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_t *sFormat)
 {
@@ -540,26 +581,35 @@ int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_
 	uint8_t	ucDigit[10] = {0};
 	uint8_t	*pString;
 	uint32_t	i, k, size;
+	int16_t sx, sy, sAddr;
 	int16_t	ret = 0;
 	
-	if( (x < 0) || (y < 0) || (x > 1023) || (y > 1023) ) return -1;
+	if( (x < 0) || (y < 0) || (x >= 1024) || (y >= 1024) ) return -1;
 
-	pSrc0 = T0_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
-	pSrc1 = T1_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
-	pSrc2 = T2_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
-	pSrc3 = T3_HEAD + (256 >> 3);	/* ソースの先頭座標(256,0) */
+	/* ソースの置き場所 */
+	sx = 256;
+	sy = 0;
 	
 	if(bLarge == TRUE)
 	{
-		pSrc0 += 0x400;
-		pSrc1 += 0x400;
-		pSrc2 += 0x400;
-		pSrc3 += 0x400;
+		sy += 8;	/* 8dot下 */
+		sAddr = Mmul128(sy) + Mdiv8(sx);
+		
+		pSrc0 = T0_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
+		pSrc1 = T1_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
+		pSrc2 = T2_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
+		pSrc3 = T3_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
 		size = 16;	/* 大 */
 		sprintf(ucDigit, sFormat, uNum);
 	}
 	else
 	{
+		sAddr = Mmul128(sy) + Mdiv8(sx);
+		
+		pSrc0 = T0_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
+		pSrc1 = T1_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
+		pSrc2 = T2_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
+		pSrc3 = T3_HEAD + sAddr;	/* ソースの先頭座標(256,256) */
 		size = 8;	/* 小 */
 		sprintf(ucDigit, sFormat, uNum);
 	}
@@ -572,7 +622,7 @@ int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_
 			case 0x20:	/* SP */
 			{
 				/* コピー先 */
-				k = (y * 0x80) + (x >> 3);
+				k = Mmul128(y) + Mdiv8(x);
 				if( (k < 0) || ((k+size) > 0x1FFFF) ) break;
 				pDst0 = T0_HEAD + k;
 				pDst1 = T1_HEAD + k;
@@ -619,7 +669,7 @@ int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_
 				pData3 = pSrc3 + data;
 				
 				/* コピー先 */
-				k = (y * 0x80) + (x >> 3);
+				k = Mmul128(y) + Mdiv8(x);
 				if( (k < 0) || ((k+size) > 0x1FFFF) ) break;
 				pDst0 = T0_HEAD + k;
 				pDst1 = T1_HEAD + k;
@@ -658,29 +708,116 @@ int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_
 	return ret;
 }
 
-
-int16_t PutTextInfo(ST_TEXTINFO stTextInfo)
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* TEXT-RAMに展開したデータから数字情報を作る */
+int16_t Text_To_Text2(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_t *sFormat)
 {
 	int16_t	ret = 0;
+	int16_t sx, sy;
+	uint32_t	i, size, MemSize;
+	uint8_t	data;
+	uint8_t	ucDigit[10] = {0};
+	uint8_t	*pString;
+
+	struct _fntbuf	*p_stTxbuf;
+
+	if( (x < 0) || (y < 0) || (x >= 1024) || (y >= 1024) ) return -1;
 	
-	uint16_t	x, y;
-	x = stTextInfo.uPosX;
-	y = stTextInfo.uPosY;
+	/* ソースの置き場所 */
+	sx = 0;
+	sy = 256;
+	
+	if(bLarge == TRUE)
+	{
+		sy += 8;	/* 8dot下 */
+		size = Mmul2(BG_HEIGHT);	/* 大 */
+		
+		sprintf(ucDigit, sFormat, uNum);
+	}
+	else
+	{
+		size = BG_HEIGHT;	/* 小 */
+		sprintf(ucDigit, sFormat, uNum);
+	}
+	pString = &ucDigit[0];
 
-	/* Top Score */
-	Text_To_Text(stTextInfo.uScoreMax,		x +  40, y +  8, FALSE, "%7d");
-	/* Score */
-	Text_To_Text(stTextInfo.uScore,			x + 192, y +  8, FALSE, "%7d");
-	/* Time Count */
-	Text_To_Text(stTextInfo.uTimeCounter,	x + 112, y + 24,  TRUE, "%3d");
-	/* Speed */
-	Text_To_Text(stTextInfo.uVs,			x + 208, y + 24, FALSE, "%3d");
-	/* Gear */
-	Text_To_Text(stTextInfo.uShiftPos,		x + 224, y + 32, FALSE,  "%d");
+	MemSize = BG_WIDTH * size;
 
+	p_stTxbuf = malloc(sizeof(int16_t) + sizeof(int16_t) + MemSize);
+	if(p_stTxbuf == NULL)
+	{
+		return -1;
+	}
+	p_stTxbuf->xl = BG_WIDTH;
+	p_stTxbuf->yl = size;
+	
+	while(*pString != 0)
+	{
+		switch(*pString)
+		{
+			case 0x20:	/* SP */
+			{
+				/* コピー先 */
+				memset(&(p_stTxbuf->buffer[0]), 0, MemSize);
+				_iocs_textput(x, y, p_stTxbuf);
+
+				x+=BG_WIDTH;
+				break;
+			}
+			case 0x30:	/* 0 */
+			case 0x31:	/* 1 */
+			case 0x32:	/* 2 */
+			case 0x33:	/* 3 */
+			case 0x34:	/* 4 */
+			case 0x35:	/* 5 */
+			case 0x36:	/* 6 */
+			case 0x37:	/* 7 */
+			case 0x38:	/* 8 */
+			case 0x39:	/* 9 */
+			{
+				/* 対象データ */
+				data = *pString - '0';
+				
+				for(i=0; i < 4; i++)
+				{
+					/* テキストプレーン */
+					_iocs_tcolor(1<<i);
+					/* コピー元 */
+					_iocs_textget(sx + (data * BG_WIDTH), sy, p_stTxbuf);
+					/* コピー先 */
+					_iocs_textput(x, y, p_stTxbuf);
+				}
+
+				x+=BG_WIDTH;
+				break;
+			}
+			default:	/* 表示対象外 */
+			{
+				x+=BG_WIDTH;
+				break;
+			}
+		}
+		pString++;
+	}
+	
+	free(p_stTxbuf);
+	
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t Put_Message_To_Graphic(uint8_t *str, uint8_t bMode)
 {
 	int16_t	ret = 0;

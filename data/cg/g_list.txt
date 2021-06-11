@@ -14,6 +14,8 @@
 13= neko128_256.pic 1 0
 14= jiko_car_128_256.pic 1 0
 15= bakuhatsu128_256.pic 1 0
-16= Over_A2.pic 3 154
-17= OverKata_T.pic 0 0
+16= Evo10_main_1_256.pic 3 202
+17= Evo10_main_2_256.pic 3 160
+18= Evo10_main_3_256.pic 3 168
+19= OverKata_T.pic 0 0
 

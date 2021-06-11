@@ -1977,7 +1977,8 @@ int16_t G_Subtractive_Color(uint16_t *pSrcBuf, uint16_t *pDstBuf, uint16_t uWidt
 						uGlay =  ((uint32_t)(Mmul2(ubR) + ubR));
 						uGlay += ((uint32_t)(Mmul4(ubG) + Mmul2(ubG)));
 						uGlay += ((uint32_t)ubB);
-						uGlay = Mdiv10(uGlay);
+						//uGlay = Mdiv10(uGlay);
+						uGlay = Mdiv4(uGlay);
 						
 						col = SetRGB(uGlay, uGlay, uGlay);	/* ÇRêFÇçáê¨ */
 
@@ -1985,7 +1986,7 @@ int16_t G_Subtractive_Color(uint16_t *pSrcBuf, uint16_t *pDstBuf, uint16_t uWidt
 						ubG = GetG(col);
 						ubB = GetB(col);
 
-						k = 0;
+						k = 1;
 						ubTmp = McmpSub(ubGen8_R[0], ubR);
 						for(m=1; m<ubCow_R; m++)
 						{

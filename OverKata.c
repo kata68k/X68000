@@ -562,7 +562,7 @@ int16_t main(void)
 			y = stCRT.view_offset_y;
 			/* 画面の位置 */
 			HOME(0b01, x, y );	/* Screen 0(TPS/FPS) */
-			T_Scroll( 0, y  );	/* テキスト画面 */
+//			T_Scroll( 0, y  );	/* テキスト画面 */
 		}
 
 		if(loop == 0)	/* 終了処理 */
@@ -832,9 +832,8 @@ int16_t BG_main(uint8_t* bFlip)
 				}
 				else
 				{
-					T_Main(g_mode);	/* テキスト画面の処理 */
-
 					MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
+					T_Main(g_mode);			/* テキスト画面の処理 */
 				}
 				
 				bFlipState++;

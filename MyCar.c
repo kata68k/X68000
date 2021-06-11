@@ -26,6 +26,8 @@
 #include "Raster.h"
 #include "Text.h"
 
+/* define定義 */
+
 /* グローバル変数 */
 int16_t	g_speed = 0;
 static int16_t g_Input;
@@ -61,6 +63,7 @@ void MyCar_Image(void);
 static int16_t	MyCar_Vibration(void);
 static int16_t	MyCar_Mascot(int16_t);
 static int16_t	MyCar_Tachometer(int16_t);
+static int16_t	MyCar_SteeringPos(int16_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -828,7 +831,7 @@ int16_t	MyCar_Interior(uint8_t bMode)
 	MyCar_Tachometer(Vibration);
 	
 	/* ハンドル */
-	/* 未実装 */
+	MyCar_SteeringPos(Vibration);
 	
 	return ret;
 }
@@ -894,42 +897,32 @@ int16_t	GetMyCarSpeed(int16_t *speed)
 /*===========================================================================================*/
 void MyCar_Image(void)
 {
+	int32_t i;
+	int32_t x = 0, y = 0;
 	
-	CG_File_Load(MYCAR_CG);	/* グラフィックの読み込み */
-
 	/* FPS */
-#if 1	/* テキスト */
-	PutGraphic_To_Text( MYCAR_CG, 0, 0			);	/* インテリア */
-	PutGraphic_To_Text( MYCAR_CG, 0, Y_OFFSET	);	/* インテリア */
-
-	T_Fill( 90,        0 + 180, 32, 31, 0, 0);		/* メーター穴（上） */
-	T_Fill( 90, Y_OFFSET + 180, 32, 31, 0, 0);		/* メーター穴（下） */
-
-	T_Fill(  0,        0 + 224, 255, 2, 0, 0x0F);	/* 下帯（上） */
-	T_Fill(  0, Y_OFFSET + 224, 255, 2, 0, 0x0F);	/* 下帯（下） */
-#else
-	int16_t x;
-
-	G_Load_Mem( MYCAR_CG, X_OFFSET,	0,			0);	/* インテリア */
-	G_Load_Mem( MYCAR_CG, X_OFFSET,	Y_OFFSET,	0);	/* インテリア */
-	/* メーターの穴 */
-	for(x = 0; x < 17; x++)
+	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
-		Draw_Circle(X_OFFSET + 106,				195,	x, TRANS_PAL, 0, 360, 255);	/* 穴をあける */
-		Draw_Circle(X_OFFSET + 106, Y_OFFSET +	195,	x, TRANS_PAL, 0, 360, 255);	/* 穴をあける */
+		uint32_t	uWidth, uHeight, uFileSize;
+		uint16_t	uCG_Num;
+		
+		uCG_Num = MYCAR_CG + i;
+		CG_File_Load(uCG_Num);	/* グラフィックの読み込み */
+
+		Get_PicImageInfo( uCG_Num, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+		
+		/* テキスト */
+		PutGraphic_To_Text( uCG_Num, uWidth * x, Y_OFFSET * y );			/* インテリア */
+
+		T_Fill( (uWidth * x) + 82, (Y_OFFSET * y) + 188, 32, 31, 0, 0);	/* メーター穴 */
+
+#ifdef DEBUG
+//		T_Fill( (uWidth * x) + (16 * i), (Y_OFFSET * y) + 164, 16, 16, 0, 0);	/* デバッグ用 */
+#endif
+		T_Fill( uWidth * x, (Y_OFFSET * y) + 224, 255, 2, 0, 0x0F);		/* 下帯 */
+		
+		x++;
 	}
-	/* 余白の塗りつぶし */
-	Draw_Fill(X_OFFSET, (       0 + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W,        0 + V_SYNC_MAX, 0x01);
-	Draw_Fill(X_OFFSET, (Y_OFFSET + MY_CAR_1_H), X_OFFSET + MY_CAR_1_W, Y_OFFSET + V_SYNC_MAX, 0x01);
-
-	Draw_Fill(X_OFFSET + 90, 			180 + 1,	X_OFFSET + 90 + 31, 			180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
-	Draw_Fill(X_OFFSET + 90, Y_OFFSET + 180 + 1,	X_OFFSET + 90 + 31, Y_OFFSET +	180 + 31 - 1,	 TRANS_PAL);	/* 穴をあける */
-#endif
-	
-
-#if 0	/* TPS */
-#else
-#endif
 }
 
 /*===========================================================================================*/
@@ -943,17 +936,10 @@ static int16_t	MyCar_Vibration(void)
 {
 	int16_t ret = 0;
 
-	int16_t	x, y;
-	uint8_t	bMode;
-	ST_CRT	stCRT;
-
 	static	int16_t	Vibration = 0;
 	static	int16_t	VibrationCT = 0;
 	static	uint8_t	ubOBD_old = OBD_NORMAL;
 	static	int16_t	CrashCount;
-	
-	GetGameMode(&bMode);
-	GetCRT(&stCRT, bMode);
 
 	/* 画面を揺らす */
 	VibrationCT++;
@@ -997,12 +983,6 @@ static int16_t	MyCar_Vibration(void)
 		}
 	}
 	ubOBD_old = g_stMyCar.ubOBD;	/* 前回値更新 */
-
-	/* 画面をフリップする */
-	GetCRT(&stCRT, bMode);
-	x = stCRT.view_offset_x;
-	y = stCRT.view_offset_y;
-	T_Scroll( 0, y + Vibration   );	/* テキスト画面 */
 	
 	ret = Vibration;
 	
@@ -1114,8 +1094,8 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 		}
 	}
 	palNum = 0x0D;
-	x = 90+16;
-	y = 180+16 - Vibration;
+	x = 82+16;
+	y = 188+16 - Vibration;
 	if(i <= 6)
 	{
 		y += 16;
@@ -1140,8 +1120,8 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 	SP_REGST( sp_num++, -1, x, y, SetBGcode(V, H, palNum, patNum), 3);
 
 	/* タコメーター */
-	x = 90+16;
-	y = 180+16 - Vibration;
+	x = 82+16;
+	y = 188+16 - Vibration;
 	V = 0;
 	H = 0;
 	palNum = 0x0D;
@@ -1154,11 +1134,34 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
 	patNum = 0x57;
 	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
-
-	/* ステアリング位置 */
 	
-	x = 16 + Mdiv16(g_SteeringDiff) + 16;
-	y = 96 + Mabs(Mdiv16(g_SteeringDiff)) + 16;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static int16_t	MyCar_SteeringPos(int16_t Vibration)
+{
+	int16_t ret = 0;
+
+	uint8_t	patNum = 0;
+	uint8_t	palNum = 0;
+	uint8_t	V=0, H=0;
+	uint8_t	sp_num=5;
+	int16_t	x, y;
+	uint32_t	uWidth, uHeight, uFileSize;
+	ST_TEXTINFO	stTextInfo;
+
+	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
+	
+	/* ステアリング位置 */
+	x = 16 + Mdiv16(g_SteeringDiff) + 16 - 2;
+	y = 96 + Mabs(Mdiv16(g_SteeringDiff)) + 16 + 2;
 	V = 0;
 	H = 0;
 	palNum = 0x0C;
@@ -1179,6 +1182,47 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
 	patNum = 0x59;
 	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
+
+	/* 画面を切り替える */
+	if(g_SteeringDiff == 0)
+	{
+		x = 1;
+		y = 0;
+	}
+	else if(g_SteeringDiff < 0)
+	{
+		if(Mabs(g_SteeringDiff) > 0x40)
+		{
+			x = 0;
+			y = 0;
+		}
+		else
+		{
+			x = 1;
+			y = 0;
+		}
+	}
+	else
+	{
+		if(Mabs(g_SteeringDiff) > 0x40)
+		{
+			x = 2;
+			y = 0;
+		}
+		else
+		{
+			x = 1;
+			y = 0;
+		}
+	}
+
+	/* テキスト画面のポジションを更新する */
+	T_Get_TextInfo(&stTextInfo);
+	stTextInfo.uPosX = x;	/* X座標 */
+	stTextInfo.uPosY = y;	/* Y座標 */
+	T_Set_TextInfo(stTextInfo);
+	
+	T_Scroll( (uWidth * x), (Y_OFFSET * y) + Vibration );	/* テキスト画面スクロール */
 	
 	return ret;
 }
