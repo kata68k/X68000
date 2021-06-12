@@ -914,7 +914,8 @@ void MyCar_Image(void)
 		/* テキスト */
 		PutGraphic_To_Text( uCG_Num, uWidth * x, Y_OFFSET * y );			/* インテリア */
 
-		T_Fill( (uWidth * x) + 82, (Y_OFFSET * y) + 188, 32, 31, 0, 0);	/* メーター穴 */
+//		T_Fill( (uWidth * x) + 82, (Y_OFFSET * y) + 188, 32, 31, 0, 0);	/* メーター穴 */
+		T_Circle( 82 + (uWidth * x), 188 + (Y_OFFSET * y), 32, 32, 0, 0);	/* メーター穴 */
 
 #ifdef DEBUG
 //		T_Fill( (uWidth * x) + (16 * i), (Y_OFFSET * y) + 164, 16, 16, 0, 0);	/* デバッグ用 */
@@ -1221,8 +1222,6 @@ static int16_t	MyCar_SteeringPos(int16_t Vibration)
 	stTextInfo.uPosX = x;	/* X座標 */
 	stTextInfo.uPosY = y;	/* Y座標 */
 	T_Set_TextInfo(stTextInfo);
-	
-	T_Scroll( (uWidth * x), (Y_OFFSET * y) + Vibration );	/* テキスト画面スクロール */
 	
 	return ret;
 }

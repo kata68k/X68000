@@ -34,6 +34,7 @@ extern int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 extern int32_t T_Fill(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 extern int32_t T_xLine(int16_t, int16_t, int16_t w, uint16_t, uint8_t);
 extern int32_t T_yLine(int16_t, int16_t, int16_t h, uint16_t, uint8_t);
+extern int16_t T_Circle(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 extern int16_t T_Get_TextInfo(ST_TEXTINFO *);
 extern int16_t T_Set_TextInfo(ST_TEXTINFO);
 

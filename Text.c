@@ -6,6 +6,7 @@
 #include "inc/usr_macro.h"
 #include "Text.h"
 
+#include "APL_Math.h"
 #include "CRTC.h"
 #include "Graphic.h"
 #include "MFP.h"
@@ -33,6 +34,7 @@ int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 int32_t T_Fill(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 int32_t T_xLine(int16_t, int16_t, int16_t w, uint16_t, uint8_t);
 int32_t T_yLine(int16_t, int16_t, int16_t h, uint16_t, uint8_t);
+int16_t T_Circle(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 int16_t T_Get_TextInfo(ST_TEXTINFO *);
 int16_t T_Set_TextInfo(ST_TEXTINFO);
 
@@ -284,9 +286,9 @@ void T_Speed(void)
 	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* SPEED */
-		BG_TextPut("SPEED", 164 + (uWidth * x), 24 + (Y_OFFSET * y) );
+		BG_TextPut("SPEED", 148 + (uWidth * x), 24 + (Y_OFFSET * y) );
 		/* KM */
-		BG_TextPut("KM",    232 + (uWidth * x), 24 + (Y_OFFSET * y) );
+		BG_TextPut("KM",    216 + (uWidth * x), 24 + (Y_OFFSET * y) );
 
 		x++;
 	}
@@ -310,7 +312,7 @@ void T_Gear(void)
 	for(i=0; i < MYCAR_IMAGE_MAX; i++)
 	{
 		/* GEAR */
-		BG_TextPut("GEAR", 172 + (uWidth * x), 32 + (Y_OFFSET * y) );
+		BG_TextPut("GEAR", 152 + (uWidth * x), 32 + (Y_OFFSET * y) );
 
 		x++;
 	}
@@ -374,6 +376,7 @@ void T_Main(uint8_t bMode)
 	
 	/* 描画 */
 	T_PutTextInfo(g_stTextInfo);
+	
 }
 
 /*===========================================================================================*/
@@ -400,12 +403,15 @@ int16_t T_PutTextInfo(ST_TEXTINFO stTextInfo)
 	/* Score */
 	Text_To_Text2(stTextInfo.uScore,		(uWidth * x) + 192, (Y_OFFSET * y) +  8, FALSE, "%7d");
 	/* Time Count */
-	Text_To_Text2(stTextInfo.uTimeCounter,	(uWidth * x) + 112, (Y_OFFSET * y) + 24,  TRUE, "%3d");
+	Text_To_Text2(stTextInfo.uTimeCounter,	(uWidth * x) + 108, (Y_OFFSET * y) + 24,  TRUE, "%3d");
 	/* Speed */
-	Text_To_Text2(stTextInfo.uVs,			(uWidth * x) + 208, (Y_OFFSET * y) + 24, FALSE, "%3d");
+	Text_To_Text2(stTextInfo.uVs,			(uWidth * x) + 190, (Y_OFFSET * y) + 24, FALSE, "%3d");
 	/* Gear */
-	Text_To_Text2(stTextInfo.uShiftPos,		(uWidth * x) + 224, (Y_OFFSET * y) + 32, FALSE,  "%d");
+	Text_To_Text2(stTextInfo.uShiftPos,		(uWidth * x) + 206, (Y_OFFSET * y) + 32, FALSE,  "%d");
 
+	/* 表示座標変更 */
+	T_Scroll( (uWidth * x), (Y_OFFSET * y) );	/* テキスト画面スクロール */
+	
 	return ret;
 }
 
@@ -609,6 +615,95 @@ int32_t T_yLine(int16_t x1, int16_t y1, int16_t h, uint16_t line_style, uint8_t 
 	}
 	return ret;
 }
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t T_Circle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_style, uint8_t color)
+{
+	int16_t	ret = 0;
+	int16_t	i;
+	int16_t	w, h;
+	int16_t	cx, cy;
+	int16_t	px, py;
+	
+	x2 += x1;
+	y2 += y1;
+	
+	/* 縦線 */
+	if(x1 == x2)
+	{
+		T_yLine(x1, y1, 1, line_style, color);
+		return ret;
+	}
+	
+	/* 横線 */
+	if(y1 == y2)
+	{
+		T_xLine(x1, y1, 1, line_style, color);
+		return ret;
+	}
+	
+	w = Mdiv2(x2 - x1);
+	h = Mdiv2(y2 - y1);
+	cx = x1 + w;
+	cy = y1 + h;
+	
+#ifdef DEBUG
+//	printf("T_Circle=(%d,%d,%d,%d)(%d,%d)(%d,%d)\n",  x1, y1, x2, y2, cx, cy, w, h);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+	
+	for(i=0; i<90; i++)
+	{
+		/* 1 */
+		px = cx + Mdiv256( (w * APL_Cos(i) ) );
+		py = cy + Mdiv256( (h * APL_Sin(i) ) );
+
+		T_Fill( cx, py, px - cx, cy - py, line_style, color);
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, cx, py, px - cx, cy - py);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+
+		/* 2 */
+		px = cx + Mdiv256( (w * APL_Cos(i+90)) );
+		py = cy + Mdiv256( (h * APL_Sin(i+90)) );
+
+		T_Fill( px, py, cx - px, cy - py, line_style, color);
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, px, py, cx - px, cy - py);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+
+		/* 3 */
+		px = cx + Mdiv256( (w * APL_Cos(i+180)) );
+		py = cy + Mdiv256( (h * APL_Sin(i+180)) );
+
+		T_Fill( px, cy, cx - px, py - cy, line_style, color);
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, px, cy, cx - px, py - cy);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+
+		/* 4 */
+		px = cx + Mdiv256( (w * APL_Cos(i+270)) );
+		py = cy + Mdiv256( (h * APL_Sin(i+270)) );
+
+		T_Fill( cx, cy, px - cx, py - cy, line_style, color);
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, cx, cy, px - cx, py - cy);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+	}
+		
+	return ret;
+}
+
 /*===========================================================================================*/
 /* 関数名	：	*/
 /* 引数		：	*/
