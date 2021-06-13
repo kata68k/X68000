@@ -34,7 +34,7 @@ extern int16_t BG_PutToText(int16_t, int16_t, int16_t, int16_t, uint8_t);
 extern int16_t BG_TimeCounter(uint32_t, uint16_t, uint16_t);
 extern int16_t BG_Number(uint32_t, uint16_t, uint16_t);
 extern int16_t Text_To_Text(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
-extern int16_t Text_To_Text2(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
+extern int16_t Text_To_Text2(uint64_t, int16_t, int16_t, uint8_t, uint8_t *);
 extern int16_t Put_Message_To_Graphic(uint8_t *, uint8_t);
 
 #endif	/* OUTPUT_TEXT_H */

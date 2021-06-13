@@ -24,6 +24,7 @@
 #include "Output_Text.h"
 #include "PCG.h"
 #include "Raster.h"
+#include "Score.h"
 #include "Text.h"
 
 /* define定義 */
@@ -673,6 +674,7 @@ static int16_t	MyCar_Crash(void)
 						ADPCM_Play(15);	/* スキール音 */
 						g_stMyCar.ubOBD |= OBD_SPIN_L;	/* 左スピン */
 					}
+					S_Reset_ScoreID();	/* スコア リセット */
 				}
 			}
 		}
@@ -860,6 +862,7 @@ int16_t	MyCar_CourseOut(void)
 
 //		ADPCM_Play(11);	/* SE：コース外 */
 
+		S_Reset_ScoreID();	/* スコア リセット */
 	}
 	else
 	{

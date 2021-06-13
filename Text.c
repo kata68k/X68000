@@ -12,6 +12,7 @@
 #include "MFP.h"
 #include "MyCar.h"
 #include "OutPut_Text.h"
+#include "Score.h"
 
 /* 構造体 */
 static ST_TEXTINFO	g_stTextInfo = {0};
@@ -52,8 +53,6 @@ void T_INIT(void)
 	MS_CUROF();			/* マウスカーソルを消します */
 	SKEY_MOD(0, 0, 0);	/* ソフトウェアキーボードを消します */
 	T_Clear();			/* テキストクリア */
-	
-	g_stTextInfo.uScoreMax = 10000;
 }
 
 /*===========================================================================================*/
@@ -332,13 +331,12 @@ void T_Main(uint8_t bMode)
 	uint32_t unStart_time, unTimer;
 	uint16_t uTimeCounter;
 	static uint32_t unPassTime = 0;
-	ST_CRT		stCRT = {0};
 	ST_CARDATA	stMyCar = {0};
+	ST_SCORE stScore;
+	
+	S_Get_ScoreInfo(&stScore);	/* スコア情報の取得 */
 
 	GetMyCar(&stMyCar);			/* 自車の情報を取得 */
-
-	/* モード切替による設定値の変更 */
-	GetCRT(&stCRT, bMode);
 
 	/* 現在時間 */
 	GetNowTime(&time_now);
@@ -363,10 +361,10 @@ void T_Main(uint8_t bMode)
 	time_old = unStart_time;
 	
 	/* Score */
-	g_stTextInfo.uScore = unPassTime / 1000;
+	g_stTextInfo.ulScore = stScore.ulScore;
 
 	/* Top Score */
-	g_stTextInfo.uScoreMax = Mmax(g_stTextInfo.uScore, g_stTextInfo.uScoreMax);
+	g_stTextInfo.ulScoreMax = stScore.ulScoreMax;
 	
 	/* Speed */
 	g_stTextInfo.uVs = stMyCar.VehicleSpeed;
@@ -399,15 +397,15 @@ int16_t T_PutTextInfo(ST_TEXTINFO stTextInfo)
 	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
 	
 	/* Top Score */
-	Text_To_Text2(stTextInfo.uScoreMax,		(uWidth * x) +  40, (Y_OFFSET * y) +  8, FALSE, "%7d");
+	Text_To_Text2(stTextInfo.ulScoreMax,				(uWidth * x) +  36, (Y_OFFSET * y) +  8, FALSE, "%8d");
 	/* Score */
-	Text_To_Text2(stTextInfo.uScore,		(uWidth * x) + 192, (Y_OFFSET * y) +  8, FALSE, "%7d");
+	Text_To_Text2(stTextInfo.ulScore,					(uWidth * x) + 192, (Y_OFFSET * y) +  8, FALSE, "%8d");
 	/* Time Count */
-	Text_To_Text2(stTextInfo.uTimeCounter,	(uWidth * x) + 108, (Y_OFFSET * y) + 24,  TRUE, "%3d");
+	Text_To_Text2((uint64_t)stTextInfo.uTimeCounter,	(uWidth * x) + 108, (Y_OFFSET * y) + 24,  TRUE, "%3d");
 	/* Speed */
-	Text_To_Text2(stTextInfo.uVs,			(uWidth * x) + 190, (Y_OFFSET * y) + 24, FALSE, "%3d");
+	Text_To_Text2((uint64_t)stTextInfo.uVs,				(uWidth * x) + 190, (Y_OFFSET * y) + 24, FALSE, "%3d");
 	/* Gear */
-	Text_To_Text2(stTextInfo.uShiftPos,		(uWidth * x) + 206, (Y_OFFSET * y) + 32, FALSE,  "%d");
+	Text_To_Text2((uint64_t)stTextInfo.uShiftPos,		(uWidth * x) + 206, (Y_OFFSET * y) + 32, FALSE,  "%d");
 
 	/* 表示座標変更 */
 	T_Scroll( (uWidth * x), (Y_OFFSET * y) );	/* テキスト画面スクロール */

@@ -29,6 +29,7 @@
 #include "Output_Text.h"
 #include "PCG.h"
 #include "Raster.h"
+#include "Score.h"
 #include "Task.h"
 #include "Text.h"
 #include "Trap14.h"
@@ -380,6 +381,9 @@ int16_t main(void)
 			{
 				Set_CRT_Contrast(0);	/* コントラスト暗 */
 				
+				/* ゲーム内容の初期化 */
+				S_Init_Score();	/* スコアの初期化 */
+				
 				/* スプライト＆ＢＧ表示 */
 				PCG_INIT();		/* スプライト／ＢＧの初期化 */
 				PCG_VIEW(TRUE);	/* スプライト＆ＢＧ表示 */
@@ -624,8 +628,9 @@ static void App_Init(void)
 {
 	puts("App_Init 開始");
 
-	/* デバッグ値初期化 */
-	SetDebugNum(0x80);
+	/* ゲーム内容の初期化 */
+	S_All_Init_Score();	/* スコアの初期化 */
+	SetDebugNum(0x80);	/* デバッグ値初期化 */
 
 	/* MFP */
 	g_CpuTime = TimerD_INIT();	/* タイマーD初期化 */

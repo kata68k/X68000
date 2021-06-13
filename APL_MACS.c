@@ -111,7 +111,7 @@ int32_t MOV_Play(uint8_t bPlayNum)
 #endif	/* MACS_MOON */
 
 	/* 画面モード再設定 */
-	CRTC_INIT();	/* 384 x 256 モード */
+	CRTC_INIT(1);
 
 	return	ret;
 }

@@ -21,7 +21,7 @@ int16_t BG_PutToText(int16_t, int16_t, int16_t, int16_t, uint8_t);
 int16_t BG_TimeCounter(uint32_t, uint16_t, uint16_t);
 int16_t BG_Number(uint32_t, uint16_t, uint16_t);
 int16_t Text_To_Text(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
-int16_t Text_To_Text2(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
+int16_t Text_To_Text2(uint64_t, int16_t, int16_t, uint8_t, uint8_t *);
 int16_t Put_Message_To_Graphic(uint8_t *, uint8_t);
 
 /* 関数 */
@@ -716,13 +716,13 @@ int16_t Text_To_Text(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_
 /* 機能		：	*/
 /*===========================================================================================*/
 /* TEXT-RAMに展開したデータから数字情報を作る */
-int16_t Text_To_Text2(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8_t *sFormat)
+int16_t Text_To_Text2(uint64_t ulNum, int16_t x, int16_t y, uint8_t bLarge, uint8_t *sFormat)
 {
 	int16_t	ret = 0;
 	int16_t sx, sy;
 	uint32_t	i, size, MemSize;
 	uint8_t	data;
-	uint8_t	ucDigit[10] = {0};
+	uint8_t	ucDigit[20] = {0};
 	uint8_t	*pString;
 
 	struct _fntbuf	*p_stTxbuf;
@@ -733,20 +733,29 @@ int16_t Text_To_Text2(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8
 	sx = 0;
 	sy = 256;
 	
+#ifdef DEBUG
+//	printf("Text_To_Text2(%ld) 1\n", ulNum);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
 	if(bLarge == TRUE)
 	{
 		sy += 8;	/* 8dot下 */
 		size = Mmul2(BG_HEIGHT);	/* 大 */
 		
-		sprintf(ucDigit, sFormat, uNum);
+		sprintf(ucDigit, sFormat, ulNum);
 	}
 	else
 	{
 		size = BG_HEIGHT;	/* 小 */
-		sprintf(ucDigit, sFormat, uNum);
+		sprintf(ucDigit, sFormat, ulNum);
 	}
 	pString = &ucDigit[0];
 
+#ifdef DEBUG
+//	printf("Text_To_Text2(%ld) 2\n", ulNum);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+	
 	MemSize = BG_WIDTH * size;
 
 	p_stTxbuf = malloc(sizeof(int16_t) + sizeof(int16_t) + MemSize);
@@ -765,8 +774,12 @@ int16_t Text_To_Text2(uint16_t uNum, int16_t x, int16_t y, uint8_t bLarge, uint8
 			{
 				/* コピー先 */
 				memset(&(p_stTxbuf->buffer[0]), 0, MemSize);
-				_iocs_textput(x, y, p_stTxbuf);
-
+				for(i=0; i < 4; i++)
+				{
+					/* テキストプレーン */
+					_iocs_tcolor(1<<i);
+					_iocs_textput(x, y, p_stTxbuf);
+				}
 				x+=BG_WIDTH;
 				break;
 			}

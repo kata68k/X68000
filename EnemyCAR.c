@@ -19,6 +19,7 @@
 #include "Music.h"
 #include "MyCar.h"
 #include "Raster.h"
+#include "Score.h"
 
 /* グローバル変数 */
 uint8_t		*g_pCG_EnemyCARImageBuf[ENEMYCAR_TYP_MAX][ENEMYCAR_PAT_MAX];
@@ -278,6 +279,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 				if(y >= Y_MAX_WINDOW)	/* 追い抜かした */
 				{
 					ADPCM_Play(14);	/* SE：自動車通過 */
+					S_Add_Score();	/* 加点 */
 				}
 				if(Out_Of_Disp < 0)
 				{

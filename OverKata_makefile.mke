@@ -32,7 +32,7 @@ execonly:
 
 OverKata.x:	OverKata.o APL_MACS.o APL_Math.o CRTC.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
 			FileManager.o Graphic.o Input.o MFP.o Moon.o Music.o MyCar.o OutPut_Text.o \
-			PCG.o Raster.o Task.o Text.o Trap14.o
+			PCG.o Raster.o Score.o Task.o Text.o Trap14.o
 	$(LD) $^ -o $@ -l $(LIBS)
 #	echo $^ > OverKata.d
 #	$(LD) -i OverKata.d -o $@ -l $(LIBS)
@@ -70,6 +70,8 @@ OutPut_Text.o:	OutPut_Text.c
 PCG.o:	PCG.c
 	$(CC) $(CFLAGS) -c $<
 Raster.o:	Raster.c
+	$(CC) $(CFLAGS) -c $<
+Score.o:	Score.c
 	$(CC) $(CFLAGS) -c $<
 Task.o:	Task.c
 	$(CC) $(CFLAGS) -c $<

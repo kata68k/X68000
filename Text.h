@@ -9,8 +9,8 @@
 typedef struct
 {
 	uint16_t	uTimeCounter;
-	uint16_t	uScore;
-	uint16_t	uScoreMax;
+	uint64_t	ulScore;
+	uint64_t	ulScoreMax;
 	uint16_t	uVs;
 	uint16_t	uShiftPos;
 	uint16_t	uPosX;
