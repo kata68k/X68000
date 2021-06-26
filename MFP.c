@@ -11,6 +11,7 @@
 #include "MFP.h"
 #include "Moon.h"
 #include "OutPut_Text.h"
+#include "PCG.h"
 #include "Raster.h"
 
 /* •Ï” */

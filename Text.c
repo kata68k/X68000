@@ -12,6 +12,7 @@
 #include "MFP.h"
 #include "MyCar.h"
 #include "OutPut_Text.h"
+#include "PCG.h"
 #include "Score.h"
 
 /* 構造体 */
@@ -28,7 +29,7 @@ void T_Time(void);
 void T_Score(void);
 void T_Speed(void);
 void T_Gear(void);
-void T_Main(uint8_t);
+void T_Main(void);
 int16_t T_PutTextInfo(ST_TEXTINFO);
 int16_t T_Scroll(uint32_t, uint32_t);
 int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
@@ -324,7 +325,7 @@ void T_Gear(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void T_Main(uint8_t bMode)
+void T_Main(void)
 {
 	uint32_t time_now;
 	static uint32_t time_old = 0;

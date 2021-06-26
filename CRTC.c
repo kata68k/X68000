@@ -9,6 +9,7 @@
 #include "inc/usr_macro.h"
 #include "CRTC.h"
 #include "Input.h"
+#include "PCG.h"
 
 /* ƒOƒ[ƒoƒ‹•Ï” */
 

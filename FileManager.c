@@ -17,6 +17,7 @@
 #include "APL_MACS.h"
 #include "Graphic.h"
 #include "MUSIC.h"
+#include "PCG.h"
 
 /* ＰＣＧデータ */
 static uint8_t	*pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
@@ -388,8 +389,9 @@ int16_t PCG_SP_dataload(int8_t *fname)
 				) ;
 			fclose( fp ) ;
 
-			for( i = 0 ; i < PCG_MAX ; i++ ){
-				SP_DEFCG( i, 1, pcg_dat );
+			for( i = 0 ; i < PCG_MAX ; i++ )
+			{
+				_iocs_sp_defcg( i, 1, pcg_dat );
 				pcg_dat += 128;
 			}
 		}

@@ -63,17 +63,6 @@
 #define ROAD_1_MIN		(RASTER_MIN)	/* BGの道の最小(mode1) */
 #define ROAD_1_MAX		(Y_MAX_WINDOW)	/* BGの道の最大(mode1) */
 
-/* スプライトＰＣＧパターン最大数 */
-#define	PCG_MAX		(256)
-#define	BG_WIDTH	(8)
-#define	BG_HEIGHT	(8)
-#define BG_0_W		(280)
-#define BG_0_H		(63)
-#define BG_1_W		(280)
-#define BG_1_H		(63)
-#define SP_X_OFFSET	(16)
-#define SP_Y_OFFSET	(16)
-
 /* グラフィックパターン 0-7 max8 */
 #define DUMMY_CG		(0)	/* ダミー(0) */
 #define BG_CG			(1)	/* 背景(1,2,3) */

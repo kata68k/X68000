@@ -114,13 +114,14 @@ int16_t main(void)
 	bDebugMode = TRUE;
 
 	/* デバッグコーナー */
-#if 0
+#if 1
 	puts("デバッグコーナー 開始");
 	/* ↓自由にコードを書いてね */
 	{
 		uint8_t bFlag = FALSE;
 		uint8_t bHit = FALSE;
-		int16_t	count = 0;
+		int16_t	count = 0, count_old = 0;
+		ST_PCG	*p_stPCG;
 		
 		/* リストファイルの読み込み */
 		Init_FileList_Load();
@@ -132,15 +133,22 @@ int16_t main(void)
 		/* グラフィック */
 		G_INIT();			/* 画面の初期設定 */
 		G_Palette_INIT();	/* グラフィックパレットの初期化 */
-
-//		CRTC_INIT();	/* 特殊解像度 */
+		/* テキスト */
+		T_INIT();			/* テキストＶＲＡＭ初期化 */
+		T_PALET();			/* テキストパレット設定 */
+		/* スプライト／ＢＧ */
+		PCG_INIT();			/* スプライト／ＢＧの初期化 */
+		PCG_VIEW(TRUE);		/* スプライト＆ＢＧ表示 */
 		
-		puts("ＥＳＣキーで終了");
+//		puts("ＥＳＣキーで終了");
 		loop = 1;
 		do
 		{
 			int16_t	input = 0;
-			get_key(&input, 0, 1);	/* キーボード＆ジョイスティック入力 */
+			int16_t	i = 0;
+			
+			get_keyboard(&input, 0, 1);		/* キーボード入力 */
+	
 			if((input & KEY_b_ESC ) != 0u)		/* ＥＳＣキー */
 			{
 				loop = 0;	/* ループ終了 */
@@ -148,7 +156,6 @@ int16_t main(void)
 			
 			if(ChatCancelSW((input & KEY_A)!=0u, &bFlag) == TRUE)	/* Aボタン */
 			{
-				CG_File_Load(0);
 				bHit = TRUE;
 			}
 			else
@@ -156,23 +163,56 @@ int16_t main(void)
 				bHit = FALSE;
 			}
 			
+			count_old = count;
+			
 			if((input & KEY_B) != 0u)	/* Bボタン */
 			{
-				if(count < 9000)
-				{
-					count++;
-				}
+				
 			}
 			else
 			{
-				if(count > 0)
+				if(count < 360)
 				{
-					count--;
+					count++;
+				}
+				else
+				{
+					count = 0;
 				}
 			}
+			
 //			printf("Count = %6d, %d\r", count, bHit);
+			if(count != count_old)
+			{
+				for(i=0; i<PCG_NUM_MAX; i++)
+				{
+					p_stPCG = PCG_Get_Info(i);
+					p_stPCG->x += p_stPCG->dx;
+					p_stPCG->y += p_stPCG->dy;
+					
+					if (p_stPCG->x <= 0 || WIDTH <= p_stPCG->x) p_stPCG->dx =- p_stPCG->dx;
+					if (p_stPCG->y <= 0 || HEIGHT <= p_stPCG->y) p_stPCG->dy =- p_stPCG->dy;
+					
+					if(p_stPCG->dx == 0)p_stPCG->dx = 1;
+					if(p_stPCG->dy == 0)p_stPCG->dy = 1;
+					
+					p_stPCG->Anime++;
+					if(p_stPCG->Anime >= p_stPCG->Pat_AnimeMax)p_stPCG->Anime = 0;
+
+					p_stPCG->update = TRUE;
+#ifdef DEBUG
+//					printf("p_stPCG[%d]=0x%p\n", i, p_stPCG);
+//					KeyHitESC();	/* デバッグ用 */
+#endif
+				}
+			}
+			
+			PCG_Main();	/* スプライト出力 */
 
 			if(loop == 0)break;
+
+			/* 同期待ち */
+			vwait(1);
 		}
 		while( loop );
 
@@ -390,8 +430,8 @@ int16_t main(void)
 
 				/* テキスト表示 */
 				T_Clear();			/* テキストクリア */
-				MyCar_G_Load();		/* 自車の画像読み込み*/
-				MyCarInfo_Init();
+				MyCar_G_Load();		/* 自車の画像読み込み */
+				MyCarInfo_Init();	/* 自車の情報初期化 */
 				
 				/* ライバル車の初期化 */
 				InitEnemyCAR();
@@ -440,6 +480,7 @@ int16_t main(void)
 					/* グラフィックを消去 */
 					G_CLR_ALL_OFFSC(g_mode);
 				}
+				
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
 				{
@@ -451,6 +492,7 @@ int16_t main(void)
 #endif
 				/* 自車の情報を取得 */
 				MyCarInfo_Update(input);	/* 自車の情報を更新 */
+				
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
 				{
@@ -463,6 +505,7 @@ int16_t main(void)
 				
 				/* ラスター処理 */
 				Raster_Main(g_mode);
+				
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
 				{
@@ -484,6 +527,7 @@ int16_t main(void)
 #endif
 				/* 余った時間で処理 */
 				BG_main(&bFlip);	/* バックグランド処理 */
+				
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
 				{
@@ -838,7 +882,9 @@ int16_t BG_main(uint8_t* bFlip)
 				else
 				{
 					MyCar_Interior(g_mode);	/* 自車のインテリア処理 */
-					T_Main(g_mode);			/* テキスト画面の処理 */
+					S_Main_Score();			/* スコア表示 */
+					PCG_Main();				/* スプライト出力 */
+					T_Main();				/* テキスト画面の処理 */
 				}
 				
 				bFlipState++;

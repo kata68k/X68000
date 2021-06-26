@@ -27,7 +27,7 @@ extern void T_Time(void);
 extern void T_Score(void);
 extern void T_Speed(void);
 extern void T_Gear(void);
-extern void T_Main(uint8_t);
+extern void T_Main(void);
 extern int16_t T_PutTextInfo(ST_TEXTINFO);
 extern int16_t T_Scroll(uint32_t, uint32_t);
 extern int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);

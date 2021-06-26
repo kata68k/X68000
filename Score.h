@@ -17,5 +17,6 @@ extern	int16_t S_Add_Score(void);
 extern	int16_t S_Reset_ScoreID(void);
 extern	int16_t S_All_Init_Score(void);
 extern	int16_t S_Init_Score(void);
+extern	int16_t S_Main_Score(void);
 
 #endif	/* SCORE_H */

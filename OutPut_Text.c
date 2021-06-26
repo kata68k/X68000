@@ -11,6 +11,7 @@
 #include "CRTC.h"
 #include "Graphic.h"
 #include "OutPut_Text.h"
+#include "PCG.h"
 
 #define	TAB_SIZE	(4)
 
