@@ -83,9 +83,11 @@ int16_t main(void)
 
 	uint32_t	unTime_cal = 0u;
 	uint32_t	unTime_cal_PH = 0u;
-	
+	uint32_t	unDemo_time = 0xFFFFFFFFu;
+	int16_t		DemoCount = 0;
+
 	uint16_t	uFreeRunCount=0u;
-	
+
 	int16_t	loop = 1;
 	int16_t	RD[1024] = {0};
 	uint8_t	bMode_flag = FALSE;
@@ -114,13 +116,14 @@ int16_t main(void)
 	bDebugMode = TRUE;
 
 	/* デバッグコーナー */
-#if 1
+#if 0
 	puts("デバッグコーナー 開始");
 	/* ↓自由にコードを書いてね */
 	{
 		uint8_t bFlag = FALSE;
 		uint8_t bHit = FALSE;
 		int16_t	count = 0, count_old = 0;
+		int16_t	pal = 0, pal_vx = 1;
 		ST_PCG	*p_stPCG;
 		
 		/* リストファイルの読み込み */
@@ -145,7 +148,7 @@ int16_t main(void)
 		do
 		{
 			int16_t	input = 0;
-			int16_t	i = 0;
+			int16_t	i = 0, j = 0;
 			
 			get_keyboard(&input, 0, 1);		/* キーボード入力 */
 	
@@ -167,7 +170,6 @@ int16_t main(void)
 			
 			if((input & KEY_B) != 0u)	/* Bボタン */
 			{
-				
 			}
 			else
 			{
@@ -178,6 +180,29 @@ int16_t main(void)
 				else
 				{
 					count = 0;
+				}
+				
+				pal += pal_vx;
+				
+				if( (pal <= 0) || (pal >= 31) )
+				{
+					pal_vx = - pal_vx;
+				}
+					
+				for(i=0; i < 4; i++)
+				{
+					PCG_PAL_Change( 8,  i+1, SetRGB((pal & 0x1F),            0,            0));
+					PCG_PAL_Change( 9,  i+1, SetRGB(           0, (pal & 0x1F),            0));
+					PCG_PAL_Change(10,  i+1, SetRGB(           0,            0, (pal & 0x1F)));
+					PCG_PAL_Change(11,  i+1, SetRGB((pal & 0x1F), (pal & 0x1F), (pal & 0x1F)));
+					PCG_PAL_Change(12,  i+1, SetRGB((pal & 0x1F), (pal & 0x1F), (pal & 0x1F)));
+				}
+				for(i=0; i < 2; i++)
+				{
+					for(j=0; j < 16; j++)
+					{
+						PCG_PAL_Change( j,  14+i, SetRGB(0, 0, (i+1)*(15-j)));
+					}
 				}
 			}
 			
@@ -354,21 +379,25 @@ int16_t main(void)
 				T_PALET();			/* テキストパレット設定 */
 
 				SetTaskInfo(SCENE_TITLE_S);	/* タイトルシーン(開始処理)へ設定 */
+				break;
 			}
-			break;
 			case SCENE_TITLE_S:	/* タイトルシーン(開始処理) */
 			{
 				Music_Play(2);	/* タイトル曲 */
 				
-				CG_File_Load(TITLE_CG);	/* グラフィックの読み込み */
-				G_Load_Mem( TITLE_CG, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
+				if(CG_File_Load(TITLE_CG) >= 0)	/* グラフィックの読み込み */
+				{
+					G_Load_Mem( TITLE_CG, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
+				}
 			
 				BG_TextPut("OVER KATA", 96, 128);		/* タイトル文字 */
 				BG_TextPut("PUSH A BUTTON", 80, 160);	/* ボタン押してね */
 
+				GetPassTime( 100, &unDemo_time );		/* 初期化 */
+
 				SetTaskInfo(SCENE_TITLE);	/* タイトルシーン(開始処理)へ設定 */
+				break;
 			}
-			break;
 			case SCENE_TITLE:	/* タイトルシーン */
 			{
 				if(input == KEY_A)	/* Aボタン */
@@ -379,9 +408,77 @@ int16_t main(void)
 				
 					SetTaskInfo(SCENE_TITLE_E);	/* タイトルシーン(開始処理)へ設定 */
 				}
+				
+				if( GetPassTime( 30000, &unDemo_time ) != 0u )	/* 所定時間何もなければデモシーンへ */
+				{
+					Music_Stop();	/* 音楽再生 停止 */
+					
+//					SetTaskInfo(SCENE_DEMO_S);	/* デモシーン(開始処理)へ設定 */
+				}
+				break;
 			}
-			break;
 			case SCENE_TITLE_E:	/* タイトルシーン(終了処理) */
+			{
+				/* スプライト＆ＢＧ */
+				PCG_VIEW(FALSE);	/* スプライト＆ＢＧ非表示 */
+
+				/* テキスト表示 */
+				T_INIT();		/* テキストクリア */
+
+				/* テキスト表示 */
+				G_CLR();		/* グラフィッククリア */
+
+				/* MFP */
+				MFP_INIT();	/* 初期化処理 */
+				
+				SetTaskInfo(SCENE_START_S);	/* ゲーム開始シーン(開始処理)へ設定 */
+				break;
+			}
+			case SCENE_DEMO_S:	/* デモシーン(開始処理) */
+			{
+				uint16_t demo;
+				DemoCount = 0;
+				
+				/* スプライト＆ＢＧ */
+				PCG_VIEW(FALSE);	/* スプライト＆ＢＧ非表示 */
+
+				/* テキスト表示 */
+				T_INIT();		/* テキストクリア */
+
+				/* テキスト表示 */
+				G_CLR();		/* グラフィッククリア */
+				
+				Music_Play(6);	/* デモ曲 */
+				
+				for(demo=0; demo<6; demo++)
+				{
+					CG_File_Load(DEMO_CG + demo);		/* グラフィックの読み込み */
+				}
+
+				SetTaskInfo(SCENE_DEMO);	/* ゲーム開始シーン(開始処理)へ設定 */
+				break;
+			}
+			case SCENE_DEMO:	/* デモシーン */
+			{
+				if( GetPassTime( 2000, &unDemo_time ) != 0u )	/* 所定時間何もなければ実行 */
+				{
+					if( DemoCount < 6u )	/* デモシーケンス満了 */
+					{
+						G_Load_Mem( DEMO_CG + DemoCount, X_OFFSET, Y_OFFSET+32, 0 );	/* デモ画像 */
+					}
+					DemoCount++;	/* 次の画像 */
+				}
+				
+				if( (DemoCount >= 10u) || /* デモシーケンス満了 */
+					(input == KEY_A) )	/* Aボタン */
+				{
+					Music_Stop();	/* 音楽再生 停止 */
+				
+					SetTaskInfo(SCENE_DEMO_E);	/* デモシーン(終了処理)へ設定 */
+				}
+				break;
+			}
+			case SCENE_DEMO_E:	/* デモシーン(終了処理) */
 			{
 				/* スプライト＆ＢＧ */
 				PCG_VIEW(FALSE);	/* スプライト＆ＢＧ非表示 */
@@ -391,23 +488,15 @@ int16_t main(void)
 
 				/* テキスト表示 */
 				G_CLR();		/* グラフィッククリア */
-
-				/* MFP */
-				MFP_INIT();	/* 初期化処理 */
 				
-				SetTaskInfo(SCENE_START_S);	/* タイトルシーン(開始処理)へ設定 */
+				SetTaskInfo(SCENE_TITLE_S);	/* ゲームスタートタスクへ設定 */
+				break;
 			}
-			break;
-			case SCENE_DEMO:	/* デモシーン */
-			{
-				
-			}
-			break;
 			case SCENE_START_S:	/* ゲーム開始シーン(開始処理) */
 			{
 				SetTaskInfo(SCENE_START);	/* ゲームスタートタスクへ設定 */
+				break;
 			}
-			break;
 			case SCENE_START:	/* ゲーム開始シーン */
 			{
 				/* 動画 */
@@ -415,8 +504,8 @@ int16_t main(void)
 				Music_Play(1);	/* ローディング中 */
 
 				SetTaskInfo(SCENE_START_E);	/* ゲームスタートタスクへ設定 */
+				break;
 			}
-			break;
 			case SCENE_START_E:	/* ゲーム開始シーン(終了処理) */
 			{
 				Set_CRT_Contrast(0);	/* コントラスト暗 */
@@ -455,6 +544,7 @@ int16_t main(void)
 				T_SetBG_to_Text();	/* テキスト用作業用データ展開 */
 				
 				SetTaskInfo(SCENE_GAME_S);	/* ゲーム(開始処理)タスクへ設定 */
+				break;
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
@@ -465,8 +555,8 @@ int16_t main(void)
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 				
 				SetTaskInfo(SCENE_GAME);	/* ゲームタスクへ設定 */
+				break;
 			}
-			break;
 			case SCENE_GAME:	/* ゲームシーン */
 			{
 				if((input & KEY_b_Q) != 0u)	/* Ｑ */
@@ -537,8 +627,8 @@ int16_t main(void)
 					g_unTime_Pass[0] = time_now;	/* 一時保存 */
 				}
 #endif
+				break;
 			}
-			break;
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
 			{
 				Music_Stop();	/* 音楽再生 停止 */
@@ -556,22 +646,20 @@ int16_t main(void)
 				MFP_EXIT();		/* MFP関連の解除 */
 				
 				SetTaskInfo(SCENE_INIT);	/* 初期化シーンへ設定 */
+				break;
 			}
-			break;
 			case SCENE_GAME_OVER:	/* ゲームオーバーシーン */
 			{
+				break;
 			}
-			break;
 			case SCENE_HI_SCORE:	/* ハイスコアランキングシーン */
 			{
-				
+				break;
 			}
-			break;
 			case SCENE_OPTION:		/* オプションシーン */
 			{
-				
+				break;
 			}
-			break;
 			case SCENE_EXIT:		/* 終了シーン */
 			{
 				Music_Stop();	/* 音楽再生 停止 */
@@ -580,13 +668,13 @@ int16_t main(void)
 				MOV_Play(2);	/* バイバイ */
 				
 				loop = 0;	/* ループ終了 */
+				break;
 			}
-			break;
 			default:	/* 異常シーン */
 			{
 				loop = 0;	/* ループ終了 */
+				break;
 			}
-			break;
 		}
 
 		if( (ChatCancelSW((input & KEY_b_M)!=0u, &bMode_flag) == TRUE) || (bFlip == TRUE) )	/* Ｍでモード切替 */

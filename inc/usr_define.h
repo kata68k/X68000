@@ -72,6 +72,7 @@
 #define MYCAR_CG		(16)	/* 自車(t) */
 /* フルグラフィック */
 #define TITLE_CG		(19)	/* タイトル */
+#define DEMO_CG			(20)	/* デモ */
 
 /* 構造体 */
 

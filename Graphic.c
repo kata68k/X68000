@@ -26,23 +26,23 @@
 #define	PIC_B	(3)
 #define	PIC_G	(3)
 #define	COLOR_R	(0)
-#define	COLOR_B	(1)
-#define	COLOR_G	(2)
-#define	COLOR_MAX	(PIC_R * PIC_B * PIC_G)
+#define	COLOR_G	(1)
+#define	COLOR_B	(2)
+#define	COLOR_MAX	(PIC_R * PIC_G * PIC_B)
 #define	G_COLOR		(16)
 #define	G_COLOR_SP	(1)	/* 特殊プライオリティとか */
 #define	G_PAL_MAX	(256)	/* 256色モード中のパレット数 */
 
 /* グローバル変数 */
 uint32_t	g_CG_List_Max	=	0u;
-uint8_t	*g_pCG_FileBuf[CG_MAX];
+uint8_t		*g_pCG_FileBuf[CG_MAX] = {NULL};
 uint16_t	g_CG_ColorCode[CG_MAX][G_PAL_MAX]	=	{0};
-uint8_t	g_CG_MaxColor[CG_MAX][3]	=	{0};
+uint8_t		g_CG_MaxColor[CG_MAX][3]	=	{0};
 
 /* グローバル構造体 */
-PICIMAGE	g_stPicImage[CG_MAX];
-CG_LIST		g_stCG_LIST[CG_MAX];
-struct APICGINFO	g_CGInfo[CG_MAX];
+PICIMAGE	g_stPicImage[CG_MAX] = {0};
+CG_LIST		g_stCG_LIST[CG_MAX] = {0};
+struct APICGINFO	g_CGInfo[CG_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 int16_t	Get_CG_FileList_MaxNum(uint32_t *);
@@ -310,19 +310,37 @@ int16_t CG_File_Load(uint16_t uListNum)
 	}
 	
 	Get_PicImagePalletTmp(&uPalTmp[0]);	/* 現在のパレットを退避 */
+#ifdef DEBUG
+//	printf("Get_PicImagePalletTmp = %d\n", uListNum );
+#endif
 
 	CG_File_Load_to_Mem(uListNum);		/* ファイルリストからメモリにPICを展開する */
+#ifdef DEBUG
+//	printf("CG_File_Load_to_Mem = %d\n", uListNum );
+#endif
 	
 	CG_Mem_Convert_Type(uListNum);		/* メモリに展開された画像をType別に変換する */
+#ifdef DEBUG
+//	printf("CG_Mem_Convert_Type = %d\n", uListNum );
+#endif
 	
 	Set_PicImagePalletTmp(&uPalTmp[0]);	/* 退避したパレットを戻す */
+#ifdef DEBUG
+//	printf("Set_PicImagePalletTmp = %d\n", uListNum );
+#endif
 	
 	Set_PicImagePallet(uListNum);		/* パレットをセットする */
+#ifdef DEBUG
+//	printf("Set_PicImagePallet = %d\n", uListNum );
+#endif
 
 	G_PaletteSetZero();					/* 念のため 0番パレット変更 */
+#ifdef DEBUG
+//	printf("G_PaletteSetZero = %d\n", uListNum );
+#endif
 	
 #ifdef DEBUG
-//	printf("CG File Load 完了 = %d\n", g_CG_List_Max );
+//	printf("CG File Load 完了 = %d\n", uListNum );
 #endif
 	
 	return ret;
@@ -384,8 +402,11 @@ int16_t CG_File_Load_to_Mem(uint16_t uListNum)
 //		printf("Head3(%d)=(%d)\n", i, Size );
 //		KeyHitESC();	/* デバッグ用 */
 #endif
+		if( g_stPicImage[i].pImageData != NULL )
+		{
+			return -1;	/* 既に確保済み */
+		}
 		/* メモリ確保 */
-		g_stPicImage[i].pImageData = NULL;
 		g_stPicImage[i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
 		if( g_stPicImage[i].pImageData == NULL )
 		{
@@ -607,7 +628,6 @@ void G_INIT(void)
 {
 	G_CLR_ON();				/* グラフィックのクリア */
 	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
-	
 	G_VIDEO_INIT();			/* ビデオコントローラーの初期化 */
 }
 
@@ -1655,15 +1675,17 @@ int16_t APICG_DataLoad2G(int8_t *fname, uint64_t pos_x, uint64_t pos_y, uint16_t
 			/* メモリエラー */
 			ret = -1;
 		}
-		if(work_buf != NULL)
-		{
-			MyMfree(work_buf);	/* メモリ解放 */
-		}
-		if(file_buf != NULL)
-		{
-			MyMfree(file_buf);	/* メモリ解放 */
-		}
 	}
+	
+	if(work_buf != NULL)
+	{
+		MyMfree(work_buf);	/* メモリ解放 */
+	}
+	if(file_buf != NULL)
+	{
+		MyMfree(file_buf);	/* メモリ解放 */
+	}
+	
 	return ret;
 }
 
@@ -1749,11 +1771,13 @@ int16_t APICG_DataLoad2M(uint8_t uNum, uint64_t pos_x, uint64_t pos_y, uint16_t 
 //												g_CGInfo[uNum].SIZEX,	g_CGInfo[uNum].SIZEY,	g_CGInfo[uNum].COLOR );
 #endif
 		
-		if(work_buf != NULL)
-		{
-			MyMfree(work_buf);	/* メモリ解放 */
-		}
 	}
+	
+	if(work_buf != NULL)
+	{
+		MyMfree(work_buf);	/* メモリ解放 */
+	}
+	
 	return ret;
 }
 
@@ -2449,7 +2473,7 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 	AVGYUV		*pAvgYUV;
 	
 	/* 減色する色数が512以上2以下ならFALSEを返して終了する。*/
-	if( (cEntries > 512) || (cEntries < 2) )return FALSE;	/* cEntriesは減色する色数 */
+	if( (cEntries > 512) || (cEntries < 2) )return -1;	/* cEntriesは減色する色数 */
 
 	/* パレット色数からビットカウントを取得する */
 	if 	(cEntries <= 2u)		nBpp = 1u;	/* cEntriesは減色する色数 */
@@ -2472,6 +2496,10 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 	/* YUVテーブル作成 */
 	dwSizeDimension = width * height;					/* YUVテーブルのサイズ */
 	pYUV = MyMalloc( sizeof(YUV) * dwSizeDimension );	/* YUVテーブル領域確保 */
+	if(pYUV == NULL)
+	{
+		return -1;
+	}
     
 	for(y=0; y < height; y++)
 	{
@@ -2534,6 +2562,11 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 	memset(pColorTable, 0, sizeof(RGBQUAD) * nColors);
 	
 	pAvgYUV = (AVGYUV*)MyMalloc( sizeof(AVGYUV) * nColors );
+	if(pAvgYUV == NULL)
+	{
+		return -1;
+	}
+	
 	memset(pAvgYUV, 0, sizeof(AVGYUV) * nColors);
 
 	for(y = 0; y < height; y++)
@@ -2541,11 +2574,14 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 		iYUV = y * width;
 		for(x = 0; x < width; x++)
 		{
+			int32_t num;
 			pos = iYUV + x;
-			pAvgYUV[pYUV[pos].no].y += (double)pYUV[pos].y;
-			pAvgYUV[pYUV[pos].no].u += (double)pYUV[pos].u;
-			pAvgYUV[pYUV[pos].no].v += (double)pYUV[pos].v;
-			pAvgYUV[pYUV[pos].no].cnt++;
+			num = pYUV[pos].no;
+			
+			pAvgYUV[num].y += (double)pYUV[pos].y;
+			pAvgYUV[num].u += (double)pYUV[pos].u;
+			pAvgYUV[num].v += (double)pYUV[pos].v;
+			pAvgYUV[num].cnt++;
 		}
 	}
 
@@ -2586,8 +2622,12 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 #endif
 		}
     }
-	MyMfree(pAvgYUV);
 
+   	if(pAvgYUV != NULL)
+	{
+		MyMfree(pAvgYUV);
+	}
+	
 	ubOffsetCol = ubImgNum * G_COLOR * G_COLOR_SP;
 	/* 減色する色数が256以下ならパレットDIBなので、*/
 	/* カラーテーブルをBITMAPINFO構造体のカラーテーブルにコピーします。 */
@@ -2708,7 +2748,10 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 			}
 			break;
     }
-	MyMfree(pYUV);
+	if(pYUV != NULL)
+	{
+		MyMfree(pYUV);
+	}
 	
     return ret;
 }

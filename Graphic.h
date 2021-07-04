@@ -42,7 +42,7 @@ enum
 	Flip_G
 };
 
-#define	CG_MAX		(20)	/* グラフィックパレット数に依存 */
+#define	CG_MAX		(26)	/* グラフィックパレット数に依存 */
 #define	TRANS_PAL	(0x00)
 
 #define FILE_TYPE			(0x424D)	/* "BM"値 */
@@ -57,18 +57,18 @@ enum
 
 //YUV平均値を求める際の作業テーブル
 typedef struct tagAVGYUV{
-    double  y;
-    double  u;
-    double  v;
-    int     cnt;
+	double	y;
+	double	u;
+	double	v;
+	int32_t cnt;
 }AVGYUV,*PAVGYUV;
 
 //ＲＧＢ変換で使用
 typedef struct tagYUV{
-    float   y;
-    float   u;
-    float   v;
-    int     no;
+	float	y;
+	float	u;
+	float	v;
+	int32_t no;
 } YUV,*PYUV;
 
 #pragma pack (push, 1)   //パディングを１byteに変更

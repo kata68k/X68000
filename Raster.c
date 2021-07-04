@@ -19,7 +19,11 @@
 #include "MFP.h"
 #include "MyCar.h"
 #include "Output_Text.h"
+#include "PCG.h"
+#include "Score.h"
 #include "Text.h"
+
+#define MAPCOL_MAX	(5)
 
 /* 変数 */
 static uint16_t	g_uRoadAnime;
@@ -31,6 +35,8 @@ static uint16_t	g_uRoadAnimeCount;
 static uint16_t	g_uRoadCycleCount;
 static uint16_t	g_uCounter;
 static uint8_t	g_bRoadInitFlag = TRUE;
+
+static uint16_t	g_uMapCounter;
 
 /* 構造体定義 */
 static ST_RAS_INFO	g_stRasInfo = {0};
@@ -67,6 +73,7 @@ int16_t	GetRoadCycleCount(uint16_t *);
 uint64_t	GetRoadDataAddr(void);
 int16_t	SetHorizon(uint8_t);
 static int16_t Load_Road_Background(int16_t);
+static int16_t Set_Road_Background_Col(int16_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -333,7 +340,8 @@ static uint8_t Raster_Calc_H(int16_t *x, int16_t Num, int16_t RevNum)
 		else
 		{
 			int16_t Scroll_w_clp;
-			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 511 ), -512 );
+//			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 511 ), -512 );
+			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 255 ), -256 );
 			
 			if(Num == 0)
 			{
@@ -519,6 +527,9 @@ void Road_Init(uint16_t uCourseNum)
 	{
 		Load_Course_Obj(i);		/* コース障害物読み込みの展開 */
 	}
+	
+	/* 道路のパレットデータ */
+	g_uMapCounter = 0;
 }
 
 /*===========================================================================================*/
@@ -854,10 +865,20 @@ static void Road_Pat_Main(void)
 		Set_Road_Distance();	/* 水平線から現在地までの距離 */
 		Set_Road_Object();		/* ライバル車の出現 */
 		
+		S_Add_Score_Point(speed * 10);	/* 車速で加点 */
+		
 		g_uCounter++;			/* コースデータのカウンタ更新 */
 		if(g_uCounter >= ROADDATA_MAX)
 		{
 			g_uCounter = 0u;
+			
+			/* 背景を変更 */
+			g_uMapCounter++;
+			if(g_uMapCounter >= MAPCOL_MAX)
+			{
+				g_uMapCounter = 0;
+			}
+			Set_Road_Background_Col(g_uMapCounter);
 		}
 
 		g_uRoadCycleCount++;	/* コース更新フリーランカウンタ */
@@ -984,11 +1005,13 @@ static int16_t Load_Road_Background(int16_t Num)
 			{
 				pSrcBuf = pImage;
 				x = uWidth * i;
-				y = Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN;
+//				y = Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN;
+				y = Y_MIN_DRAW +        0;
 				G_BitBlt_From_Mem( x, y, 1, pSrcBuf, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);	/* 背景(上側) */
 
 				pSrcBuf = pImage;
-				y = Y_MIN_DRAW + Y_OFFSET + Y_HORIZON_1 - uHeight + RASTER_MIN;
+//				y = Y_MIN_DRAW + Y_OFFSET + Y_HORIZON_1 - uHeight + RASTER_MIN;
+				y = Y_MIN_DRAW + Y_OFFSET;
 				G_BitBlt_From_Mem( x, y, 1, pSrcBuf, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);	/* 背景(下側) */
 
 //				G_Load_Mem( ubPatNumber, uWidth * i, Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN, 1);	/* 背景(上側) */
@@ -1008,6 +1031,83 @@ static int16_t Load_Road_Background(int16_t Num)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static int16_t Set_Road_Background_Col(int16_t Num)
+{
+	int16_t	ret = 0;
+
+	uint32_t	i, j;
+	uint16_t uRoadCol[MAPCOL_MAX][4][5] ={
+#if 1
+		{/* 0 */
+			0x9C62,0xEF76,0xEF76,0xEF7A,0xA252,
+			0x9C62,0xEF76,0x8F40,0xEF7A,0xA210,
+			0xACE6,0x8F40,0xEF76,0xACE6,0x918C,
+			0xACE6,0x8F40,0x8F40,0xACE6,0x918C
+		},
+#endif
+#if 1
+		{/* 1 */
+			0x9C62,0xEF76,0xEF76,0x9C62,0xBE4E,
+			0x9C62,0xEF76,0x8F40,0x9C62,0xBE4E,
+			0xACE6,0x8F40,0x8F40,0xACE6,0xCED2,
+			0xACE6,0x8F40,0xEF76,0xACE6,0xCED2
+		},
+#endif
+#if 1
+		{/* 2 */
+			0xAF5A,0x9DC0,0x9DC0,0xAF5A,0xDF66,
+			0xAF5A,0x9DC0,0xEF72,0xAF5A,0xDF66,
+			0xBF5E,0xEF72,0x9DC0,0xBF5E,0xCF62,
+			0xBF5E,0xEF72,0xEF72,0xBF5E,0xCF62
+		},
+#endif
+#if 1
+		{/* 3 */
+			0x739C,0x9CE6,0xA528,0xEF7A,0xAA52,
+			0x739C,0x9CE6,0xDEF6,0xEF7A,0xAA52,
+			0x6B5A,0xDEF6,0xA528,0x6B5A,0x99CE,
+			0x6B5A,0xDEF6,0xDEF6,0x6B5A,0x99CE
+		},
+#endif
+#if 1
+		{/* 4 */
+			0x8420,0x669A,0x669A,0xDEF6,0xBCD6,
+			0x8420,0x669A,0xDF7A,0xDEF6,0xBCD6,
+			0x7BDE,0xDF7A,0x669A,0x7BDE,0xCD5A,
+			0x7BDE,0xDF7A,0xDF7A,0x7BDE,0xCD5A
+		}/* end */
+#endif
+	};
+	
+	if(Num >= MAPCOL_MAX)Num = 0;
+	
+	for(i=0; i < 4; i++)
+	{
+		PCG_PAL_Change( 8,  i+1, uRoadCol[Num][i][0]);
+		PCG_PAL_Change( 9,  i+1, uRoadCol[Num][i][1]);
+		PCG_PAL_Change(10,  i+1, uRoadCol[Num][i][2]);
+		PCG_PAL_Change(11,  i+1, uRoadCol[Num][i][3]);
+		PCG_PAL_Change(12,  i+1, uRoadCol[Num][i][4]);
+	}
+	
+	for(j=0; j < 16; j++)
+	{
+		PCG_PAL_Change( j,  14, 0xE81E);
+	}
+	
+	for(j=0; j < 16; j++)
+	{
+		PCG_PAL_Change( j,  15, 0xE81E);
+	}
+	return ret;
+}
 
 #endif	/* RASTER_C */
 

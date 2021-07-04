@@ -9,6 +9,7 @@
 #include "inc/usr_macro.h"
 #include "Draw.h"
 #include "CRTC.h"
+#include "FileManager.h"
 #include "Graphic.h"
 #include "OutPut_Text.h"
 #include "PCG.h"
@@ -759,7 +760,7 @@ int16_t Text_To_Text2(uint64_t ulNum, int16_t x, int16_t y, uint8_t bLarge, uint
 	
 	MemSize = BG_WIDTH * size;
 
-	p_stTxbuf = malloc(sizeof(int16_t) + sizeof(int16_t) + MemSize);
+	p_stTxbuf = MyMalloc(sizeof(int16_t) + sizeof(int16_t) + MemSize);
 	if(p_stTxbuf == NULL)
 	{
 		return -1;

@@ -706,7 +706,14 @@ int32_t	M_Play(int16_t Key)
 #ifdef DEBUG	/* デバッグコーナー */
 	if(bDebugMode == TRUE)
 	{
-		sprintf(uMML, "@%dv15o2l4q1@k%d d+&", uDebugNum, Mdiv8(Key) );	/* OK */
+		if(Key >= 0x80)
+		{
+			sprintf(uMML, "@%dv15o2l4q1@k%d d+&", uDebugNum, Mdiv8(Key) );	/* OK */
+		}
+		else
+		{
+			sprintf(uMML, "@137v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
+		}
 	}
 	else
 #endif

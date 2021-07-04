@@ -18,4 +18,10 @@
 17= Evo10_main_2_256.pic 3 160
 18= Evo10_main_3_256.pic 3 168
 19= OverKata_T.pic 0 0
+20= BGG_Demo1_256.pic 0 0
+21= BGG_Demo2_256.pic 0 0
+22= BGG_Demo3_256.pic 0 0
+23= BGG_Demo4_256.pic 0 0
+24= BGG_Demo5_256.pic 0 0
+25= BGG_Demo6_256.pic 0 0
 

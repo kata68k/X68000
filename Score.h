@@ -14,6 +14,7 @@ typedef struct{
 extern	int16_t S_Get_ScoreInfo(ST_SCORE *);
 extern	int16_t S_Set_ScoreInfo(ST_SCORE);
 extern	int16_t S_Add_Score(void);
+extern	int16_t S_Add_Score_Point(uint64_t);
 extern	int16_t S_Reset_ScoreID(void);
 extern	int16_t S_All_Init_Score(void);
 extern	int16_t S_Init_Score(void);

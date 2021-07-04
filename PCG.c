@@ -29,6 +29,7 @@ ST_PCG *PCG_Get_Info(uint8_t);
 int16_t PCG_Set_Info(ST_PCG, uint8_t);
 int16_t PCG_Load_Data(int8_t *, uint16_t , ST_PCG , uint16_t , uint8_t );
 int16_t PCG_Load_PAL_Data(int8_t *, uint16_t, uint16_t);
+int16_t PCG_PAL_Change(uint16_t , uint16_t , uint16_t);
 /* 関数 */
 /*===========================================================================================*/
 /* 関数名	：	*/
@@ -44,26 +45,26 @@ void PCG_INIT(void)
 	uint8_t		ubOK;
 	
 	/* スプライトの初期化 */
-	SP_INIT();			/* スプライトの初期化 */
+	_iocs_sp_init();			/* スプライトの初期化 */
 	
 	/*スプライトレジスタ初期化*/
 	for( j = 0x80000000; j < 0x80000000 + 128; j++ )
 	{
-		SP_REGST(j,-1,0,0,0,0);
+		_iocs_sp_regst(j,-1,0,0,0,0);
 	}
 #if 0
 	for(uint32_t i = 0; i < 256; i++ )
 	{
-		SP_CGCLR(i);			/* スプライトクリア */
-		SP_DEFCG( i, 1,  );
+		_iocs_sp_cgclr(i);			/* スプライトクリア */
+		_iocs_sp_defcg( i, 1,  );
 	}
 #endif
 	
-	//	BGCTRLGT(1);				/* BGコントロールレジスタ読み込み */
-	BGSCRLST(0,0,0);				/* BGスクロールレジスタ設定 */
-	BGSCRLST(1,0,0);				/* BGスクロールレジスタ設定 */
-	BGTEXTCL(0,SetBGcode(0,0,0,0));	/* BGテキストクリア */
-	BGTEXTCL(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
+	//	_iocs_bgctrlgt(1);				/* BGコントロールレジスタ読み込み */
+	_iocs_bgscrlst(0,0,0);				/* BGスクロールレジスタ設定 */
+	_iocs_bgscrlst(1,0,0);				/* BGスクロールレジスタ設定 */
+	_iocs_bgtextcl(0,SetBGcode(0,0,0,0));	/* BGテキストクリア */
+	_iocs_bgtextcl(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
 	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
 
 	PCG_SP_dataload("data/sp/BG.SP");	/* スプライトのデータ読み込み */
@@ -85,7 +86,7 @@ void PCG_INIT(void)
 		g_stPCG_DATA[uPCG_num].rad			= 0;			/* 回転 */
 		g_stPCG_DATA[uPCG_num].Pat_w			= 1;			/* 横方向のパターン数 */
 		g_stPCG_DATA[uPCG_num].Pat_h			= 1;			/* 縦方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= malloc(sizeof(uint32_t));
+		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= MyMalloc(sizeof(uint32_t));
 		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl)	= SetBGcode(0, 0, 0x0C, uPCG_num);	/* パターンコードテーブル */
 		g_stPCG_DATA[uPCG_num].update		= TRUE;			/* 更新 */
 		g_stPCG_DATA[uPCG_num].validty		= TRUE;		/* 有効 */
@@ -102,7 +103,7 @@ void PCG_INIT(void)
 		g_stPCG_DATA[uPCG_num].Pat_w			= 3;	/* 横方向のパターン数 */
 		g_stPCG_DATA[uPCG_num].Pat_h			= 3;	/* 縦方向のパターン数 */
 		g_stPCG_DATA[uPCG_num].Pat_size		= 1;	/* パターンサイズ 0:8x8 1:16x16 */
-		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= malloc(sizeof(uint32_t) * g_stPCG_DATA[uPCG_num].Pat_w * g_stPCG_DATA[uPCG_num].Pat_h);
+		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= MyMalloc(sizeof(uint32_t) * g_stPCG_DATA[uPCG_num].Pat_w * g_stPCG_DATA[uPCG_num].Pat_h);
 		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 0)	= SetBGcode(0, 0, 0x09, 0x40);	/* パターンコードテーブル */
 		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 1)	= SetBGcode(0, 0, 0x09, 0x41);	/* パターンコードテーブル */
 		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 2)	= SetBGcode(0, 0, 0x09, 0x42);	/* パターンコードテーブル */
@@ -166,8 +167,8 @@ void PCG_INIT(void)
 		ST_PCG stPCG;
 		
 		/* たちまち初期化は不要 */
-		stPCG.x			= SP_X_OFFSET + (rand() % 256);	/* x座標 */
-		stPCG.y			= SP_Y_OFFSET + (rand() % 256);	/* y座標 */
+		stPCG.x			= SP_X_OFFSET + (rand() % 128);	/* x座標 */
+		stPCG.y			= SP_Y_OFFSET + (rand() % 128);	/* y座標 */
 		stPCG.dx		= rand() % 2;	/* 移動量x */
 		stPCG.dy		= rand() % 2;	/* 移動量y */
 		stPCG.Anime		= 0;	/* 現在のアニメ */
@@ -386,7 +387,7 @@ void PCG_INIT(void)
 		
 		if(ubOK == TRUE)
 		{
-			g_stPCG_DATA[uPCG_num].update	= TRUE;
+			g_stPCG_DATA[uPCG_num].update	= FALSE;
 			g_stPCG_DATA[uPCG_num].validty	= TRUE;
 		}
 		else
@@ -417,15 +418,15 @@ void PCG_VIEW(uint8_t bSW)
 {
 	if(bSW == TRUE)
 	{
-		SP_ON();			/* スプライト表示をＯＮ */
-		BGCTRLST(0, 1, 1);	/* ＢＧ０表示ＯＮ */
-		BGCTRLST(1, 1, 1);	/* ＢＧ１表示ＯＮ */
+		_iocs_sp_on();				/* スプライト表示をＯＮ */
+		_iocs_bgctrlst(0, 1, 1);	/* ＢＧ０表示ＯＮ */
+		_iocs_bgctrlst(1, 1, 1);	/* ＢＧ１表示ＯＮ */
 	}
 	else
 	{
-		SP_OFF();			/* スプライト表示をＯＦＦ */
-		BGCTRLST(0, 1, 0);	/* ＢＧ０表示ＯＦＦ */
-		BGCTRLST(1, 1, 0);	/* ＢＧ１表示ＯＦＦ */
+		_iocs_sp_off();				/* スプライト表示をＯＦＦ */
+		_iocs_bgctrlst(0, 1, 0);	/* ＢＧ０表示ＯＦＦ */
+		_iocs_bgctrlst(1, 1, 0);	/* ＢＧ１表示ＯＦＦ */
 	}
 }
 
@@ -693,8 +694,8 @@ void BG_TEXT_SET(int8_t *fname)
 			if(y < 12)		pal = 0x0E;
 			else if(x > 31)	pal = 0x0F;
 			else 			pal = 0x0E;
-			BGTEXTST(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
-			BGTEXTST(1,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+			_iocs_bgtextst(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+			_iocs_bgtextst(1,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
 		}
 	}
 
@@ -705,12 +706,12 @@ void BG_TEXT_SET(int8_t *fname)
 		for(x=0; x<i; x++)
 		{
 			if(x < 16 || x > 40){
-				BGTEXTST(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
-				BGTEXTST(1,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+				_iocs_bgtextst(0,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
+				_iocs_bgtextst(1,x,y,SetBGcode(0,0,pal,map_data[y][x]));		/* BGテキスト設定 */
 			}
 			else{	/* 垂直反転 */
-				BGTEXTST(0,x,y,SetBGcode(0,1,pal,map_data[y][x]));		/* BGテキスト設定 */
-				BGTEXTST(1,x,y,SetBGcode(0,1,pal,map_data[y][x]));		/* BGテキスト設定 */
+				_iocs_bgtextst(0,x,y,SetBGcode(0,1,pal,map_data[y][x]));		/* BGテキスト設定 */
+				_iocs_bgtextst(1,x,y,SetBGcode(0,1,pal,map_data[y][x]));		/* BGテキスト設定 */
 			}
 		}
 		
@@ -991,7 +992,7 @@ int16_t PCG_Load_Data(int8_t *sFileName, uint16_t uPCG_data_ofst,
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t PCG_Load_PAL_Data(int8_t *sFileName, uint16_t uPAL_data_ofst, uint16_t uPAL_Set_num)
+int16_t PCG_Load_PAL_Data(int8_t *sFileName, uint16_t uPAL_data_ofst, uint16_t uPAL_Set_block)
 {
 	int16_t	ret = 0;
 	
@@ -1022,11 +1023,41 @@ int16_t PCG_Load_PAL_Data(int8_t *sFileName, uint16_t uPAL_data_ofst, uint16_t u
 		/* スプライトパレットに転送 */
 		for( i = 0 ; i < 16 ; i++ )
 		{
-			_iocs_spalet( (0x80 | (i & 0x0F)), uPAL_Set_num, pal_dat[i] ) ;
+			_iocs_spalet( (0x80 | (i & 0x0F)), (uPAL_Set_block & 0x0F), pal_dat[i] ) ;
 		}
 	}
 	
 	return ret;
 }
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t PCG_PAL_Change(uint16_t uPAL_Set_mode, uint16_t uPAL_Set_block, uint16_t uCol)
+{
+	int16_t	ret = 0;
+
+#if 1
+	volatile uint16_t *PALETTE_ADR = (uint16_t *)0xE82200;
+	uint16_t *pPal;
+	
+	pPal = (uint16_t *)PALETTE_ADR + (Mmul16(uPAL_Set_block) + uPAL_Set_mode);
+	*pPal = uCol;
+#ifdef DEBUG
+//	printf("PCG_PAL_Change[0x%p]=(%d,%d)0x%d\n", pPal, uPAL_Set_mode, uPAL_Set_block, uCol);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+#else
+	/* スプライトパレットに転送 */
+	_iocs_spalet( (0x80 | (uPAL_Set_mode & 0x0F)), (uPAL_Set_block & 0x0F), uCol) ;
+#endif
+	
+	return ret;
+}
+
 #endif	/* PCG_C */
 
