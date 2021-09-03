@@ -44,8 +44,10 @@ typedef struct
 	uint8_t	bScene;	/* ÉVÅ[Éì */
 }	ST_TASK;
 
-extern	int16_t	TaskManage(void);
-extern	int16_t	GetTaskInfo(ST_TASK *);
-extern	int16_t	SetTaskInfo(uint8_t);
+extern int16_t	TaskManage_Init(void);
+extern int16_t	TaskManage(void);
+extern int16_t	GetTaskInfo(ST_TASK *);
+extern int16_t	UpdateTaskInfo(void);
+extern int16_t	SetTaskInfo(uint8_t);
 
 #endif	/* TASK_H */

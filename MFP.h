@@ -27,7 +27,6 @@ extern uint8_t SetStartTime(uint32_t);		/* 開始の時間を設定する */
 extern uint8_t GetPassTime(uint32_t, uint32_t *);	/* 経過タイマー */
 extern int16_t SetRasterIntData(void *, size_t);
 extern int16_t GetRasterIntPos(uint16_t *, uint16_t *, uint16_t *, uint16_t);
-extern int16_t vwait(int16_t);
 
 
 #endif	/* MFP_H */

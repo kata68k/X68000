@@ -51,7 +51,7 @@ int16_t	InitCourseObj(void)
 	{
 		g_stCourse_Obj[i].ubType = 0;
 		g_stCourse_Obj[i].x = 0;
-		g_stCourse_Obj[i].y = (3 * i);
+		g_stCourse_Obj[i].y = (COURSE_OBJ_H_MAX * i);
 		g_stCourse_Obj[i].z = 0;
 		g_stCourse_Obj[i].uTime = 0xFFFF;
 		g_stCourse_Obj[i].ubAlive = TRUE;
@@ -132,11 +132,6 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		ST_CRT	stCRT;
 		ST_RAS_INFO	stRasInfo;
 		ST_ROAD_INFO	stRoadInfo;
-		
-#ifdef DEBUG	/* デバッグコーナー */
-		uint8_t	bDebugMode;
-		GetDebugMode(&bDebugMode);
-#endif
 		
 		GetCRT(&stCRT, bMode);
 		GetRasterInfo(&stRasInfo);
@@ -221,7 +216,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
 			//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
 			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して16で割った(=7pat) */
-			dz = Mmin( Mmax( 7 - (Mdiv16(Mmul256(z) / (z + ROAD_ED_POINT))) , 0), 7 );
+			dz = Mmin( Mmax( 7 - (Mdiv16(Mmul256(z) / (z + ROAD_ED_POINT))) , 0), 7);
 			/* 描画 */
 			Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
 											stCRT.hide_offset_y + dy,
@@ -240,13 +235,6 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 //				z = 0;
 //				g_stCourse_Obj[bNum].ubAlive = FALSE;
 			}
-#ifdef DEBUG	/* デバッグコーナー */
-			if( bDebugMode == TRUE )
-			{
-				Draw_Pset(	stCRT.hide_offset_x + dx,
-							stCRT.hide_offset_y + ras_y, 0x03);	/* デバッグ用座標位置 */
-			}
-#endif
 		}
 		else
 		{
@@ -291,7 +279,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uint8_t ubType, uint8_t ubPos)
 {
 	int16_t	ret = 0;
-#if 1
+
 	uint16_t	*pSrcBuf = NULL;
 	uint32_t	uWidth=0, uHeight=0;
 	uint8_t		ubPos_H;
@@ -315,55 +303,6 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 		ubPos_H = POS_LEFT;
 	}
 	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_CENTER);
-#else
-	int16_t	i;
-	uint16_t	w, h;
-	uint8_t	ubType;
-	uint8_t	ubPos_H;
-	uint32_t	uWidth, uHeight, uFileSize;
-	uint32_t	uWidth_o, uHeight_o;
-	uint32_t	uW_tmp, uH_tmp;
-	uint16_t	height_sum = 0u;
-	uint16_t	height_sum_o = 0u;
-	
-	ubType = g_stCourse_Obj[0].ubType;
-	
-	Get_PicImageInfo( COURSE_OBJ_CG + ubType, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-
-	uWidth_o = uWidth;
-	uHeight_o = uHeight;
-	
-	for(i=1; i<=Size; i++)
-	{
-		/* 縮小先のサイズ */
-		height_sum_o += uHeight_o;
-		uW_tmp = uWidth_o << 3;
-		uWidth_o = Mmul_p1(uW_tmp);
-		uH_tmp = uHeight_o << 3;
-		uHeight_o = Mmul_p1(uH_tmp);
-		
-		/* 次の縮小元 */
-		height_sum += uHeight;
-		uWidth = uWidth_o;
-		uHeight = uHeight_o;
-	}
-	
-	w = uWidth;
-	h = uHeight;
-	
-	if(ubPos == TRUE)	/* 左 */
-	{
-		ubPos_H = POS_RIGHT;
-	}
-	else				/* 右 */
-	{
-		ubPos_H = POS_LEFT;
-	}
-	
-	ret = G_BitBlt(	x,		w,			y,	h,	0,
-					140,	w,	height_sum,	h,	0,
-					ubMode, ubPos_H, POS_CENTER);
-#endif
 	
 	return	ret;
 }
@@ -426,14 +365,13 @@ int16_t	Load_Course_Obj(int16_t Num)
 	uint32_t uWidth_dst, uHeight_dst;
 //	uint32_t uOffset_X = 0u;
 	uint16_t *pSrcBuf = NULL;
-#if 1
+
 	int32_t	Size;
 	uint32_t	uSize8x = 0;
 	uint16_t	*pDstBuf = NULL;
 	BITMAPFILEHEADER *pFile;
 	BITMAPINFOHEADER *pInfo;
 	
-#endif
 	if(Num >= COURSE_OBJ_TYP_MAX)return -1;
 	PatNumber = COURSE_OBJ_CG + Num;
 
@@ -446,7 +384,6 @@ int16_t	Load_Course_Obj(int16_t Num)
 //	printf("debug1(0x%p)=(%d,%d)\n", pSrcBuf, uWidth, uHeight );
 #endif
 
-#if 1
 	/* PICヘッダにメモリ割り当て */
 	g_stPicCourse_ObjImage[Num][i].pBMf = (BITMAPFILEHEADER*)MyMalloc( FILE_HEADER_SIZE );
 	g_stPicCourse_ObjImage[Num][i].pBMi = (BITMAPINFOHEADER*)MyMalloc( INFO_HEADER_SIZE );
@@ -459,7 +396,11 @@ int16_t	Load_Course_Obj(int16_t Num)
 	Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
 	pFile->bfSize = Size;		/* メモリサイズ設定 */
 	/* メモリ確保 */
-	g_stPicCourse_ObjImage[Num][i].pImageData = NULL;							/* ポインタ初期化 */
+//	g_stPicCourse_ObjImage[Num][i].pImageData = NULL;
+	if(g_stPicCourse_ObjImage[Num][i].pImageData != NULL)	/* Nullチェック */
+	{
+		MyMfree(g_stPicCourse_ObjImage[Num][i].pImageData);	/* メモリ解放 */
+	}
 	g_stPicCourse_ObjImage[Num][i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
 	memset(g_stPicCourse_ObjImage[Num][i].pImageData, 0, Size);					/* メモリクリア */
 //	memcpy(g_stPicCourse_ObjImage[Num][i].pImageData, pSrcBuf, Size);			/* マスターからヤシの木車用のバッファにコピー */
@@ -469,8 +410,6 @@ int16_t	Load_Course_Obj(int16_t Num)
 //	ret = G_BitBlt_From_Mem( 0, 0, 0, g_stPicCourse_ObjImage[Num][0].pImageData, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);
 //	KeyHitESC();	/* デバッグ用 */
 #endif
-	
-#endif	
 
 	if(ret >= 0)
 	{
@@ -482,16 +421,12 @@ int16_t	Load_Course_Obj(int16_t Num)
 
 		for(i=1; i<COURSE_OBJ_PAT_MAX; i++)
 		{
-#if 1
 			/* PICヘッダにメモリ割り当て */
 			g_stPicCourse_ObjImage[Num][i].pBMf = (BITMAPFILEHEADER*)MyMalloc( FILE_HEADER_SIZE );
 			g_stPicCourse_ObjImage[Num][i].pBMi = (BITMAPINFOHEADER*)MyMalloc( INFO_HEADER_SIZE );
 			pFile = g_stPicCourse_ObjImage[Num][i].pBMf;
 			pInfo = g_stPicCourse_ObjImage[Num][i].pBMi;
-#else
-			/* 縮小先のサイズ */
-			height_sum_o += uHeight_o;
-#endif
+
 			/* 縮小先のサイズ(W) */
 			uW_tmp = uWidth_dst << 3;
 			uWidth_dst = Mmul_p1(uW_tmp);
@@ -501,7 +436,7 @@ int16_t	Load_Course_Obj(int16_t Num)
 			uH_tmp = uHeight_dst << 3;
 			uHeight_dst = Mmul_p1(uH_tmp);
 			uHeight_dst = Mmax(uHeight_dst, 1);
-#if 1
+
 			pInfo->biWidth = uWidth_dst;
 			pInfo->biHeight = uHeight_dst;
 			/* メモリのサイズ演算 */
@@ -509,7 +444,11 @@ int16_t	Load_Course_Obj(int16_t Num)
 			Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
 			pFile->bfSize = Size;		/* メモリサイズ設定 */
 			/* メモリ確保 */
-			g_stPicCourse_ObjImage[Num][i].pImageData = NULL;							/* ポインタ初期化 */
+//			g_stPicCourse_ObjImage[Num][i].pImageData = NULL;
+			if(g_stPicCourse_ObjImage[Num][i].pImageData != NULL)	/* Nullチェック */
+			{
+				MyMfree(g_stPicCourse_ObjImage[Num][i].pImageData);	/* メモリ解放 */
+			}
 			g_stPicCourse_ObjImage[Num][i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
 			memset(g_stPicCourse_ObjImage[Num][i].pImageData, 0, Size);				/* メモリクリア */
 #ifdef DEBUG
@@ -529,16 +468,6 @@ int16_t	Load_Course_Obj(int16_t Num)
 			/* 縮小コピー */
 			G_Stretch_Pict_To_Mem(	pDstBuf,	uWidth_dst,	uHeight_dst,
 									pSrcBuf,	uWidth,		uHeight);
-#else
-			/* 描画 */
-			G_Stretch_Pict(
-							0 + uOffset_X,	uWidth_o + uOffset_X,
-							height_sum_o,	uHeight_o,
-							0,
-							0 + uOffset_X,	uWidth + uOffset_X,
-							height_sum,		uHeight,
-							0);
-#endif
 			/* 次の縮小元 */
 			height_sum += uHeight;
 #ifdef DEBUG
@@ -574,6 +503,8 @@ int16_t	Load_Course_Data(uint8_t bCourseNum)
 	sprintf(str, "data/map/course%02d.csv", bCourseNum);
 	File_Load_Course_CSV(str, p_stRoadData, &x, &y);
 
+	ret = y;
+	
 	return ret;
 }
 
@@ -629,14 +560,7 @@ int16_t	Move_Course_BG(uint8_t bMode)
 	{
 		Move = Move << 2;
 	}
-	if(bMode == 1)
-	{
-		G_Scroll(BG_x, Y_MIN_DRAW +        0 + Move, 1);
-	}
-	else
-	{
-		G_Scroll(BG_x, Y_MIN_DRAW + Y_OFFSET + Move, 1);
-	}
+	G_Scroll(BG_x, Y_MIN_DRAW +        0 + Move, 1);	/* 背景スクロール */
 	
 	return ret;
 }

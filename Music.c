@@ -40,12 +40,12 @@
 #define MC_DRV_NUM	(0x00600000)
 
 /* グローバル変数 */
-int8_t	music_list[MUSIC_MAX][256]	=	{0};
+int8_t		music_list[MUSIC_MAX][256]	=	{0};
 uint32_t	m_list_max	=	0u;
 
 #if		ZM_V2 == 1
 #elif	ZM_V3 == 1
-	static int8_t	music_dat[MUSIC_MAX][4096]	=	{0};
+	int8_t	*music_dat[MUSIC_MAX];
 	static int16_t	music_dat_size[MUSIC_MAX]	=	{0};
 #elif	MC_DRV == 1
 #else
@@ -54,9 +54,9 @@ uint32_t	m_list_max	=	0u;
 
 #if		ZM_V2 == 1
 #elif	ZM_V3 == 1
-int8_t		se_list[SOUND_MAX][256]	=	{0};
-uint32_t	s_list_max	=	0u;
-	static int8_t	se_dat[SOUND_MAX][4096]	=	{0};
+	int8_t		se_list[SOUND_MAX][256]	=	{0};
+	uint32_t	s_list_max	=	0u;
+	int8_t		*se_dat[SOUND_MAX];
 	static int16_t	se_dat_size[SOUND_MAX]	=	{0};
 	static int32_t	se_dat_addr[SOUND_MAX]	=	{0};
 #elif	MC_DRV == 1
@@ -64,10 +64,9 @@ uint32_t	s_list_max	=	0u;
 	#error "No Music Lib"
 #endif
 
-int8_t	adpcm_list[ADPCM_MAX][256]	=	{0};
+int8_t		adpcm_list[ADPCM_MAX][256]	=	{0};
 uint32_t	p_list_max	=	0u;
-
-static int8_t	adpcm_dat[ADPCM_MAX][32768]	=	{0};
+int8_t		*adpcm_dat[ADPCM_MAX];
 static int32_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
 
 uint8_t	SE_Data[] = {	/* 構造体にした方がよい？ */
@@ -226,8 +225,13 @@ void Init_Music(void)
 #elif	ZM_V3 == 1
 	for(i = 0; i < m_list_max; i++)
 	{
+		int32_t	FileSize;
+		
+		GetFileLength(music_list[i], &FileSize);
+		music_dat[i] = (int8_t*)MyMalloc(FileSize);
+		memset(music_dat[i], 0, FileSize);
 		/* メモリに登録 */
-		music_dat_size[i] = File_Load(music_list[i], music_dat[i], sizeof(uint8_t), 0);
+		music_dat_size[i] = File_Load(music_list[i], music_dat[i], sizeof(int8_t), 0);
 		printf("Music File %2d = %s = size(%d[byte])\n", i, music_list[i], music_dat_size[i]);
 	}
 #elif	MC_DRV == 1
@@ -242,8 +246,13 @@ void Init_Music(void)
 #elif	ZM_V3 == 1
 	for(i = 0; i < s_list_max; i++)
 	{
+		int32_t	FileSize;
+		
+		GetFileLength(se_list[i], &FileSize);
+		se_dat[i] = (int8_t*)MyMalloc(FileSize);
+		memset(se_dat[i], 0, FileSize);
 		/* メモリに登録 */
-		se_dat_size[i] = File_Load(se_list[i], se_dat[i], sizeof(uint8_t), 0);
+		se_dat_size[i] = File_Load(se_list[i], se_dat[i], sizeof(int8_t), 0);
 		se_dat_addr[i] = Get_ZMD_Trak_Head(se_dat[i], se_dat_size[i]);
 		printf("Sound Effect File %2d = %s = size(%d[byte](Head[0x%x]))\n", i, se_list[i], se_dat_size[i], se_dat_addr[i]);
 	}
@@ -269,9 +278,14 @@ void Init_Music(void)
 	for(i = 0; i < p_list_max; i++)
 	{
 #if 1
+		int32_t	FileSize;
+		
+		GetFileLength(adpcm_list[i], &FileSize);
+		adpcm_dat[i] = (int8_t*)MyMalloc(FileSize);
+		memset(adpcm_dat[i], 0, FileSize);
 		/* メモリに登録 */
-	 	adpcm_dat_size[i] = (int32_t)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(uint8_t), 0);
-		printf("ADPCM File %2d = %s = size(%d[byte])\n", i, adpcm_list[i], adpcm_dat_size[i]);
+	 	adpcm_dat_size[i] = (int32_t)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(int8_t), FileSize);
+//		printf("ADPCM File %2d = %s = size(%d[byte]=%d)\n", i, adpcm_list[i], adpcm_dat_size[i], FileSize);
 #else
 	#if		ZM_V3 == 1
 		/* ADPCM登録 */
@@ -499,7 +513,7 @@ int32_t ADPCM_Play(uint8_t bPlayNum)
 	if(bPlayNum > p_list_max)return ret;
 
 	/* 色々試したけどIOCSライブラリの方を使う */
-	_iocs_adpcmout(adpcm_dat[bPlayNum], 0x403, adpcm_dat_size[bPlayNum]);	/* 再生 */
+	_iocs_adpcmout(adpcm_dat[bPlayNum], Mmul256(4) + 3, adpcm_dat_size[bPlayNum]);	/* 再生 */
 #if 0
 	
 #ifdef	ZM_V2
@@ -706,7 +720,7 @@ int32_t	M_Play(int16_t Key)
 #ifdef DEBUG	/* デバッグコーナー */
 	if(bDebugMode == TRUE)
 	{
-		if(Key >= 0x80)
+		if(Key > 0x80)
 		{
 			sprintf(uMML, "@%dv15o2l4q1@k%d d+&", uDebugNum, Mdiv8(Key) );	/* OK */
 		}

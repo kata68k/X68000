@@ -5,116 +5,167 @@
 #include "Task.h"
 #include "MFP.h"
 
+/* グローバル変数 */
 ST_TASK	g_stTask = {0}; 
 
+/* スタティック変数 */
+static uint32_t	un8ms_time		= 0;
+static uint32_t	un16ms_time		= 0;
+static uint32_t	un32ms_time		= 0;
+static uint32_t	un96ms_time		= 0;
+static uint32_t	un496ms_time	= 0;
+	
+/* 関数のプロトタイプ宣言 */
+int16_t	TaskManage_Init(void);
 int16_t	TaskManage(void);
 int16_t	GetTaskInfo(ST_TASK *);
+int16_t	UpdateTaskInfo(void);
 int16_t	SetTaskInfo(uint8_t);
 
+/* 関数 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	TaskManage_Init(void)
+{
+	int16_t ret=0;
+	uint32_t	time;
+	
+	GetStartTime(&time);	/* 開始時刻を取得 */
+	
+	un8ms_time		= time + 0;
+	un16ms_time		= time + 1;
+	un32ms_time		= time + 2;
+	un96ms_time		= time + 3;
+	un496ms_time	= time + 4;
+	
+	g_stTask.b8ms	=	TRUE;
+	g_stTask.b16ms	=	TRUE;
+	g_stTask.b32ms	=	TRUE;
+	g_stTask.b96ms	=	TRUE;
+	g_stTask.b496ms	=	TRUE;
+
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	TaskManage(void)
 {
 	int16_t ret=0;
 	
-	static int8_t	bFirstTime		= TRUE;
-	static uint32_t	un8ms_time		= 0;
-	static uint32_t	un16ms_time		= 0;
-	static uint32_t	un32ms_time		= 0;
-	static uint32_t	un96ms_time		= 0;
-	static uint32_t	un496ms_time	= 0;
 	uint32_t	time;
-	uint8_t	b8ms_time;
-	uint8_t	b16ms_time;
-	uint8_t	b32ms_time;
-	uint8_t	b96ms_time;
-	uint8_t	b496ms_time;
 
 	GetStartTime(&time);	/* 開始時刻を取得 */
 	
-	if( (time - un8ms_time) > 8)	/* 8ms周期 */
+	if( ((time - un8ms_time) >= 8) && (g_stTask.b8ms == FALSE) )	/* 8ms周期 */
 	{
 		un8ms_time = time;
-		b8ms_time = TRUE;
-	}
-	else
-	{
-		b8ms_time = FALSE;
+		g_stTask.b8ms = TRUE;
 	}
 	
-	if( ((time+2) - un16ms_time) > 16)	/* 16ms周期 */
+	if( ((time - un16ms_time) >= 16) && (g_stTask.b16ms == FALSE) )	/* 16ms周期 */
 	{
-		un16ms_time = (time+2);
-		b16ms_time = TRUE;
-	}
-	else
-	{
-		b16ms_time = FALSE;
+		un16ms_time = time;
+		g_stTask.b16ms = TRUE;
 	}
 
-	if( ((time+4) - un32ms_time) > 32)	/* 32ms周期 */
+	if( ((time - un32ms_time) >= 32) && (g_stTask.b32ms == FALSE) )	/* 32ms周期 */
 	{
-		un32ms_time = (time+4);
-		b32ms_time = TRUE;
-	}
-	else
-	{
-		b32ms_time = FALSE;
+		un32ms_time = time;
+		g_stTask.b32ms = TRUE;
 	}
 
-	if( ((time+6) - un96ms_time) > 96)	/* 96ms周期 */
+	if( ((time - un96ms_time) >= 96) && (g_stTask.b96ms == FALSE) )	/* 96ms周期 */
 	{
-		un96ms_time = (time+6);
-		b96ms_time = TRUE;
-	}
-	else
-	{
-		b96ms_time = FALSE;
+		un96ms_time = time;
+		g_stTask.b96ms = TRUE;
 	}
 	
-	if( ((time+8)- un496ms_time) > 496)	/* 496ms周期 */
+	if( ((time - un496ms_time) >= 496) && (g_stTask.b496ms == FALSE) )	/* 496ms周期 */
 	{
-		un496ms_time = (time+8);
-		b496ms_time = TRUE;
-	}
-	else
-	{
-		b496ms_time = FALSE;
-	}
-
-	if(bFirstTime == TRUE)
-	{
-		bFirstTime = FALSE;
-		g_stTask.b8ms	=	TRUE;
-		g_stTask.b16ms	=	TRUE;
-		g_stTask.b32ms	=	TRUE;
-		g_stTask.b96ms	=	TRUE;
-		g_stTask.b496ms	=	TRUE;
-	}
-	else
-	{
-		g_stTask.b8ms	=	b8ms_time;
-		g_stTask.b16ms	=	b16ms_time;
-		g_stTask.b32ms	=	b32ms_time;
-		g_stTask.b96ms	=	b96ms_time;
-		g_stTask.b496ms	=	b496ms_time;
+		un496ms_time = time;
+		g_stTask.b496ms = TRUE;
 	}
 
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	GetTaskInfo(ST_TASK *pst_Task)
 {
 	int16_t ret=0;
 
-	pst_Task->b8ms		=	g_stTask.b8ms;
-	pst_Task->b16ms		=	g_stTask.b16ms;
-	pst_Task->b32ms		=	g_stTask.b32ms;
-	pst_Task->b96ms		=	g_stTask.b96ms;
-	pst_Task->b496ms	=	g_stTask.b496ms;
-	pst_Task->bScene	=	g_stTask.bScene;
+	*pst_Task = g_stTask;
 	
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	UpdateTaskInfo(void)
+{
+	int16_t ret=0;
+
+	if(g_stTask.b8ms == TRUE)
+	{
+		g_stTask.b8ms	=	FALSE;
+		ret = 1;
+	}
+
+	if(g_stTask.b16ms == TRUE)
+	{
+		g_stTask.b16ms	=	FALSE;
+		ret = 1;
+	}
+
+	if(g_stTask.b32ms == TRUE)
+	{
+		g_stTask.b32ms	=	FALSE;
+		ret = 1;
+	}
+	
+	if(g_stTask.b96ms == TRUE)
+	{
+		g_stTask.b96ms	=	FALSE;
+		ret = 1;
+	}
+	
+	if(g_stTask.b496ms == TRUE)
+	{
+		g_stTask.b496ms	=	FALSE;
+		ret = 1;
+	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int16_t	SetTaskInfo(uint8_t bScene)
 {
 	int16_t ret=0;

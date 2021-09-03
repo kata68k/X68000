@@ -41,6 +41,7 @@ extern	int16_t	GetMyCar(ST_CARDATA *stDat);
 extern	int16_t	SetMyCar(ST_CARDATA stDat);
 extern	int16_t	MyCarInfo_Init(void);
 extern	int16_t	MyCarInfo_Update(int16_t);
+extern	int16_t	MyCarInfo_Update16ms(int16_t);
 extern	int16_t	MyCar_Interior(uint8_t);
 extern	int16_t	MyCar_CourseOut(void);
 extern	int16_t	GetMyCarSpeed(int16_t *);

@@ -26,19 +26,20 @@
 #define MAPCOL_MAX	(5)
 
 /* •Ï” */
-static uint16_t	g_uRoadAnime;
-static uint16_t	g_uRoadAnime_old;
-static uint16_t	g_uRoadAnimeBase;
-static uint16_t	g_uRoadAnimeBase_old;
-static uint16_t	g_uRoadAnimeCount;
+static uint16_t	g_uRoadAnime = 0u;
+static uint16_t	g_uRoadAnime_old = 0u;
+static uint16_t	g_uRoadAnimeBase = 0u;
+static uint16_t	g_uRoadAnimeBase_old = 0u;
+static uint16_t	g_uRoadAnimeCount = 0u;
 
-static uint16_t	g_uRoadCycleCount;
-static uint16_t	g_uCounter;
+static uint16_t	g_uRoadCycleCount = 0u;
+static uint16_t	g_uCounter = 0u;
 static uint8_t	g_bRoadInitFlag = TRUE;
 
-static uint16_t	g_uMapCounter;
+static uint16_t	g_uMapCounter = 0u;
 
 /* \‘¢‘Ì’è‹` */
+ST_RASTER_INT g_stRasterInt[RASTER_MAX] = {0};
 static ST_RAS_INFO	g_stRasInfo = {0};
 
 static ST_ROAD_INFO	g_stRoadInfo = {0};
@@ -57,6 +58,7 @@ int16_t	GetRasterPos(uint16_t *, uint16_t *, uint16_t);	/* ƒ‰ƒXƒ^[ˆ—Œ‹‰Ê‚ğæ“
 int16_t	GetRoadInfo(ST_ROAD_INFO *);
 int16_t	SetRoadInfo(ST_ROAD_INFO);
 void Road_Init(uint16_t);
+void Road_BG_Init(uint16_t);
 static void Get_Road_Pat(uint16_t *, uint8_t);
 static void Set_Road_Pat_offset(int16_t);
 static int16_t Road_Pat_Update(uint16_t);
@@ -74,6 +76,7 @@ uint64_t	GetRoadDataAddr(void);
 int16_t	SetHorizon(uint8_t);
 static int16_t Load_Road_Background(int16_t);
 static int16_t Set_Road_Background_Col(int16_t);
+int16_t Road_Map_Draw(uint8_t);
 
 /* ŠÖ” */
 /*===========================================================================================*/
@@ -136,8 +139,12 @@ void Raster_Main(uint8_t bMode)
 	uint16_t	uRas_y;
 	uint16_t	uRas_st, uRas_mid, uRas_ed, uRas_size;
 
+	int16_t	Steer = 0;
+	int16_t	Scroll_ofst = 0;
+
 	ST_CRT			stCRT = {0};
 	ST_RASTER_INT	stRasterInt[RASTER_MAX] = {0};
+	ST_CARDATA 		stMyCar = {0};
 
 #ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
 	uint8_t	bY_area;
@@ -146,7 +153,6 @@ void Raster_Main(uint8_t bMode)
 	GetDebugMode(&bDebugMode);
 	GetDebugNum(&uDebugNum);
 #endif
-	
 	/* ƒ‚[ƒhØ‘Ö‚É‚æ‚éİ’è’l‚Ì•ÏX */
 	GetCRT(&stCRT, bMode);
 	view_offset_x	= stCRT.view_offset_x;
@@ -155,6 +161,10 @@ void Raster_Main(uint8_t bMode)
 	hide_offset_y	= stCRT.hide_offset_y;
 	BG_offset_x		= stCRT.BG_offset_x;
 	BG_offset_y		= stCRT.BG_offset_y;
+
+	/* ©Ô‚Ìî•ñ‚ğæ“¾ */
+	GetMyCar(&stMyCar);
+	Steer = Mdiv16(stMyCar.Steering);	/* ƒXƒeƒAƒŠƒ“ƒOƒ|ƒWƒVƒ‡ƒ“ */
 
 	/* ƒ[ƒhƒpƒ^[ƒ“ */
 	Road_Pat_Main();
@@ -187,12 +197,13 @@ void Raster_Main(uint8_t bMode)
 	g_stRasInfo.size	= uRas_size;				/* ƒ‰ƒXƒ^[‚Ì”ÍˆÍ */
 	SetRasterInfo(g_stRasInfo);
 	
-#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
+//#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
+#if 0
 	if(bDebugMode == TRUE)	/* ƒfƒoƒbƒOƒ‚[ƒh */
 	{
 		int16_t	col;
 		
-		APAGE(0);				/* ƒOƒ‰ƒtƒBƒbƒN‚Ì‘‚«‚İ */
+		_iocs_apage(0);				/* ƒOƒ‰ƒtƒBƒbƒN‚Ì‘‚«‚İ(‘Sƒy[ƒW) */
 
 		/* ƒ‰ƒXƒ^[ŠJnˆÊ’u */
 		col = 0x3;
@@ -234,23 +245,69 @@ void Raster_Main(uint8_t bMode)
 		
 		uRev_uRas_y = uRas_size - uRas_y;	/* uRas_size -> 0 */
 		
+		
 		/* XÀ•W */
-		Raster_Calc_H( &ras_cal_x, uRas_y, uRev_uRas_y );
-
-		/* YÀ•W */
-		bY_area = Raster_Calc_V( &ras_cal_y, uRas_y, uRev_uRas_y );
-
-		/* ƒ[ƒhƒpƒ^[ƒ“ */
+#if 1
 		if(uRas_y == 0)
 		{
+			Scroll_ofst	= 0;
+			ras_cal_x = 0;
 			bRoad_pat = TRUE;
 		}
+
+		if(Steer == 0)
+		{
+			Scroll_ofst	= 0;
+		}
+		else
+		{
+			/* ƒXƒeƒAƒŠƒ“ƒOƒ|ƒWƒVƒ‡ƒ“ */
+			Scroll_ofst	= APL_sDiv( Steer * uRas_y, g_stRasInfo.size );	/* Ô‘Ì‚ÌˆÚ“®(‚‚¢ˆÊ’u‚Ù‚ÇˆÚ“®—Ê‚ª­‚È‚¢) */
+		}
+		/* ƒXƒNƒ[ƒ‹‚·‚é•~ŒvZ‚·‚é‚‚³€ƒ‰ƒXƒ^[ƒXƒNƒ[ƒ‹‚³‚¹‚é‚‚³ */
+		if(g_stRoadInfo.angle == 0)
+		{
+			ras_cal_x	= 0;
+		}
+		else
+		{
+			int16_t Scroll_w_clp;
+			
+			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 255 ), -256 );
+			
+			ras_cal_x	= APL_sDiv( Scroll_w_clp, uRas_y);	/* ƒJ[ƒu(’á‚¢ˆÊ’u‚Ù‚ÇˆÚ“®—Ê‚ª­‚È‚¢) */
+		}
+		ras_cal_x = (ras_cal_x + Scroll_ofst) & 0x1FFu;		/* 9bitƒ}ƒXƒN *//* Max224‚®‚ç‚¢ */
+#else
+		Raster_Calc_H( &ras_cal_x, uRas_y, uRev_uRas_y );
+#endif
+
+		/* YÀ•W */
+		if(	(g_stRasInfo.mid == g_stRoadInfo.Horizon)	/* …•½ü‚ÌˆÊ’u‚ª’Êí‚æ‚è‰º‘¤‚Ìˆ— */
+			|| (g_CpuTime < 300) )						/* ’á‘¬MPU */
+		{
+			ras_cal_y = ROAD_ST_POINT - g_stRasInfo.mid;	/* •W€ˆÊ’u */
+#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
+			bY_area = 0xFF;
+#endif
+		}
+		else
+		{
+#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
+			bY_area = Raster_Calc_V( &ras_cal_y, uRas_y, uRev_uRas_y );
+#else
+			Raster_Calc_V( &ras_cal_y, uRas_y, uRev_uRas_y );
+#endif
+		}
+
+		/* ƒ[ƒhƒpƒ^[ƒ“ */
 		Get_Road_Pat(&ras_pat, bRoad_pat);	/* ƒ[ƒh‚Ìƒpƒ^[ƒ“î•ñ‚ğæ“¾ */
 		Set_Road_Pat_offset(uRas_y);		/* ƒ[ƒhƒpƒ^[ƒ“è‡’l‚ÌXV */
 
 		ras_offset = uRas_st + uRas_y;
 
-#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
+//#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
+#if 0
 		if(bDebugMode == TRUE)	/* ƒfƒoƒbƒOƒ‚[ƒh */
 		{
 			int16_t	col;
@@ -282,19 +339,25 @@ void Raster_Main(uint8_t bMode)
 		stRasterInt[ras_offset].y = (uint16_t)ras_cal_y;
 		stRasterInt[ras_offset].pat = ras_pat;
 
+		g_stRasterInt[ras_offset] = stRasterInt[ras_offset];
+
 		stRasterInt[ras_offset+1].x = (uint16_t)ras_cal_x;	/* Œ„ŠÔ‚Ì•¡» */
 		stRasterInt[ras_offset+1].y = (uint16_t)ras_cal_y;	/* Œ„ŠÔ‚Ì•¡» */
 		stRasterInt[ras_offset+1].pat = ras_pat;		/* Œ„ŠÔ‚Ì•¡» */
+		
+		g_stRasterInt[ras_offset+1] = stRasterInt[ras_offset+1];
 	}
-	
-	stRasterInt[0].y = g_stRasInfo.st;		/* Š„‚è‚İˆÊ’u‚Ìİ’è */
+	stRasterInt[0].y = g_stRasInfo.st;					/* Š„‚è‚İˆÊ’u‚Ìİ’è */
+	g_stRasterInt[0] = stRasterInt[0];
 	/* BG‚ÌYÀ•W‚ğ‘I‚Ôƒ‰ƒXƒ^‚ÌŠ„‚è‚İˆÊ’u‚É‘Î‚µ‚Ä•\¦‚µ‚½‚¢BG‚ÌYÀ•W‚©‚ç */
 	/* ‰‰ñ‚Í0or512‚Å‚È‚¢‚Æ‹ó‚É“¹‚ªo‚Ä‚­‚é */	/* ‚Õ‚Ì‚Ğ‚Æ ‚³‚ñ‚ÌƒAƒhƒoƒCƒX‰ÓŠ */
 	stRasterInt[1].y = ROAD_ST_POINT - g_stRasInfo.st;	/* Š„‚è‚İ‚ª‚©‚©‚é‚Ü‚Å‚Ì•\¦ˆÊ’u(ƒ‰ƒXƒ^Š„‚è‚İˆÊ’u‚É‚æ‚é‚¸‚ê‚Ìl—¶‚Í•s—v)	*/
+	g_stRasterInt[1] = stRasterInt[1];
 	
-	SetRasterIntData(stRasterInt, sizeof(ST_RASTER_INT) * RASTER_MAX);
+	SetRasterIntData(NULL, 0);	/* ƒ‰ƒXƒ^[Š„‚è‚İƒf[ƒ^İ’èŠ®—¹ */
 }
 
+#if 0
 /*===========================================================================================*/
 /* ŠÖ”–¼	F	*/
 /* ˆø”		F	*/
@@ -312,25 +375,7 @@ static uint8_t Raster_Calc_H(int16_t *x, int16_t Num, int16_t RevNum)
 	}
 	/* XÀ•W */
 	{
-		int16_t	Steer = 0;
 		int16_t	Scroll_w = 0;
-		int16_t	Scroll_ofst = 0;
-		int16_t	Point_x = 0;
-		ST_CARDATA stMyCar = {0};
-
-		GetMyCar(&stMyCar);			/* ©Ô‚Ìî•ñ‚ğæ“¾ */
-
-		Steer = (stMyCar.Steering >> 4);
-		
-		/* ƒXƒNƒ[ƒ‹‚·‚é•~ŒvZ‚·‚é‚‚³€ƒ‰ƒXƒ^[ƒXƒNƒ[ƒ‹‚³‚¹‚é‚‚³ */
-		if((Steer == 0) || (Num == 0))
-		{
-			Scroll_ofst	= 0;
-		}
-		else
-		{
-			Scroll_ofst	= APL_sDiv( Steer * Num, g_stRasInfo.size );	/* Ô‘Ì‚ÌˆÚ“®(‚‚¢ˆÊ’u‚Ù‚ÇˆÚ“®—Ê‚ª­‚È‚¢) */
-		}
 		
 		/* ƒXƒNƒ[ƒ‹‚·‚é•~ŒvZ‚·‚é‚‚³€ƒ‰ƒXƒ^[ƒXƒNƒ[ƒ‹‚³‚¹‚é‚‚³ */
 		if(g_stRoadInfo.angle == 0)
@@ -340,7 +385,7 @@ static uint8_t Raster_Calc_H(int16_t *x, int16_t Num, int16_t RevNum)
 		else
 		{
 			int16_t Scroll_w_clp;
-//			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 511 ), -512 );
+			
 			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 255 ), -256 );
 			
 			if(Num == 0)
@@ -352,13 +397,12 @@ static uint8_t Raster_Calc_H(int16_t *x, int16_t Num, int16_t RevNum)
 				Scroll_w	= APL_sDiv( Scroll_w_clp, Num);	/* ƒJ[ƒu(’á‚¢ˆÊ’u‚Ù‚ÇˆÚ“®—Ê‚ª­‚È‚¢) */
 			}
 		}
-		Point_x		= Scroll_ofst + Scroll_w;	/* ƒ‰ƒXƒ^[ƒXƒNƒ[ƒ‹ˆÊ’u */
-
-		*x = Point_x & 0x1FFu;	/* 9bitƒ}ƒXƒN *//* Max224‚®‚ç‚¢ */
+		*x = Scroll_w;	/* ƒ‰ƒXƒ^[ƒXƒNƒ[ƒ‹ˆÊ’u */
 	}
 
 	return bRet;
 }
+#endif
 
 /*===========================================================================================*/
 /* ŠÖ”–¼	F	*/
@@ -371,13 +415,6 @@ static uint8_t Raster_Calc_V(int16_t *y, int16_t Num, int16_t RevNum)
 {
 	uint8_t bRet = 0;
 	int16_t RoadPoint_y = 0;
-
-#ifdef DEBUG	/* ƒfƒoƒbƒOƒR[ƒi[ */
-	uint8_t	bDebugMode;
-	uint16_t	uDebugNum;
-	GetDebugMode(&bDebugMode);
-	GetDebugNum(&uDebugNum);
-#endif
 
 	if(Num == 0u)	
 	{
@@ -394,13 +431,7 @@ static uint8_t Raster_Calc_V(int16_t *y, int16_t Num, int16_t RevNum)
 		MaxClip = ROAD_ED_POINT - (uRasStart + Num);
 		Point_y_def = ROAD_ST_POINT - g_stRasInfo.mid;	/* •W€ˆÊ’u */
 		
-		if(g_stRasInfo.mid == g_stRoadInfo.Horizon)	/* …•½ü‚ÌˆÊ’u‚ª’Êí‚æ‚è‰º‘¤‚Ìˆ— */
-		{
-			RoadPoint_y = Point_y_def;
-
-			bRet = 0xFF;
-		}
-		else if( g_stRasInfo.mid > g_stRoadInfo.Horizon )	/* …•½ü‚ÌˆÊ’u‚ª’Êí‚æ‚èã‘¤‚Ìˆ— */
+		if( g_stRasInfo.mid > g_stRoadInfo.Horizon )	/* …•½ü‚ÌˆÊ’u‚ª’Êí‚æ‚èã‘¤‚Ìˆ— */
 		{
 			int16_t	Road_strch = 0;
 			
@@ -512,14 +543,30 @@ void Road_Init(uint16_t uCourseNum)
 	}
 	
 	/* ƒR[ƒXƒf[ƒ^‚Ì“Ç‚İ‚İ */
-	Load_Course_Data(uCourseNum);
+	g_stRoadInfo.Courselength = Load_Course_Data(uCourseNum);	/* ƒR[ƒX‚Ì‘S’· */
 
 	Set_Road_Angle();		/* ƒR[ƒX‚Ì‹È‚ª‚è‹ï‡ */
 	Set_Road_Height();		/* ƒR[ƒX‚Ì•W‚ */
 	Set_Road_Slope();		/* ƒR[ƒX‚ÌŒ»İ’n‚©‚ç•W‚‚Ü‚Å‚ÌŒX‚« */
-	Set_Road_Distance();	/* …•½ü‚©‚’Œ»İ’n‚Ü‚Å‚Ì‹——£ */
+	Set_Road_Distance();	/* …•½ü‚©‚çŒ»İ’n‚Ü‚Å‚Ì‹——£ */
 	Set_Road_Object();		/* ƒ‰ƒCƒoƒ‹Ô‚ÌoŒ» */
 	
+	/* …•½ü‚Ìİ’è */
+	SetHorizon(1);
+}
+/*===========================================================================================*/
+/* ŠÖ”–¼	F	*/
+/* ˆø”		F	*/
+/* –ß‚è’l	F	*/
+/*-------------------------------------------------------------------------------------------*/
+/* ‹@”\		F	*/
+/*===========================================================================================*/
+void Road_BG_Init(uint16_t uCourseNum)
+{
+	uint32_t	i;
+	
+	if(uCourseNum == 0u)uCourseNum = 1u;
+
 	Load_Road_Background(0);	/* ƒR[ƒX”wŒi‚Ì“WŠJ */
 	
 	/* ƒR[ƒXáŠQ•¨‚Ì“WŠJ */
@@ -543,9 +590,9 @@ static void Get_Road_Pat(uint16_t *p_uPat, uint8_t bFlag)
 {
 #if 1
 	uint16_t	uBG_pat[4][4] = {288,   0,  96, 192, 
-		 				 192, 288,   0,  96, 
-		 				  96, 192, 288,   0, 
-		 				   0,  96, 192, 288} ;
+		 						 192, 288,   0,  96, 
+		 						  96, 192, 288,   0, 
+		 						   0,  96, 192, 288} ;
 	if(bFlag == TRUE)
 	{
 		*p_uPat = uBG_pat[3][0];
@@ -559,6 +606,13 @@ static void Get_Road_Pat(uint16_t *p_uPat, uint8_t bFlag)
 #endif
 }
 
+/*===========================================================================================*/
+/* ŠÖ”–¼	F	*/
+/* ˆø”		F	*/
+/* –ß‚è’l	F	*/
+/*-------------------------------------------------------------------------------------------*/
+/* ‹@”\		F	*/
+/*===========================================================================================*/
 static void Set_Road_Pat_offset(int16_t Num)
 {
 	if( (Num == 0) || (g_stRoadInfo.offset_val == 0) )
@@ -668,7 +722,7 @@ static int16_t	Set_Road_Height(void)
 	road_height_old = g_stRoadInfo.height;	/* ‘O‰ñ’lXV */
 	
 	/* ƒR[ƒXƒf[ƒ^“Ç‚İ‚İ */
-	road_height = (int16_t)(0x80 - g_stRoadData[g_uCounter].bHeight);	/* “¹‚Ì•W‚	(0x80ƒZƒ“ƒ^[) */
+	road_height = ((int16_t)g_stRoadData[g_uCounter].bHeight) - 0x80;	/* “¹‚Ì•W‚	(0x80ƒZƒ“ƒ^[) */
 	road_height = Mmax(Mmin(road_height, 31), -32);					/* +‚‚¢F-’á‚¢ */
 
 	g_stRoadInfo.height = road_height;		/*  */
@@ -867,8 +921,8 @@ static void Road_Pat_Main(void)
 		
 		S_Add_Score_Point(speed * 10);	/* Ô‘¬‚Å‰Á“_ */
 		
-		g_uCounter++;			/* ƒR[ƒXƒf[ƒ^‚ÌƒJƒEƒ“ƒ^XV */
-		if(g_uCounter >= ROADDATA_MAX)
+		g_uCounter++;	/* ƒR[ƒXƒf[ƒ^‚ÌƒJƒEƒ“ƒ^XV */
+		if(g_uCounter >= g_stRoadInfo.Courselength)
 		{
 			g_uCounter = 0u;
 			
@@ -1006,16 +1060,9 @@ static int16_t Load_Road_Background(int16_t Num)
 				pSrcBuf = pImage;
 				x = uWidth * i;
 //				y = Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN;
-				y = Y_MIN_DRAW +        0;
+				y = Y_MIN_DRAW;
 				G_BitBlt_From_Mem( x, y, 1, pSrcBuf, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);	/* ”wŒi(ã‘¤) */
-
-				pSrcBuf = pImage;
-//				y = Y_MIN_DRAW + Y_OFFSET + Y_HORIZON_1 - uHeight + RASTER_MIN;
-				y = Y_MIN_DRAW + Y_OFFSET;
-				G_BitBlt_From_Mem( x, y, 1, pSrcBuf, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);	/* ”wŒi(‰º‘¤) */
-
 //				G_Load_Mem( ubPatNumber, uWidth * i, Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN, 1);	/* ”wŒi(ã‘¤) */
-//				G_Load_Mem( ubPatNumber, uWidth * i, Y_MIN_DRAW + Y_OFFSET + Y_HORIZON_1 - uHeight + RASTER_MIN, 1);	/* ”wŒi(‰º‘¤) */
 			}
 		}
 		else
@@ -1106,6 +1153,91 @@ static int16_t Set_Road_Background_Col(int16_t Num)
 	{
 		PCG_PAL_Change( j,  15, 0xE81E);
 	}
+	return ret;
+}
+
+/*===========================================================================================*/
+/* ŠÖ”–¼	F	*/
+/* ˆø”		F	*/
+/* –ß‚è’l	F	*/
+/*-------------------------------------------------------------------------------------------*/
+/* ‹@”\		F	*/
+/*===========================================================================================*/
+int16_t Road_Map_Draw(uint8_t bMode)
+{
+	int16_t	ret = 0;
+	int16_t	col;
+	int16_t			x =0, y = 0;
+	uint16_t		pos_x, pos_y;
+	static int32_t	xofst, yofst, rad;
+	static uint16_t s_uCount = 0u;
+	
+	if(s_uCount >= g_stRoadInfo.Courselength)
+	{
+		return  -1;
+	}
+	else if(s_uCount == 0)
+	{
+		_iocs_apage(0);	/* ƒOƒ‰ƒtƒBƒbƒN‚Ì‘‚«‚İ(‘Sƒy[ƒW) */
+		_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);	/* ‘S—Ìˆæ‘‚«Š·‚¦OK */
+		
+		xofst = Mmul256(256);
+		yofst = Mmul256(0) + Mmul256((s_uCount/256) * 64);
+		
+		rad = 0;
+	}
+	else
+	{
+#if 0
+		g_stRoadData[s_uCount].bHeight;		/* “¹‚Ì•W‚	(0x80ƒZƒ“ƒ^[) */
+		g_stRoadData[s_uCount].bWidth;			/* “¹‚Ì•	(0x80ƒZƒ“ƒ^[) */
+		g_stRoadData[s_uCount].bAngle;			/* “¹‚ÌŠp“x	(0x80ƒZƒ“ƒ^[) */
+		g_stRoadData[s_uCount].bfriction;		/* “¹‚Ì–€C	(0x80ƒZƒ“ƒ^[) */
+		g_stRoadData[s_uCount].bPat;			/* “¹‚Ìí—Ş	 */
+		g_stRoadData[s_uCount].bObject;		/* oŒ»ƒ|ƒCƒ“ƒg‚ÌƒIƒuƒWƒFƒNƒg‚Ìí—Ş */
+		g_stRoadData[s_uCount].bRepeatCount;	/* ŒJ‚è•Ô‚µ‰ñ” */
+#endif		
+	}
+	
+	
+	col = 0x3;	/* White */
+	
+	rad += 0x80 - g_stRoadData[s_uCount].bAngle;
+	rad %= 360;
+	
+	x = APL_Cos(rad);
+	y = APL_Sin(rad);
+	
+#if 1
+	xofst += x;
+	xofst += x;	/* bug */
+	yofst += y;
+#else
+	if(xofst >= 0x20000)
+	{
+		xofst = Mmul256(0);
+		yofst = Mmul256(0) + Mmul256((s_uCount/256) * 64);
+	}
+	else if(xofst <= -X_OFFSET)
+	{
+		xofst = Mmul256(256);
+		yofst = Mmul256(0) + Mmul256((s_uCount/256) * 64);
+	}
+	else
+	{
+		xofst += x;
+		yofst += y;
+	}
+#endif
+	pos_x = Mdiv512(xofst);
+	pos_y = Mdiv512(yofst);
+
+	_iocs_home(0b0000, X_OFFSET + pos_x - 128, Y_OFFSET + pos_y - 128);
+
+	Draw_Pset( X_OFFSET + pos_x, Y_OFFSET + pos_y,	col);
+	
+	s_uCount++;
+	
 	return ret;
 }
 

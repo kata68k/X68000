@@ -3,7 +3,11 @@
 
 #include "inc/usr_define.h"
 
+/* define’è‹` */
 #define	CRT_MAX		(3)
+#define	GP_VDISP	(0x10)
+#define	GP_H_SYNC	(0x80)
+#define	GP_V_SYNC	(0x40)
 
 /* \‘¢‘Ì’è‹` */
 
@@ -26,5 +30,8 @@ extern	int16_t	SetCRT(ST_CRT, int16_t);
 extern	int16_t	CRT_INIT(void);
 extern	int16_t	Get_CRT_Contrast(int8_t *);
 extern	int16_t	Set_CRT_Contrast(int8_t);
+extern int16_t wait_vdisp(int16_t);
+extern int16_t wait_h_sync(void);
+extern int16_t wait_v_sync(void);
 
 #endif	/* CRTC_H */

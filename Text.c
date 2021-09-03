@@ -396,7 +396,7 @@ int16_t T_PutTextInfo(ST_TEXTINFO stTextInfo)
 	y = stTextInfo.uPosY;
 
 	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* ‰æ‘œ‚Ìî•ñ‚ğæ“¾ */
-	
+
 	/* Top Score */
 	Text_To_Text2(stTextInfo.ulScoreMax,				(uWidth * x) +  36, (Y_OFFSET * y) +  8, FALSE, "%8d");
 	/* Score */

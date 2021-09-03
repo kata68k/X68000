@@ -330,7 +330,14 @@ int16_t	SetAlive_EnemyCAR(void)
 			rand &= 0x0Fu;
 			
 			g_pStEnemyCar[i]->ubCarType = rand & 0x07u;
-			g_pStEnemyCar[i]->VehicleSpeed = Mmax(Mmin(stMyCar.VehicleSpeed-10, 240), 60);
+			if(g_pStEnemyCar[i]->ubCarType < 4)
+			{
+				g_pStEnemyCar[i]->VehicleSpeed = Mmax(Mmin(stMyCar.VehicleSpeed-10, 240), 60);
+			}
+			else
+			{
+				g_pStEnemyCar[i]->VehicleSpeed = 0;
+			}
 			g_pStEnemyCar[i]->x = rand;
 			g_pStEnemyCar[i]->y = 0;
 			g_pStEnemyCar[i]->z = 4;
@@ -505,7 +512,11 @@ int16_t	Load_EnemyCAR(int16_t Num)
 	Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
 	pFile->bfSize = Size;		/* メモリサイズ設定 */
 	/* メモリ確保 */
-	g_stPicEnemyCARImage[Num][i].pImageData = NULL;							/* ポインタ初期化 */
+//	g_stPicEnemyCARImage[Num][i].pImageData = NULL;
+	if(g_stPicEnemyCARImage[Num][i].pImageData != NULL)	/* Nullチェック */
+	{
+		MyMfree(g_stPicEnemyCARImage[Num][i].pImageData);	/* メモリ解放 */
+	}
 	g_stPicEnemyCARImage[Num][i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
 	memset(g_stPicEnemyCARImage[Num][i].pImageData, 0, Size);				/* メモリクリア */
 //	memcpy(g_stPicEnemyCARImage[Num][i].pImageData, pSrcBuf, Size);			/* マスターからライバル車用のバッファにコピー */
@@ -555,7 +566,11 @@ int16_t	Load_EnemyCAR(int16_t Num)
 			Size = (pInfo->biHeight) * uSize8x * sizeof(uint16_t);
 			pFile->bfSize = Size;		/* メモリサイズ設定 */
 			/* メモリ確保 */
-			g_stPicEnemyCARImage[Num][i].pImageData = NULL;							/* ポインタ初期化 */
+//			g_stPicEnemyCARImage[Num][i].pImageData = NULL;
+			if(g_stPicEnemyCARImage[Num][i].pImageData != NULL)	/* Nullチェック */
+			{
+				MyMfree(g_stPicEnemyCARImage[Num][i].pImageData);	/* メモリ解放 */
+			}
 			g_stPicEnemyCARImage[Num][i].pImageData = (uint16_t*)MyMalloc( Size );	/* メモリの確保 */
 			memset(g_stPicEnemyCARImage[Num][i].pImageData, 0, Size);				/* メモリクリア */
 #ifdef DEBUG

@@ -3,7 +3,7 @@
 
 #include "inc/usr_define.h"
 
-#define	ROADDATA_MAX	(1024u)
+#define	ROADDATA_MAX	(2048u)
 
 /* 構造体定義 */
 /* ラスター情報の構造体 */
@@ -37,7 +37,7 @@ typedef struct
 	int16_t	angle;			/*  */
 	int16_t	distance;		/*  */
 	int16_t	object;			/*  */
-	
+	int16_t	Courselength;	/* コースの全長 */
 }	ST_ROAD_INFO;
 
 /* コースの構造体 */
@@ -54,6 +54,8 @@ typedef struct
 
 
 /* extern宣言 */
+extern	ST_RASTER_INT	g_stRasterInt[RASTER_MAX];
+
 extern void	Raster_Init(void);
 extern void Raster_Main(uint8_t);
 extern int16_t GetRasterInfo(ST_RAS_INFO *);
@@ -63,7 +65,9 @@ extern int16_t GetRasterPos(uint16_t *, uint16_t *, uint16_t);
 extern int16_t	GetRoadInfo(ST_ROAD_INFO *);
 extern int16_t	SetRoadInfo(ST_ROAD_INFO);
 extern void Road_Init(uint16_t);
+extern void Road_BG_Init(uint16_t);
 extern uint64_t GetRoadDataAddr(void);
 extern int16_t GetRoadCycleCount(uint16_t *);
+extern int16_t Road_Map_Draw(uint8_t);
 
 #endif	/* RASTER_H */

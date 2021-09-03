@@ -19,13 +19,14 @@
 #include "MUSIC.h"
 #include "PCG.h"
 
-/* ＰＣＧデータ */
-static uint8_t	*pcg_dat; /* ＰＣＧデータファイル読み込みバッファ */
-static uint16_t	pal_dat[ 128 ]; /* パレットデータファイル読み込みバッファ */
+static uint8_t		*pcg_dat;		/* ＰＣＧデータファイル読み込みバッファ */
+static 	uint16_t	pal_dat[ 128 ];	/* パレットデータファイル読み込みバッファ */
+
 
 /* 関数のプロトタイプ宣言 */
 int16_t Init_FileList_Load(void);
 int16_t File_Load(int8_t *, void *, size_t, size_t);
+int16_t File_Save(int8_t *, void *, size_t, size_t);
 int16_t File_Load_CSV(int8_t *, uint16_t *, uint16_t *, uint16_t *);
 int16_t PCG_SP_dataload(int8_t *);
 int16_t PCG_PAL_dataload(int8_t *);
@@ -38,6 +39,7 @@ int16_t GetFilePICinfo(int8_t *, BITMAPINFOHEADER *);
 int16_t GetRectangleSise(uint16_t *, uint16_t, uint16_t, uint16_t);
 void *MyMalloc(int32_t);
 int16_t MyMfree(void *);
+int32_t	MaxMemSize(int8_t);
 
 /*===========================================================================================*/
 /* 関数名	：	*/
@@ -91,8 +93,9 @@ int16_t Init_FileList_Load(void)
 #else
 	#error "No Music Lib"
 #endif
+	
 	/* 効果音(ADPCM) */
-	Load_SE_List("data\\se\\", "p_list_V3.txt", adpcm_list, &p_list_max);
+	Load_SE_List("data\\se\\", "p_list.txt", adpcm_list, &p_list_max);
 	for(i = 0; i < p_list_max; i++)
 	{
 		printf("ADPCM File %2d = %s\n", i, adpcm_list[i]);
@@ -123,6 +126,7 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 	if(fp == NULL)
 	{
 		/* ファイルが読み込めません */
+		printf("ERR:%sファイルが見つかりません！\n", fname);
 		ret = -1;
 	}
 	else
@@ -140,6 +144,42 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 		/* ファイルを閉じる */
 		fclose (fp);
 	}
+
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* ファイル保存 */
+/* *fname	ファイル名 */
+/* *ptr		格納先の先頭アドレス */
+/* size		データのサイズ */
+/* n		データの個数 */
+int16_t File_Save(int8_t *fname, void *ptr, size_t size, size_t n)
+{
+	FILE *fp;
+	int16_t ret = 0;
+
+	/* ファイルを開ける */
+	fp = fopen(fname, "rb");
+	
+	if(fp == NULL)	/* ファイルが無い */
+	{
+		/* ファイルを開ける */
+		fp = fopen(fname, "wb");
+		fwrite(ptr, size, n, fp);
+	}
+	else
+	{
+		/* ファイルが存在する場合は何もしない */
+	}
+	/* ファイルを閉じる */
+	fclose (fp);
 
 	return ret;
 }
@@ -361,7 +401,7 @@ int16_t File_Load_Course_CSV(int8_t *fname, ST_ROADDATA *st_ptr, uint16_t *Col, 
 int16_t PCG_SP_dataload(int8_t *fname)
 {
 	int16_t ret = 0;
-
+	
 	FILE *fp;
 
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
@@ -376,7 +416,10 @@ int16_t PCG_SP_dataload(int8_t *fname)
 		int32_t	pcg_size;
 		pcg_size = filelength( fileno( fp ) );
 		
-		pcg_dat = NULL;
+		if(pcg_dat != NULL)
+		{
+//			MyMfree(pcg_dat);	/* メモリ解放 */
+		}
 		pcg_dat = (uint8_t*)MyMalloc( pcg_size );
 		if(pcg_dat != NULL)
 		{
@@ -395,6 +438,7 @@ int16_t PCG_SP_dataload(int8_t *fname)
 				pcg_dat += 128;
 			}
 		}
+//		MyMfree(pcg_dat);	/* メモリ解放 */
 	}
 	
 	return ret;
@@ -553,6 +597,17 @@ int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *l
 		{
 	        p = buf;
 			sscanf(p,"%d= %s %d %d", &num, z_name, &bType, &bTransPal);
+#if 0
+			FILE *fp_d;
+			
+			p = strtok(z_name, ".");
+			sprintf(z_name, "%s.GRP", p, );
+			fp_d = fopen(z_name, "r");
+			if(fp_d == NULL)
+			{
+			}
+#endif
+			
 #ifdef DEBUG
 //			printf("%d=%s,%d\n", num, z_name, bType);
 //			KeyHitESC();	/* デバッグ用 */
@@ -958,5 +1013,68 @@ int16_t	MyMfree(void *pPtr)
 	
 	return ret;
 }
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int32_t	MaxMemSize(int8_t SizeType)
+{
+	int32_t ret = 0;
+	int32_t i, dummy;
+	int32_t chk[2];
+	int8_t *ptMem[2];
+	
+	ptMem[0] = (int8_t *)0x0FFFFF;
+	ptMem[1] = (int8_t *)0x100000;
+	
+	do{
+		for(i=0; i<2; i++)
+		{
+			if((int32_t)ptMem[i] >= 0xC00000)	/* 12MBの上限 */
+			{
+				chk[0] = 0;	/* 強制ループ脱出 */
+				chk[1] = 2;	/* 強制ループ脱出 */
+				break;
+			}
+			else
+			{
+				chk[i] = _dos_memcpy(ptMem[i], &dummy, 1);	/* バスエラーチェック */
+			}
+		}
+		
+		/* 実装メモリの境界 */
+		if( (chk[0] == 0) &&	/* 読み書きできた */
+			(chk[1] == 2) )		/* バスエラー */
+		{
+			break;	/* ループ脱出 */
+		}
+		
+		ptMem[0] += 0x100000;	/* +1MB 加算 */
+		ptMem[1] += 0x100000;	/* +1MB 加算 */
+	}while(1);
+	
+//	printf("Memory Size = %d[MB](%d[Byte])(0x%p)\n", ((int)ptMem[1])>>20, ((int)ptMem[1]), ptMem[0]);
+
+	switch(SizeType)
+	{
+	case 0:	/* Byte */
+		ret = ((int)ptMem[1]);
+		break;
+	case 1:	/* KByte */
+		ret = ((int)ptMem[1])>>10;
+		break;
+	case 2:	/* MByte */
+	default:
+		ret = ((int)ptMem[1])>>20;
+		break;
+	}
+	
+	return ret;
+}
+
 #endif	/* FILEMANAGER_C */
 

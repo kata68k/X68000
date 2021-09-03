@@ -33,7 +33,7 @@ execonly:
 OverKata.x:	OverKata.o APL_MACS.o APL_Math.o CRTC.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
 			FileManager.o Graphic.o Input.o MFP.o Moon.o Music.o MyCar.o OutPut_Text.o \
 			PCG.o Raster.o Score.o Task.o Text.o Trap14.o
-	$(LD) $^ -o $@ -l $(LIBS)
+	$(LD) $^ -o $@ -l $(LIBS) -p OverKata.map
 #	echo $^ > OverKata.d
 #	$(LD) -i OverKata.d -o $@ -l $(LIBS)
 

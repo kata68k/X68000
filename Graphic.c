@@ -59,7 +59,6 @@ int16_t CG_Mem_Convert_Type(uint16_t);
 void G_INIT(void);
 void G_VIDEO_INIT(void);
 void G_HOME(void);
-void G_VIEW(uint8_t);
 void G_Palette_INIT(void);
 void G_PaletteSetZero(void);
 int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
@@ -68,6 +67,7 @@ int16_t G_Copy_Pict_To_Mem(	uint16_t *, uint16_t , uint16_t , uint16_t *, uint16
 int16_t	G_BitBlt(int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t , int16_t , uint16_t , uint8_t , uint8_t , uint8_t , uint8_t );
 int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , uint16_t , uint8_t , uint8_t , uint8_t );
 int32_t	G_CLR(void);
+int16_t G_CLR_HS(void);
 int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);
 int16_t	G_CLR_ALL_OFFSC(uint8_t);
 int16_t	G_FILL_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t, uint8_t);
@@ -468,6 +468,7 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 		uint32_t	uSize8x = 0;
 		uint32_t	uAPICG_work_Size;
 		int32_t		Res;
+		uint8_t		ubGpal = 0u;
 
 		BITMAPINFOHEADER *pInfo;
 		
@@ -575,9 +576,23 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 		{
 			case 1:	/* スプライトライク */
 			{
-				//;
-				G_APIC_to_Mem(pSrcBuf, pDstBuf, uWidth, uHeight);	/* APIC画像を使いやすいBITMAP似のメモリに展開 */
-				G_MedianCut(pDstBuf, pDstBuf, uWidth, uHeight, 16, i, g_stCG_LIST[i].ubTransPal);	/* 256→16色 減色処理 */
+				uint8_t str[256] = {0};
+				sprintf(str, "data\\cg\\test%02d.G16", i );
+				
+				if(File_Load( str, g_stPicImage[i].pImageData, sizeof(uint16_t), uSize8x * uHeight) < 0)
+				{
+					/* ファイルがない場合 */
+					G_APIC_to_Mem(pSrcBuf, pDstBuf, uWidth, uHeight);	/* APIC画像を使いやすいBITMAP似のメモリに展開 */
+					G_MedianCut(pDstBuf, pDstBuf, uWidth, uHeight, 16, i, g_stCG_LIST[i].ubTransPal);	/* 256→16色 減色処理 */
+					File_Save( str, g_stPicImage[i].pImageData, sizeof(uint16_t), uSize8x * uHeight );
+					ubGpal = 1u;	/* パレット保存フラグセット */
+				}
+				else
+				{
+					/* ファイルがある場合 */
+					ubGpal = 2u;	/* パレット保存フラグセット */
+				}
+				
 				break;
 			}
 			case 2:	/* テキスト描画 */
@@ -602,6 +617,29 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 		/* パレット */
 //		G_PaletteSetZero();	/* 0番パレット変更 */
 		Get_PicImagePallet(i);	/* パレットを保存 */
+		switch(ubGpal)
+		{
+			case 0:
+			default:
+			{
+				/* 何もしない */
+				break;
+			}
+			case 1:
+			{
+				uint8_t str[256] = {0};
+				sprintf(str, "data\\cg\\test%02d.P16", i );
+				File_Save( str, &g_CG_ColorCode[i][0], sizeof(uint16_t), 16 );
+				break;
+			}
+			case 2:
+			{
+				uint8_t str[256] = {0};
+				sprintf(str, "data\\cg\\test%02d.P16", i );
+				File_Load( str, &g_CG_ColorCode[i][0], sizeof(uint16_t), 16 );
+				break;
+			}
+		}
 		
 		/* メモリ操作 */
 		if(pSrcBuf != NULL)
@@ -626,8 +664,8 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 /*===========================================================================================*/
 void G_INIT(void)
 {
-	G_CLR_ON();				/* グラフィックのクリア */
-	VPAGE(0b1111);			/* pege(3:0n 2:0n 1:0n 0:0n) */
+	_iocs_g_clr_on();		/* グラフィックのクリア */
+	_iocs_vpage(0b1111);	/* グラフィック表示(page3:0n page2:0n page1:0n page0:0n) */
 	G_VIDEO_INIT();			/* ビデオコントローラーの初期化 */
 }
 
@@ -706,12 +744,12 @@ void G_VIDEO_INIT(void)
 /*===========================================================================================*/
 void G_HOME(void)
 {
-	WINDOW( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);
-	HOME(0b0000, X_OFFSET, Y_OFFSET);
-//	HOME(1, X_OFFSET, Y_OFFSET);
-//	HOME(2, X_OFFSET, 416);
-//	HOME(3, X_OFFSET, 416);
-	WIPE();
+	_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);
+	_iocs_wipe();
+	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);
+//	_iocs_home(1, X_OFFSET, Y_OFFSET);
+//	_iocs_home(2, X_OFFSET, 416);
+//	_iocs_home(3, X_OFFSET, 416);
 }
 
 /*===========================================================================================*/
@@ -729,40 +767,6 @@ void G_Palette_INIT(void)
 	for(nPalette=0; nPalette < 0xFF; nPalette++)
 	{
 		GPALET( nPalette, SetRGB(0, 0, 0));	/* Black */
-	}
-}
-
-/*===========================================================================================*/
-/* 関数名	：	*/
-/* 引数		：	*/
-/* 戻り値	：	*/
-/*-------------------------------------------------------------------------------------------*/
-/* 機能		：	*/
-/*===========================================================================================*/
-void G_VIEW(uint8_t bSW)
-{
-	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
-	
-	if(bSW == TRUE)
-	{
-		/* グラフィック表示をＯＮ */
-//												   FEDCBA9876543210
-		*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0F, 0b0000000000001111);	/* ON */
-//												   |||||||||||||||+-bit0 GS0	512x512 Pri0 <0:OFF 1:ON>
-//												   ||||||||||||||+--bit1 GS1	512x512 Pri1 <0:OFF 1:ON>
-//												   |||||||||||||+---bit2 GS2	512x512 Pri2 <0:OFF 1:ON>
-//												   ||||||||||||+----bit3 GS3	512x512 Pri3 <0:OFF 1:ON>
-	}
-	else
-	{
-		HOME(0b0000, 0, Y_OFFSET);
-		/* グラフィック表示をＯＦＦ */
-//												   FEDCBA9876543210
-		*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0F, 0b0000000000000000);	/* OFF */
-//												   |||||||||||||||+-bit0 GS0	512x512 Pri0 <0:OFF 1:ON>
-//												   ||||||||||||||+--bit1 GS1	512x512 Pri1 <0:OFF 1:ON>
-//												   |||||||||||||+---bit2 GS2	512x512 Pri2 <0:OFF 1:ON>
-//												   ||||||||||||+----bit3 GS3	512x512 Pri3 <0:OFF 1:ON>
 	}
 }
 
@@ -1300,7 +1304,37 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 /* 画面のクリア */
 int32_t G_CLR(void)
 {
+	_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);
 	return _iocs_wipe();
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t G_CLR_HS(void)	/* 現在表示している領域をクリアする */
+{
+	int16_t	ret = 0;
+	
+	volatile uint16_t *CRTC_R21  = (uint16_t *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
+	volatile uint16_t *CRTC_mode = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
+
+	/* 必ずテキスト表示処理の後に行うこと */
+	/* クリアにかかる時間は1/55fpsとのこと@Tea_is_Appleさんより */
+//	wait_v_sync();
+	*CRTC_R21  = 0x03u;	/* SCREEN1 高速クリアOFF(bit3:0 bit2:0) / SCREEN0 高速クリアON(bit1:1 bit0:1) */
+	*CRTC_mode = 0x02u;	/* クリア実行 */
+//	*CRTC_R21  = Mbset(*CRTC_R21,  0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
+//	*CRTC_mode = Mbset(*CRTC_mode, 0x02u, 0x02u);	/* クリア実行 */
+//	wait_v_sync();
+		
+	while(!(*CRTC_mode) & 0x02);	/* 消去前ウェイト */
+	while((*CRTC_mode) & 0x02);		/* 消去中ウェイト */
+	
+	return	ret;
 }
 
 /*===========================================================================================*/
@@ -1313,11 +1347,14 @@ int32_t G_CLR(void)
 int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 {
 	int16_t	ret = 0;
+#if 1	/* memset */
 	int16_t	i=0;
 	uint64_t	ulGR_H;
 	uint64_t	ulPoint;
 	uint32_t	unSize;
-#if 0
+#endif
+	
+#if 0	/* DMA */
 	uint16_t	data[512] = {0};
 	int32_t	nMode;
 	uint8_t *DMA_DCR;
@@ -1328,11 +1365,8 @@ int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 
 	if(DMAMODE() != 0u)return -1;
 #endif
-#if 0
-	volatile uint16_t *CRTC_R21 = (uint16_t *)0xE8002Au;	/* テキスト・アクセス・セット、クリアーP.S */
-	volatile uint16_t *CRTC_480 = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
-#endif
 
+#if 1	/* memset */
 	switch(Screen)
 	{
 		case 0:
@@ -1354,7 +1388,9 @@ int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 	
 	unSize = (w << 1);
 	ulPoint = (y << 10u) + (x << 1);
-#if 0
+#endif
+
+#if 0	/* DMA */
 	nMode = 0b10000100;
 	/*		  ||||||++------	(bit1,0)	DAC(addr2)	00:none	01:inc	10:dec	*/
 	/*		  ||||++--------	(bit3,2)	MAC(addr1)	00:none	01:inc	10:dec	*/
@@ -1381,7 +1417,7 @@ int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 			(int32_t)h);				/* len */
 #endif
 
-#if 0
+#if 0	/* DMA */
 	for(i=0; i<h; i++)
 	{
 //		DMAMOVE(&data[0],									/* addr1 */
@@ -1391,22 +1427,13 @@ int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 	}
 #endif
 
-#if 1
+#if 1	/* memset */
 	for(i=0; i<h; i++)
 	{
 		memset((void *)(ulGR_H + ulPoint + (i << 10u)), 0x00u, unSize);
 	}
 #endif
 
-#if 0
-	/* 必ずテキスト表示処理の後に行うこと */
-	/* クリアにかかる時間は1/55fpsとのこと@Tea_is_Appleさんより */
-	if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
-	{
-		*CRTC_R21 = Mbset(*CRTC_R21, 0x0Fu, 0x0Cu);	/* SCREEN1 高速クリアON / SCREEN0 高速クリアOFF */
-		*CRTC_480 = Mbset(*CRTC_480, 0x02u, 0x02u);	/* クリア実行 */
-	}
-#endif
 	return	ret;
 }
 
@@ -1425,13 +1452,17 @@ int16_t G_CLR_ALL_OFFSC(uint8_t bMode)
 	GetCRT(&stCRT, bMode);
 	
 	/* 描画可能枠再設定 */
-	WINDOW( stCRT.hide_offset_x, 
-			stCRT.hide_offset_y,
-			stCRT.hide_offset_x + WIDTH,
-			stCRT.hide_offset_y + Y_MAX_WINDOW);	
+	_iocs_window(	stCRT.hide_offset_x, 
+					stCRT.hide_offset_y,
+					stCRT.hide_offset_x + WIDTH,
+					stCRT.hide_offset_y + Y_MAX_WINDOW);	
 	/* 消去 */
+#if	1	/* IOCS */
+	ret = _iocs_wipe();	/* クリア */
+#else
 	ret = G_CLR_AREA(stCRT.hide_offset_x, WIDTH, stCRT.hide_offset_y, Y_MAX_WINDOW, 0);	/* Screen0 消去 */
-
+#endif
+	
 	return	ret;
 }
 
@@ -1450,7 +1481,7 @@ int16_t G_FILL_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen
 	uint64_t	ulPoint;
 	uint32_t	unSize;
 
-	WINDOW( x, y, x + w, y + h);	/* 描画可能枠再設定 */
+	_iocs_window( x, y, x + w, y + h);	/* 描画可能枠再設定 */
 
 	switch(Screen)
 	{
@@ -2244,7 +2275,7 @@ int16_t	G_Scroll(int16_t x, int16_t y, uint8_t bSCNum)
 	
 	switch(bSCNum)
 	{
-	case 0:
+	case 0:	/* ページ０ */
 		{
 			volatile uint16_t *CRTC_R12 = (uint16_t *)0xE80018u;
 			volatile uint16_t *CRTC_R13 = (uint16_t *)0xE8001Au;
@@ -2256,7 +2287,7 @@ int16_t	G_Scroll(int16_t x, int16_t y, uint8_t bSCNum)
 			*CRTC_R15  = Mbset(*CRTC_R15 , 0x01FF, y);	/* Screen 1 y */
 			break;
 		}
-	case 1:
+	case 1:	/* ページ１ */
 		{
 			volatile uint16_t *CRTC_R16 = (uint16_t *)0xE80020u;
 			volatile uint16_t *CRTC_R17 = (uint16_t *)0xE80022u;
@@ -2751,6 +2782,10 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 	if(pYUV != NULL)
 	{
 		MyMfree(pYUV);
+	}
+	if(pColorTable != NULL)
+	{
+		MyMfree(pColorTable);
 	}
 	
     return ret;

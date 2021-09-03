@@ -50,6 +50,7 @@ int16_t	GetMyCar(ST_CARDATA *stDat);
 int16_t	SetMyCar(ST_CARDATA stDat);
 int16_t	MyCarInfo_Init(void);
 int16_t	MyCarInfo_Update(int16_t);
+int16_t	MyCarInfo_Update16ms(int16_t);
 static int16_t	MyCar_Steering(void);
 static int16_t	MyCar_ShiftPos(void);
 static int16_t	MyCar_Accel(void);
@@ -163,6 +164,22 @@ int16_t	MyCarInfo_Update(int16_t input)
 	Torque += MyCar_Crash();		/* 衝突判定 */
 	
 	Torque += MyCar_CourseOut();	/* コースアウト時の処理 */
+	
+	ret = Torque;
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	MyCarInfo_Update16ms(int16_t Torque)
+{
+	int16_t	ret = 0;
 	
 	MyCar_EngineSpeed(Torque);		/* エンジン回転数の算出 */
 	
@@ -304,12 +321,14 @@ static int16_t	MyCar_ShiftPos(void)
 	int16_t	ret = 0;
 
 	static uint8_t bShiftPosFlag[3] = {FALSE};
-
+#if 0
 	if( ((g_Input & KEY_A) != 0u) && ((g_Input & KEY_B) == 0u))	/* Aボタン(only) */
 	{
 		/* アクセルだけはシフト操作禁止 */
 	}
-	else{
+	else
+#endif
+	{
 		if(ChatCancelSW((g_Input & KEY_UPPER)!=0u, &bShiftPosFlag[0]) == TRUE)
 		{
 			if(g_stMyCar.ubShiftPos != 5)
@@ -983,7 +1002,7 @@ static int16_t	MyCar_Vibration(void)
 		{
 			CrashCount = Mdec((int16_t)CrashCount, 1u);	/* カウンタデクリメント */
 			
-			Vibration = Mdiv256( (8 * APL_Sin(VibrationCT)) );	/* 画面の振動 */
+			Vibration = Mdiv256( APL_Sin(VibrationCT) );	/* 画面の振動 */
 		}
 	}
 	ubOBD_old = g_stMyCar.ubOBD;	/* 前回値更新 */
@@ -1082,13 +1101,6 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 	int16_t ret = 0;
 	
 	int16_t	i = 0, dwRev = 0;
-#if 1	
-#else
-	uint8_t	patNum = 0;
-	uint8_t	palNum = 0;
-	uint8_t	V=0, H=0;
-	uint8_t	sp_num=0;
-#endif
 	int16_t	x, y;
 
 	ST_PCG	*p_stPCG = NULL;
@@ -1106,8 +1118,8 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 	}while(i<24);
 	
 	x =  81 + SP_X_OFFSET;
-	y = 188 + SP_Y_OFFSET - Vibration;
-#if 1
+	y = 188 + SP_Y_OFFSET;
+
 	if(i < 8)
 	{
 		y += SP_H;
@@ -1122,66 +1134,25 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 		x += SP_W;
 		i = 16+23 - i;
 	}
-#else
-	palNum = 0x0D;
-	if(i <= 6)
-	{
-		y += SP_H;
-		patNum = 0x70+i;
-		V = 1;
-		H = 0;
-	}
-	else if(i <= 12)
-	{
-		patNum = 0x70+12-i;
-		V = 0;
-		H = 0;
-	}
-	else
-	{
-		x += SP_W;
-		patNum = 0x70+i-12;
-		V = 0;
-		H = 1;
-	}
-#endif
 	
-#if 1	
 	p_stPCG = PCG_Get_Info(MYCAR_PCG_NEEDLE);	/* タコメーター針 */
 	if(p_stPCG != NULL)
 	{
 		p_stPCG->x = x;
-		p_stPCG->y = y - Vibration;
+		p_stPCG->y = y;
 		p_stPCG->Anime = i;
 		p_stPCG->update	= TRUE;
 	}
-#else
-	SP_REGST( sp_num++, -1, x, y, SetBGcode(V, H, palNum, patNum), 3);
-#endif
 	/* タコメーター */
 	x =  81 + SP_X_OFFSET;
-	y = 188 + SP_Y_OFFSET - Vibration;
-#if 1	
+	y = 188 + SP_Y_OFFSET;
 	p_stPCG = PCG_Get_Info(MYCAR_PCG_TACHO);	/* タコメーター */
 	if(p_stPCG != NULL)
 	{
 		p_stPCG->x = x;
-		p_stPCG->y = y - Vibration;
+		p_stPCG->y = y;
 		p_stPCG->update	= TRUE;
 	}
-#else
-	V = 0;
-	H = 0;
-	palNum = 0x0D;
-	patNum = 0x46;
-	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x47;
-	SP_REGST( sp_num++, -1, x + 16, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x56;
-	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x57;
-	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
-#endif
 	
 	return ret;
 }
@@ -1196,13 +1167,6 @@ static int16_t	MyCar_Tachometer(int16_t Vibration)
 static int16_t	MyCar_SteeringPos(int16_t Vibration)
 {
 	int16_t ret = 0;
-#if 1	
-#else
-	uint8_t	patNum = 0;
-	uint8_t	palNum = 0;
-	uint8_t	V=0, H=0;
-	uint8_t	sp_num=5;
-#endif
 	int16_t	x, y;
 	uint32_t	uWidth, uHeight, uFileSize;
 	ST_TEXTINFO	stTextInfo;
@@ -1213,7 +1177,6 @@ static int16_t	MyCar_SteeringPos(int16_t Vibration)
 	/* ステアリング位置 */
 	x =  16 + Mdiv16(g_SteeringDiff)       + SP_X_OFFSET - 4;
 	y = 112 + Mabs(Mdiv16(g_SteeringDiff)) + SP_Y_OFFSET;
-#if 1	
 	p_stPCG = PCG_Get_Info(MYCAR_PCG_STEERING_POS);	/* ステアリングポジション */
 	if(p_stPCG != NULL)
 	{
@@ -1221,18 +1184,10 @@ static int16_t	MyCar_SteeringPos(int16_t Vibration)
 		p_stPCG->y = y;
 		p_stPCG->update	= TRUE;
 	}
-#else
-	V = 0;
-	H = 0;
-	palNum = 0x0C;
-	patNum = 0x4A;
-	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-#endif
 	
 	/* ステアリング */
 	x =   0 + SP_X_OFFSET;
 	y = 112 + SP_Y_OFFSET;
-#if 1	
 	p_stPCG = PCG_Get_Info(MYCAR_PCG_STEERING);	/* ステアリング */
 	if(p_stPCG != NULL)
 	{
@@ -1240,19 +1195,6 @@ static int16_t	MyCar_SteeringPos(int16_t Vibration)
 		p_stPCG->y = y;
 		p_stPCG->update	= TRUE;
 	}
-#else
-	V = 0;
-	H = 0;
-	palNum = 0x0B;
-	patNum = 0x48;
-	SP_REGST( sp_num++, -1, x + 0, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x49;
-	SP_REGST( sp_num++, -1, x + 16, y + 0, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x58;
-	SP_REGST( sp_num++, -1, x + 0, y + 16, SetBGcode(V, H, palNum, patNum), 3);
-	patNum = 0x59;
-	SP_REGST( sp_num++, -1, x + 16, y + 16, SetBGcode(V, H, palNum, patNum), 3);
-#endif
 
 	/* 画面を切り替える */
 	if(g_SteeringDiff == 0)

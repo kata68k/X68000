@@ -3,7 +3,8 @@
 
 #include "inc/usr_define.h"
 
-#define	COURSE_OBJ_MAX	(16)
+#define	COURSE_OBJ_MAX		(6)
+#define	COURSE_OBJ_H_MAX	(3)	/* COURSE_OBJ_MAX‚Ì”¼•ª‚ð’è‹`‚·‚é */
 #define PINETREE_0_W	(31)
 #define PINETREE_0_H	(56)
 #define PINETREE_1_W	(62)

@@ -1,5 +1,6 @@
 ECHO OFF
 rem 開発用
+cp -u L:\Develop\data\map\course01.csv D:\超電動開発室\OverKata\data\map\
 cp -u OverKata.x D:\超電動開発室\OverKata\
 D:
 cd D:\超電動開発室\OverKata

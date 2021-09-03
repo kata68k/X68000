@@ -167,10 +167,10 @@ void PCG_INIT(void)
 		ST_PCG stPCG;
 		
 		/* たちまち初期化は不要 */
-		stPCG.x			= SP_X_OFFSET + (rand() % 128);	/* x座標 */
-		stPCG.y			= SP_Y_OFFSET + (rand() % 128);	/* y座標 */
-		stPCG.dx		= rand() % 2;	/* 移動量x */
-		stPCG.dy		= rand() % 2;	/* 移動量y */
+		stPCG.x			= 0;	/* x座標 */
+		stPCG.y			= 0;	/* y座標 */
+		stPCG.dx		= 0;	/* 移動量x */
+		stPCG.dy		= 0;	/* 移動量y */
 		stPCG.Anime		= 0;	/* 現在のアニメ */
 		stPCG.Anime_old	= 0;	/* 前回のアニメ */
 		

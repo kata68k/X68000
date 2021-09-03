@@ -7,5 +7,9 @@
 6=GR_OPN.zmd
 7=TAKO3.ZMD
 8=YOBIKOMIKUN.ZMD
-9=skymsx.zmd
+9=AB2_AFT.ZMD
+10=TRUTH@.ZMD
+11=MRIDER_2_story.zmd
+12=MRIDER_3_start.zmd
+13=MRIDER_4_bgm.zmd
 

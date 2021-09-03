@@ -725,6 +725,7 @@ int16_t Text_To_Text2(uint64_t ulNum, int16_t x, int16_t y, uint8_t bLarge, uint
 	uint32_t	i, size, MemSize;
 	uint8_t	data;
 	uint8_t	ucDigit[20] = {0};
+	uint8_t	ucBuffer[136] = {0};
 	uint8_t	*pString;
 
 	struct _fntbuf	*p_stTxbuf;
@@ -759,8 +760,8 @@ int16_t Text_To_Text2(uint64_t ulNum, int16_t x, int16_t y, uint8_t bLarge, uint
 #endif
 	
 	MemSize = BG_WIDTH * size;
-
-	p_stTxbuf = MyMalloc(sizeof(int16_t) + sizeof(int16_t) + MemSize);
+	p_stTxbuf = (struct _fntbuf	*)&ucBuffer[0];
+	
 	if(p_stTxbuf == NULL)
 	{
 		return -1;
@@ -820,8 +821,6 @@ int16_t Text_To_Text2(uint64_t ulNum, int16_t x, int16_t y, uint8_t bLarge, uint
 		}
 		pString++;
 	}
-	
-	free(p_stTxbuf);
 	
 	return ret;
 }

@@ -9,6 +9,7 @@
 
 extern int16_t Init_FileList_Load(void);
 extern int16_t File_Load(int8_t *, void *, size_t, size_t);
+extern int16_t File_Save(int8_t *, void *, size_t, size_t);
 extern int16_t File_Load_CSV(int8_t *, uint16_t *, uint16_t *, uint16_t *);
 extern int16_t File_Load_Course_CSV(int8_t *, ST_ROADDATA *, uint16_t *, uint16_t *);
 extern int16_t PCG_SP_dataload(int8_t *);
@@ -22,5 +23,6 @@ extern int16_t GetFilePICinfo(int8_t *, BITMAPINFOHEADER *);
 extern int16_t GetRectangleSise(uint16_t *, uint16_t, uint16_t, uint16_t);
 extern void *MyMalloc(int32_t);
 extern int16_t MyMfree(void *);
+extern int32_t MaxMemSize(int8_t);
 
 #endif	/* FILEMANAGER_H */

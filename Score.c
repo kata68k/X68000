@@ -24,8 +24,8 @@ uint32_t	g_uScoreTable[8] = {
 /* グローバル変数 */
 static 	ST_SCORE	g_stScore = {0};
 static 	uint8_t		g_bSetScore = FALSE;
-static 	uint16_t	g_uScoreNum;
-static 	uint16_t	g_uPassCarNum;
+static 	uint16_t	g_uScoreNum = 0u;
+static 	uint16_t	g_uPassCarNum = 0u;
 
 /* 構造体定義 */
 
@@ -191,23 +191,18 @@ int16_t S_All_Init_Score(void)
 	g_uPassCarNum = 0;
 	g_bSetScore = FALSE;
 
-#if 0
-	x = 128;
-	y = 160;
-#else
 	x = 176;
 	y = 128;
-#endif
 	
-	for(i = SCORE_PCG_1; i <= SCORE_PCG_4; i++)
+	for(i = 0; i < 4; i++)
 	{
-		p_stPCG = PCG_Get_Info(i);	/* スコア */
+		p_stPCG = PCG_Get_Info(SCORE_PCG_1 + i);	/* スコア */
 		if(p_stPCG != NULL)
 		{
 			p_stPCG->Anime = 0;
-			p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * (i - SCORE_PCG_1));
+			p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * i);
 			p_stPCG->y = SP_Y_OFFSET + y;
-			p_stPCG->update	= TRUE;
+			p_stPCG->update	= FALSE;
 		}
 	}
 	
@@ -251,31 +246,25 @@ int16_t S_Main_Score(void)
 	uint16_t	number;
 
 	static uint8_t bJump = FALSE;
-	static int16_t uAcc;
 
 	ST_PCG	*p_stPCG = NULL;
 	
-#if 0
-	x = 128;
-	y = 160;
-#else
 	x = 176;
 	y = 128;
-#endif
 	
 	if(bJump == FALSE)
 	{
 		if(g_bSetScore == TRUE)
 		{
-			uAcc = -18;
 			bJump = TRUE;
 			
-			for(i = SCORE_PCG_1; i <= SCORE_PCG_4; i++)
+			for(i = 0; i < 4; i++)
 			{
-				p_stPCG = PCG_Get_Info(i);	/* スコア */
+				p_stPCG = PCG_Get_Info(SCORE_PCG_1 + i);	/* スコア */
 				if(p_stPCG != NULL)
 				{
-					p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * (i - SCORE_PCG_1));
+					p_stPCG->dx = -18;
+					p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * i);
 					p_stPCG->y = y;
 					p_stPCG->update	= TRUE;
 				}
@@ -285,7 +274,14 @@ int16_t S_Main_Score(void)
 	
 	if(bJump == TRUE)
 	{
-		uAcc += 3;
+		for(i = 0; i < 4; i++)
+		{
+			p_stPCG = PCG_Get_Info(SCORE_PCG_1 + i);	/* スコア */
+			if(p_stPCG != NULL)
+			{
+				p_stPCG->dx += 3;
+			}
+		}
 	}
 	number = g_uPassCarNum;
 	
@@ -296,62 +292,39 @@ int16_t S_Main_Score(void)
 	
 	number = g_uPassCarNum;
 	
-	for(i = SCORE_PCG_1; i <= SCORE_PCG_4; i++)
+	for(i = 0; i < 4; i++)
 	{
-		p_stPCG = PCG_Get_Info(i);	/* スコア */
+		p_stPCG = PCG_Get_Info(SCORE_PCG_1 + i);	/* スコア */
 		if(p_stPCG != NULL)
 		{
+			int16_t	pos;
+
 			p_stPCG->Anime = number % 10;
 			number /= 10;
 			
-			if(digit > (i - SCORE_PCG_1))	/* 表示桁内 */
+			if(digit > i)	/* 表示桁内 */
 			{
-#if 0
-				p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * (i - SCORE_PCG_1));
-				p_stPCG->y += uAcc;
-#else
-				p_stPCG->x += uAcc;
+				p_stPCG->x += p_stPCG->dx;
 				p_stPCG->y = y;
-#endif
-				p_stPCG->update	= TRUE;
 			}
 			else
 			{
-#if 0
-				p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * (i - SCORE_PCG_1));
-				p_stPCG->y = SP_Y_OFFSET + y;
-#else
-				x = 128;
-				y = 160;
-				p_stPCG->x = x;
-				p_stPCG->y = y;
-#endif
-				p_stPCG->update	= TRUE;
+				p_stPCG->x = 0;
+				p_stPCG->y = 0;
 			}
+			p_stPCG->update	= TRUE;
+			
+			pos = SP_X_OFFSET + x - (Mdiv2(SP_W) * i);	/* 閾値 */
 
-#if 0
-			if(p_stPCG->y > (SP_Y_OFFSET + y))
+			if(p_stPCG->x > pos)
 			{
-				p_stPCG->y = SP_Y_OFFSET + y;
-				if(i == SCORE_PCG_1)
+				p_stPCG->x = pos;
+				if(i == 0)
 				{
 					bJump = FALSE;
 					g_bSetScore = FALSE;
-					p_stPCG->update	= FALSE;
 				}
 			}
-#else
-			if(p_stPCG->x > (SP_X_OFFSET + x - (Mdiv2(SP_W) * (i - SCORE_PCG_1))))
-			{
-				p_stPCG->x = SP_X_OFFSET + x - (Mdiv2(SP_W) * (i - SCORE_PCG_1));
-				if(i == SCORE_PCG_1)
-				{
-					bJump = FALSE;
-					g_bSetScore = FALSE;
-					p_stPCG->update	= FALSE;
-				}
-			}
-#endif
 		}
 	}
 	
