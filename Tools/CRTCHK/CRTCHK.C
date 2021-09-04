@@ -53,36 +53,36 @@ struct CRT_MODE
 }stCRT_MODE[CRT_MODE_MAX];
 
 char sCRT_MODE_Mess[CRT_MODE_MAX][64] = {
-	"Frq:31kHz Rsl:512x512  Col/Page:16/1    VRAM:1024",/*0*/
-	"Frq:15kHz Rsl:512x512  Col/Page:16/1    VRAM:1024",/*1*/
-	"Frq:31kHz Rsl:256x256  Col/Page:16/1    VRAM:1024",/*2*/
-	"Frq:15kHz Rsl:256x256  Col/Page:16/1    VRAM:1024",/*3*/
-	"Frq:31kHz Rsl:512x512  Col/Page:16/4    VRAM:512 ",/*4*/
-	"Frq:15kHz Rsl:512x512  Col/Page:16/4    VRAM:512 ",/*5*/
-	"Frq:31kHz Rsl:256x256  Col/Page:16/4    VRAM:512 ",/*6*/
-	"Frq:15kHz Rsl:256x256  Col/Page:16/4    VRAM:512 ",/*7*/
-	"Frq:31kHz Rsl:512x512  Col/Page:256/2   VRAM:512 ",/*8*/
-	"Frq:15kHz Rsl:512x512  Col/Page:256/2   VRAM:512 ",/*9*/
-	"Frq:31kHz Rsl:256x256  Col/Page:256/2   VRAM:512 ",/*10*/
-	"Frq:15kHz Rsl:256x256  Col/Page:256/2   VRAM:512 ",/*11*/
-	"Frq:31kHz Rsl:512x512  Col/Page:65536/1 VRAM:512 ",/*12*/
-	"Frq:15kHz Rsl:512x512  Col/Page:65536/1 VRAM:512 ",/*13*/
-	"Frq:31kHz Rsl:256x256  Col/Page:65536/1 VRAM:512 ",/*14*/
-	"Frq:15kHz Rsl:256x256  Col/Page:65536/1 VRAM:512 ",/*15*/
-	"Frq:31kHz Rsl:768x512  Col/Page:16/1    VRAM:1024",/*16*/
-	"Frq:24kHz Rsl:1024x424 Col/Page:16/1    VRAM:1024",/*17*/
-	"Frq:24kHz Rsl:1024x848 Col/Page:16/1    VRAM:1024",/*18*/
-	"Frq:24kHz Rsl:640x480  Col/Page:16/1    VRAM:1024",/*19*/
-	"Frq:31kHz Rsl:768x512  Col/Page:256/2   VRAM:1024",/*20*/
-	"Frq:24kHz Rsl:1024x424 Col/Page:256/2   VRAM:1024",/*21*/
-	"Frq:24kHz Rsl:1024x848 Col/Page:256/2   VRAM:1024",/*22*/
-	"Frq:24kHz Rsl:640x480  Col/Page:256/2   VRAM:1024",/*23*/
-	"Frq:31kHz Rsl:768x512  Col/Page:65536/1 VRAM:1024",/*24*/
-	"Frq:24kHz Rsl:1024x424 Col/Page:65536/1 VRAM:1024",/*25*/
-	"Frq:24kHz Rsl:1024x848 Col/Page:65536/1 VRAM:1024",/*26*/
-	"Frq:24kHz Rsl:640x480  Col/Page:65536/1 VRAM:1024",/*27*/
-//	"Frq:24kHz Rsl:680x424  Col/Page:16/1    VRAM:1024",/*28*/	/* 使わない */
-//	"Frq:31kHz Rsl:384x256  Col/Page:65536/1 VRAM:1024",/*29*/	/* 使わない */
+	"31kHz 512x512  Col/Page:16/1    VRAM:1024",/*0*/
+	"15kHz 512x512(480)  Col/Page:16/1    VRAM:1024",/*1*/
+	"31kHz 256x256  Col/Page:16/1    VRAM:1024",/*2*/
+	"15kHz 256x256(240)  Col/Page:16/1    VRAM:1024",/*3*/
+	"31kHz 512x512  Col/Page:16/4    VRAM:512 ",/*4*/
+	"15kHz 512x512(480)  Col/Page:16/4    VRAM:512 ",/*5*/
+	"31kHz 256x256  Col/Page:16/4    VRAM:512 ",/*6*/
+	"15kHz 256x256(240)  Col/Page:16/4    VRAM:512 ",/*7*/
+	"31kHz 512x512  Col/Page:256/2   VRAM:512 ",/*8*/
+	"15kHz 512x512(480)  Col/Page:256/2   VRAM:512 ",/*9*/
+	"31kHz 256x256  Col/Page:256/2   VRAM:512 ",/*10*/
+	"15kHz 256x256(240)  Col/Page:256/2   VRAM:512 ",/*11*/
+	"31kHz 512x512  Col/Page:65536/1 VRAM:512 ",/*12*/
+	"15kHz 512x512(480)  Col/Page:65536/1 VRAM:512 ",/*13*/
+	"31kHz 256x256  Col/Page:65536/1 VRAM:512 ",/*14*/
+	"15kHz 256x256(240)  Col/Page:65536/1 VRAM:512 ",/*15*/
+	"31kHz 768x512  Col/Page:16/1    VRAM:1024",/*16*/
+	"24kHz 1024x424 Col/Page:16/1    VRAM:1024",/*17*/
+	"24kHz 1024x848 Col/Page:16/1    VRAM:1024",/*18*/
+	"24kHz 640x480  Col/Page:16/1    VRAM:1024",/*19*/
+	"31kHz 768x512  Col/Page:256/2   VRAM:1024",/*20*/
+	"24kHz 1024x424 Col/Page:256/2   VRAM:1024",/*21*/
+	"24kHz 1024x848 Col/Page:256/2   VRAM:1024",/*22*/
+	"24kHz 640x480  Col/Page:256/2   VRAM:1024",/*23*/
+	"31kHz 768x512  Col/Page:65536/1 VRAM:1024",/*24*/
+	"24kHz 1024x424 Col/Page:65536/1 VRAM:1024",/*25*/
+	"24kHz 1024x848 Col/Page:65536/1 VRAM:1024",/*26*/
+	"24kHz 640x480  Col/Page:65536/1 VRAM:1024",/*27*/
+//	"24kHz 680x424  Col/Page:16/1    VRAM:1024",/*28*/	/* 使わない */
+//	"31kHz 384x256  Col/Page:65536/1 VRAM:1024",/*29*/	/* 使わない */
 };
 
 char	tCRT_15kHz[ 8] = {  1,  3,  5,  7,  9, 11, 13, 15 };
@@ -506,11 +506,8 @@ void View_Line(unsigned short mode, unsigned short color)
 	switch(mode)
 	{
 	case 0:	/* 512x512 */
-	case 1:	/* 512x512 */
 	case 4:	/* 512x512 */
-	case 5:	/* 512x512 */
 	case 8:	/* 512x512 */
-	case 9:	/* 512x512 */
 		{
 			w = 512;
 			h = 512;
@@ -519,8 +516,18 @@ void View_Line(unsigned short mode, unsigned short color)
 			G_Palette();
 		}
 		break;
+	case 1:	/* 512x512(480) */
+	case 5:	/* 512x512(480) */
+	case 9:	/* 512x512(480) */
+		{
+			w = 512;
+			h = 480;
+			sq = h/8;
+
+			G_Palette();
+		}
+		break;
 	case 12:	/* 512x512 */
-	case 13:	/* 512x512 */
 		{
 			w = 512;
 			h = 512;
@@ -530,12 +537,19 @@ void View_Line(unsigned short mode, unsigned short color)
 			HiColorFlag = 1;
 		}
 		break;
+	case 13:	/* 512x512(480) */
+		{
+			w = 512;
+			h = 480;
+			sq = h/8;
+			
+			G_Palette16();
+			HiColorFlag = 1;
+		}
+		break;
 	case  2:	/* 256x256 */
-	case  3:	/* 256x256 */
 	case  6:	/* 256x256 */
-	case  7:	/* 256x256 */
 	case 10:	/* 256x256 */
-	case 11:	/* 256x256 */
 		{
 			w = 256;
 			h = 256;
@@ -544,11 +558,31 @@ void View_Line(unsigned short mode, unsigned short color)
 			G_Palette();
 		}
 		break;
+	case  3:	/* 256x256(240) */
+	case  7:	/* 256x256(240) */
+	case 11:	/* 256x256(240) */
+		{
+			w = 256;
+			h = 240;
+			sq = h/8;
+
+			G_Palette();
+		}
+		break;
 	case 14:	/* 256x256 */
-	case 15:	/* 256x256 */
 		{
 			w = 256;
 			h = 256;
+			sq = h/8;
+
+			G_Palette16();
+			HiColorFlag = 1;
+		}
+		break;
+	case 15:	/* 256x256(240) */
+		{
+			w = 256;
+			h = 240;
 			sq = h/8;
 
 			G_Palette16();
@@ -743,7 +777,8 @@ void View_Line(unsigned short mode, unsigned short color)
 		T_Fill(w-sq-1, h-sq-1,   sq,   sq, 0xFFFF,  3);	/* 右下 W */
 	}
 
-	printf("[%2d]%s\n", mode, sCRT_MODE_Mess[mode]);
+	puts("CRTCHK.x Ver0.92");
+	printf("Mode[%2d] %s\n", mode, sCRT_MODE_Mess[mode]);
 	puts("SPACE = next");
 	puts("BS    = back");
 	puts("ESC   = exit");
