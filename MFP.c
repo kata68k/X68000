@@ -8,6 +8,8 @@
 #include "inc/usr_macro.h"
 
 #include "OverKata.h"
+#include "CRTC.h"
+#include "Draw.h"
 #include "MFP.h"
 #include "Moon.h"
 #include "OutPut_Text.h"
@@ -17,15 +19,40 @@
 /* define定義 */
 
 /* グローバル変数 */
+uint8_t				g_bRasterSET[2];
+uint16_t			g_uRasterLine[8];
+
+volatile uint8_t	g_ubRasterFirst;
+volatile uint16_t	g_uRasterFirstPos;
+volatile uint16_t	g_uRasterSideNow;
+volatile uint16_t	g_uRasterSide;
+volatile uint16_t	g_uRas_NexrCount;
+volatile uint16_t	g_uRas_Count;
+volatile uint16_t	g_uCRT_Tmg;
+
+volatile uint16_t	Hsync_count;
+volatile uint16_t	Vsync_count;
+volatile uint16_t	Raster_count;
+volatile uint16_t	RasterLine_count;
+
+//volatile uint16_t *CRTC_R06		= (uint16_t *)0xE8000Cu;	/* 垂直表示開始位置-1 */
+//volatile uint16_t *CRTC_R09		= (uint16_t *)0xE80012u;	/* ラスター割り込み位置 */
+//volatile uint16_t *CRTC_R12		= (uint16_t *)0xE80018u;	/* スクリーン0 X */
+//volatile uint16_t *CRTC_R14		= (uint16_t *)0xE8001Cu;	/* スクリーン1 X */
+volatile uint16_t *VIDEO_REG3	= (uint16_t *)0xE82600;	/* グラフィック表示 */
+//volatile uint16_t *BG_CTRL		= (uint16_t *)0xEB0808;
+volatile uint16_t *BG0scroll_x	= (uint16_t *)0xEB0800;
+volatile uint16_t *BG0scroll_y	= (uint16_t *)0xEB0802;
+volatile uint16_t *BG1scroll_x	= (uint16_t *)0xEB0804;
+volatile uint16_t *BG1scroll_y	= (uint16_t *)0xEB0806;
 
 /* スタティック変数 */
 static uint8_t g_bTimer_D;
-static uint8_t g_bRasterSET;
 static volatile uint32_t NowTime;
 static volatile uint32_t StartTime;
-static volatile uint16_t g_uRas_Count;
-static volatile uint16_t Hsync_count;
-static volatile uint16_t Vsync_count;
+#if 1
+static uint32_t g_unTime_cal=0, g_unTime_cal_PH=0, g_unTime_min_PH=0;
+#endif
 
 /* 関数のプロトタイプ宣言 */
 int16_t MFP_INIT(void);
@@ -38,7 +65,7 @@ uint8_t SetNowTime(uint32_t);		/* 現在の時間を設定する */
 uint8_t GetStartTime(uint32_t *);	/* 開始の時間を取得する */
 uint8_t SetStartTime(uint32_t);	/* 開始の時間を設定する */
 uint8_t GetPassTime(uint32_t, uint32_t *);	/* 経過タイマー */
-int16_t SetRasterIntData(void *, size_t);
+int16_t SetRasterIntData(uint16_t);
 int16_t GetRasterIntPos(uint16_t *, uint16_t *, uint16_t *, uint16_t);
 static void interrupt Timer_D_Func(void);
 #if 0
@@ -46,6 +73,9 @@ static void interrupt Hsync_Func(void);
 #endif
 static void interrupt Raster_Func(void);
 static void interrupt Vsync_Func(void);
+
+const uint16_t D_RASMAX[2] = { RASTER_L_MAX, RASTER_H_MAX };	/* 0:15kHz 1:31kHz */
+const uint16_t D_RAS_INT_MAX[2] = { Y_MAX_WINDOW + 16, 320 + 32};	/* 0:15kHz 1:31kHz */
 
 /* 関数 */
 /*===========================================================================================*/
@@ -62,13 +92,21 @@ int16_t MFP_INIT(void)
 	volatile uint8_t *MFP_TADR = (uint8_t *)0xe8801f;
 
 	/* ラスタ割り込み */
-	g_bRasterSET = FALSE;
+	g_ubRasterFirst = TRUE;
+	g_uRasterSide = 0;
+	g_uRasterSideNow = 0;
+	g_bRasterSET[0] = FALSE;
+	g_bRasterSET[1] = FALSE;
 	g_uRas_Count = 0;
-	memset(g_stRasterInt, 0, sizeof(ST_RASTER_INT) * RASTER_MAX);
+	g_uRas_NexrCount = RASTER_NEXT;	/* ラスター割り込みスキップカウント最小値で初期化 */
+	g_uCRT_Tmg = 0;
+	memset(g_stRasterInt, 0, sizeof(ST_RASTER_INT) * RASTER_H_MAX);
 	/* H-Sync割り込み */
 	Hsync_count = 0;
 	/* V-Sync割り込み */
 	Vsync_count = 0;
+	/* ラスター割り込み */
+	Raster_count = 0;
 
 	//VDISPST 初回だけバグあり（EXCEED.さん）
 	*MFP_TACR = 0x00;	/* タイマーＡを止める */
@@ -95,7 +133,8 @@ int16_t MFP_EXIT(void)
 {
 	int32_t	vdispst = -1;
 
-	g_bRasterSET = FALSE;
+	g_bRasterSET[0] = FALSE;
+	g_bRasterSET[1] = FALSE;
 
 	CRTCRAS((void *)0, 0);		/* stop */
 	puts("MFP_EXIT CRTCRAS");
@@ -127,8 +166,8 @@ int16_t MFP_RESET(void)
 {
 	int16_t	ret = 0;
 
-	volatile uint8_t *MFP_INTCTRL_A  = (uint8_t *)0xE88007;	/* 割り込みイネーブルレジスタA */
-	volatile uint8_t *MFP_TADR  		= (uint8_t *)0xE8801F;	/* タイマーAデータレジスタ */
+	volatile uint8_t *MFP_INTCTRL_A = (uint8_t *)0xE88007;	/* 割り込みイネーブルレジスタA */
+	volatile uint8_t *MFP_TADR  	= (uint8_t *)0xE8801F;	/* タイマーAデータレジスタ */
 	
 	*MFP_TADR = 1;					/* カウンタ設定 */
 	*MFP_INTCTRL_A |= 0b01000000;	/* CRTC Raster割り込み許可 */
@@ -151,6 +190,7 @@ int16_t	TimerD_INIT()
 	NowTime = 0;
 	StartTime = 0;
 	TIMERDST(Timer_D_Func, 7, 20);	/* Timer-Dセット */	/* 50us(7) x 20cnt = 1ms */
+//	TIMERDST(Timer_D_Func, 3, 5);	/* Timer-Dセット */	/* 4us(3) x 5cnt = 20us */
 	g_bTimer_D =TRUE;
 	SetNowTime(NowTime);	/* 時間の初期化 */
 	/* マイコンクロックを計測 */
@@ -263,21 +303,13 @@ uint8_t GetPassTime(uint32_t uSetTimer, uint32_t *pOldTimer)	/* 経過タイマー */
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t SetRasterIntData(void *pSrc, size_t n)
+int16_t SetRasterIntData(uint16_t uSide)
 {
 	int16_t ret = 0;
-#if	1
-	g_bRasterSET = TRUE;
-#else
-	if(memcpy(g_stRasterInt, pSrc, n) == NULL)
-	{
-		ret = -1;
-	}
-	else
-	{
-		g_bRasterSET = TRUE;
-	}
-#endif
+	
+	g_bRasterSET[1] = TRUE;
+	g_uRasterSide = uSide;
+	
 	return ret;
 }
 
@@ -292,9 +324,12 @@ int16_t GetRasterIntPos(uint16_t *x, uint16_t *y, uint16_t *pat, uint16_t uNum)
 {
 	int16_t	ret = 0;
 
-	if(uNum >= RASTER_MAX)
+	/* 現在アクティブなラスター割り込みデータを取得 */
+	uNum = Mmul2(uNum) + g_uRasterSide;
+
+	if(uNum >= D_RASMAX[0])
 	{
-		uNum = RASTER_MAX - 1;
+		uNum = D_RASMAX[0] - 1;
 		ret = -1;
 	}
 	
@@ -315,7 +350,7 @@ int16_t GetRasterIntPos(uint16_t *x, uint16_t *y, uint16_t *pat, uint16_t uNum)
 	{
 		/* nop */
 	}
-
+	
 	if(pat !=  NULL)
 	{
 		*pat = g_stRasterInt[uNum].pat;
@@ -370,48 +405,59 @@ static void interrupt Hsync_Func(void)
 /* ２ライン飛ばしぐらいが精度の限界 */	/* EXCEED.さんのアドバイス */
 static void interrupt Raster_Func(void)
 {
-	volatile uint16_t *BG0scroll_x	= (uint16_t *)0xEB0800;
-	volatile uint16_t *BG0scroll_y	= (uint16_t *)0xEB0802;
-	volatile uint16_t *BG1scroll_x	= (uint16_t *)0xEB0804;
-	volatile uint16_t *BG1scroll_y	= (uint16_t *)0xEB0806;
-	volatile uint16_t *CRTC_R09		= (uint16_t *)0xE80012u;	/* ラスター割り込み位置 */
-//	volatile uint16_t *CRTC_R12		= (uint16_t *)0xE80018u;	/* スクリーン0 X */
-//	volatile uint16_t *CRTC_R14		= (uint16_t *)0xE8001Cu;	/* スクリーン1 X */
-	volatile uint16_t *VIDEO_REG3	= (uint16_t *)0xE82600;	/* グラフィック表示 */
-
-	uint16_t nNum = g_uRas_Count - SP_Y_OFFSET;	/* おそらくここはSP_Y_OFFSETではなく、CRTC_R06分を引くのが正解 */
-
-#ifdef DEBUG	/* デバッグコーナー */
-	uint8_t	bDebugMode;
-	uint16_t	uDebugNum;
-	GetDebugMode(&bDebugMode);
-	GetDebugNum(&uDebugNum);
-#endif
+	uint16_t nNum;
 	
-	g_uRas_Count += RASTER_NEXT;		/* 次のラスタ割り込み位置の計算 */
-	*CRTC_R09 = g_uRas_Count;			/* 次のラスタ割り込み位置の設定 */
-
-//	*CRTC_R12		= g_stRasterInt[nNum].x + X_OFFSET;			/* GRのX座標の設定 */
-	if( g_stRasterInt[0].y < nNum )
+	Set_DI();	/* 割り込み禁止設定 */
+	
+	nNum = (g_uRas_Count - g_uRasterFirstPos) + g_uRasterSideNow;
+	
+	g_uRas_Count += g_uRas_NexrCount;		/* 次のラスタ割り込み位置の計算 */
+	*CRTC_R09 = g_uRas_Count;				/* 次のラスタ割り込み位置の設定 */
+	
+	if(g_uRas_Count < D_RAS_INT_MAX[g_uCRT_Tmg])	/* ラスター割り込み位置の最後 */
 	{
-		/* 背景消去(ラスター割り込み開始位置からグラフィック表示をやめることで、あたかもBGより裏側に見せる) */
-		*VIDEO_REG3		= Mbset(*VIDEO_REG3,   0x0C, 0b0000000000000000);	/* GRSC1(GR3,GR4)=OFF */
+		
+		uint16_t x, y;
+		
+		g_bRasterSET[0] = TRUE;
+		
+		//	*CRTC_R12		= g_stRasterInt[nNum].x + X_OFFSET;			/* GRのX座標の設定 */
+		if(g_ubRasterFirst == TRUE)
+		{
+			g_ubRasterFirst = FALSE;	/* 初回処理終了 */
+			/* 背景消去(ラスター割り込み開始位置からグラフィック表示をやめることで、あたかもBGより裏側に見せる) */
+			*VIDEO_REG3		= Mbset(*VIDEO_REG3,   0x0C, 0b0000000000000000);	/* GRSC1(GR3,GR4)=OFF */
+
+			y = g_stRasterInt[nNum].y;
+			
+		}
+		else
+		{
+			y = g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;
+		}
+		x = g_stRasterInt[nNum].x;
+
 		/* BG0 */
-		*BG0scroll_x	= g_stRasterInt[nNum].x;							/* BG0のX座標の設定 */
-		*BG0scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG0のY座標の設定 */
+		*BG0scroll_x	= x;	/* BG0のX座標の設定 */
+		*BG0scroll_y	= y;	/* BG0のY座標の設定 */
 		/* BG1 */
-		*BG1scroll_x	= g_stRasterInt[nNum].x;							/* BG1のX座標の設定 */
-		*BG1scroll_y	= g_stRasterInt[nNum].y + g_stRasterInt[nNum].pat;	/* BG1のY座標の設定 */
+		*BG1scroll_x	= x;	/* BG1のX座標の設定 */
+		*BG1scroll_y	= y;	/* BG1のY座標の設定 */
 	}
 	else
 	{
-		/* BG0 */
-		*BG0scroll_x	= 256;					/* BG0のX座標の設定 */
-		*BG0scroll_y	= g_stRasterInt[1].y;	/* BG0のY座標の設定 */
-		/* BG1 */
-		*BG1scroll_x	= 256;					/* BG1のX座標の設定 */
-		*BG1scroll_y	= g_stRasterInt[1].y;	/* BG1のY座標の設定 */
+		g_bRasterSET[0] = FALSE;
+		
+		CRTCRAS((void *)0, 0);		/* stop */
+		g_uRas_Count = g_uRasterFirstPos;		/* 最初に戻しておく */
+		*CRTC_R09 = 255;			/* 次のラスタ割り込み位置の設定 */
+		
+		Raster_count++;	/* ラスタ割り込み一連の処理完了回数 */
 	}
+	
+	RasterLine_count++;	/* ラスター割り込み処理回数 */
+	
+	Set_EI();	/* 割り込み禁止解除 */
 	
 	IRTE();	/* 割り込み関数の最後で必ず実施 */
 }
@@ -425,31 +471,124 @@ static void interrupt Raster_Func(void)
 /*===========================================================================================*/
 static void interrupt Vsync_Func(void)
 {
-	volatile uint16_t *VIDEO_REG3	= (uint16_t *)0xE82600;
-	volatile uint16_t *BG0scroll_x	= (uint16_t *)0xEB0800;
-	volatile uint16_t *BG0scroll_y	= (uint16_t *)0xEB0802;
-	volatile uint16_t *BG1scroll_x	= (uint16_t *)0xEB0804;
-	volatile uint16_t *BG1scroll_y	= (uint16_t *)0xEB0806;
-//	volatile uint16_t *BGCTRL		= (uint16_t *)0xEB0808;
-	volatile uint16_t *CRTC_R06		= (uint16_t *)0xE8000Cu;	/* 垂直表示開始位置-1 */
-//	volatile uint16_t *CRTC_R09		= (uint16_t *)0xE80012u;
-
+	uint16_t x, y;
+#if 1
+	uint32_t time_now;
+	static uint32_t unTime_old = 0;
+#endif
+	
+//	Set_DI();	/* 割り込み禁止設定 */
+	
+	/* V-Sync割り込み処理 */
+	Vsync_count++;
+	
 	/* V-Sync割り込み処理 */
 #ifdef 	MACS_MOON
 	/* 何もしない */
+	/* MACS_Vsync経由であれば割り込み禁止状態で実行されているため、割り込み禁止処置不要 */
 #else	/* MACS_MOON */
+	Set_DI();	/* 割り込み禁止設定 */
 	vdispst = VDISPST((void *)0, 0, 0);	/* stop */
+	Set_EI();	/* 割り込み禁止解除 */
 #endif	/* MACS_MOON */
+	
+	if( g_bRasterSET[1] == TRUE )	/* ラスタ割り込み可能 */
+	{
+		/* 背景表示（割り込み開始前は、背景を表示させておく） */
+		*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000001100);	/* GR2(GR3,GR4)=ON */
 
-	/* 背景表示（割り込み開始前は、背景を表示させておく） */
-	*VIDEO_REG3 = Mbset(*VIDEO_REG3,   0x0C, 0b0000000000001100);	/* GR2(GR3,GR4)=ON */
+		if(g_bRasterSET[0] == TRUE)	/* ラスタ割り込み処理中 */
+		{
+			/* ラスタ割り込み処理中なので何もしない */
+		}
+		else						/* ラスタ割り込み処理中でない */
+		{
+			uint16_t uSide;
+			
+			/* ラスタ割り込み */
+			CRTCRAS((void *)0, 0);	/* stop */
 
-//	*BGCTRL = Mbclr(*BGCTRL, Bit_9);
-	/* ここはラスタ割り込み開始位置分のズレは考慮しなくてよい */
-	*BG0scroll_x	= 256;					/* BG0のX座標の設定 *//* 空のコントロール */
-	*BG0scroll_y	= g_stRasterInt[1].y;	/* BG0のY座標の設定 *//* 空のコントロール */
-	*BG1scroll_x	= 256;					/* BG1のX座標の設定 *//* 空のコントロール */
-	*BG1scroll_y	= g_stRasterInt[1].y;	/* BG1のY座標の設定 *//* 空のコントロール */
+			uSide = g_uRasterSide;
+			
+			/* ラスタ割り込み設定 */
+			g_ubRasterFirst = TRUE;	/* ラスタ割り込みで初回だけ処理するためのフラグ */
+
+			if(g_uCRT_Tmg != 0)	/* ラスタ２度読みの場合(31kHz) */
+			{
+				/* モニタの表示開始位置はCRTC_R06が最初の位置となる */
+				/* 割り込み開始表示位置(表示画面開始位置＋スプライトオフセット＋割り込みしたい座標) */
+				/* SP/BGは、原点-16のオフセットがあるのでSP/BGに対して割り込みを行う場合、オフセット分を足す必要がある */
+				g_uRasterFirstPos = *CRTC_R06 + g_stRasterInt[(RASTER_H_MAX - 2) + uSide].y;
+			}
+			else				/* ノンインターレースモードの場合(15kHz) */
+			{
+				/* ラスタ */
+				g_uRasterFirstPos = *CRTC_R06 + g_stRasterInt[(RASTER_H_MAX - 2) + uSide].y + SP_Y_OFFSET;	/* 割り込み開始位置 */	/* 第一フィールドのみ */
+			}
+	//		インターレースの場合	g_uRasterFirstPos = Mmul2((*CRTC_R09 - *CRTC_R06)) + g_stRasterInt[0 + uSide].y + SP_Y_OFFSET;	/* 割り込み開始位置 */	/* 第一フィールドのみ */
+			
+			/* ラスタ割り込み */
+			g_uRas_Count = g_uRasterFirstPos;
+			g_uRasterSideNow = uSide;
+			CRTCRAS( Raster_Func, g_uRas_Count );	/* ラスター割り込み */
+
+			/* BG */
+			x = 256;
+			y = g_stRasterInt[(RASTER_H_MAX - 4) + uSide].y;
+	//		*BG_CTRL = Mbset(*BG_CTRL, 0x200, 0x000);	/* DISP/CPU=OFF */
+			*BG0scroll_x	= x;	/* BG0のX座標の設定 *//* 空のコントロール */
+			*BG0scroll_y	= y;	/* BG0のY座標の設定 *//* 空のコントロール */
+			*BG1scroll_x	= x;	/* BG1のX座標の設定 *//* 空のコントロール */
+			*BG1scroll_y	= y;	/* BG1のY座標の設定 *//* 空のコントロール */
+	//		*BG_CTRL = Mbset(*BG_CTRL, 0x200, 0x200);	/* DISP/CPU=ON */
+
+		}
+	}
+	else	/* ラスタ割り込み不可 */
+	{
+		/* ラスター割り込み */
+		Raster_count = 0;
+		
+		g_unTime_cal = 0;
+		g_unTime_cal_PH = 0;
+		g_unTime_min_PH = 0;
+	}
+	
+	if(g_bRasterSET[0] == TRUE)	/* ラスタ割り込み処理中 */
+	{
+		/* ラスタ割り込み処理中なので何もしない */
+	}
+	else						/* ラスタ割り込み処理中でない */
+	{
+		/* 画面切り替え */
+		FlipProc();
+	}
+	
+#if 1	/* デバッグ表示 */
+	if( g_bRasterSET[1] == TRUE )
+	{
+		g_uRasterLine[7] = g_uRasterLine[6];
+		g_uRasterLine[6] = g_uRasterLine[5];
+		g_uRasterLine[5] = g_uRasterLine[4];
+		g_uRasterLine[4] = g_uRasterLine[3];
+		g_uRasterLine[3] = g_uRasterLine[2];
+		g_uRasterLine[2] = g_uRasterLine[1];
+		g_uRasterLine[1] = g_uRasterLine[0];
+		g_uRasterLine[0] = RasterLine_count;
+		
+		/* 処理時間計測 */
+		GetNowTime(&time_now);
+		g_unTime_cal = time_now - unTime_old;	/* LSB:1 UNIT:ms */
+		if(unTime_old != 0)
+		{
+			g_unTime_min_PH = Mmin(g_unTime_cal, g_unTime_min_PH);
+			g_unTime_cal_PH = Mmax(g_unTime_cal, g_unTime_cal_PH);
+		}
+		unTime_old = time_now;
+		
+		RasterLine_count = 0;
+	}
+#endif
 	
 	/* H-Sync割り込み処理 */
 	Hsync_count = 0;
@@ -457,24 +596,6 @@ static void interrupt Vsync_Func(void)
 	HSYNCST(Hsync_Func);	/* H-Sync割り込み */
 #endif
 	
-	/* ラスタ割り込み */
-	CRTCRAS((void *)0, 0);	/* stop */
-	if(g_bRasterSET == TRUE)
-	{
-#if 1	/* ノンインターレースモードの場合 */
-		/* モニタの表示開始位置はCRTC_R06が最初の位置となる */
-		/* ラスタ配列の要素番号＝画面のY座標 */
-		/* ただしSP/BGは、X+16,Y+16のオフセットがあるので */
-		/* ラスタ配列からオフセット分を足す必要がある */
-		g_uRas_Count = *CRTC_R06 + g_stRasterInt[0].y + SP_Y_OFFSET;	/* 割り込み開始位置 */	/* 初回は0で始まること */
-#else	/* インターレースモードの場合 */
-		g_uRas_Count = ((*CRTC_R09 - *CRTC_R06) * 2) + g_stRasterInt[0].y + SP_Y_OFFSET;	/* 割り込み開始位置 */	/* 初回は0で始まること */
-#endif
-		CRTCRAS( Raster_Func, g_uRas_Count );	/* ラスター割り込み */
-	}
-
-	/* V-Sync割り込み処理 */
-	Vsync_count++;
 #ifdef 	MACS_MOON
 	/* 何もしない */
 #else	/* MACS_MOON */

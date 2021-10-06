@@ -15,6 +15,8 @@
 #include "PCG.h"
 #include "Score.h"
 
+/* グローバル変数 */
+static uint16_t g_uTpalDef[16];
 /* 構造体 */
 static ST_TEXTINFO	g_stTextInfo = {0};
 
@@ -50,6 +52,18 @@ int16_t T_Set_TextInfo(ST_TEXTINFO);
 /*===========================================================================================*/
 void T_INIT(void)
 {
+	uint16_t i;
+	static uint8_t g_bTpalDef_Flag = TRUE;
+	
+	if(g_bTpalDef_Flag == TRUE)
+	{
+		for(i=0; i < 16u; i++)
+		{
+			g_uTpalDef[i] = _iocs_tpalet2( i, -1 );
+		}
+	}
+	g_bTpalDef_Flag = FALSE;
+	
 	B_CUROFF();			/* カーソルを消します */
 	MS_CUROF();			/* マウスカーソルを消します */
 	SKEY_MOD(0, 0, 0);	/* ソフトウェアキーボードを消します */
@@ -65,8 +79,17 @@ void T_INIT(void)
 /*===========================================================================================*/
 void T_EXIT(void)
 {
+	uint16_t i;
+	
 	B_CURON();	/* カーソルを表示します */
 	T_Clear();	/* テキストクリア */
+	
+	/* テキストパレットをデフォルトに戻す */
+	for(i=0; i < 16u; i++)
+	{
+		_iocs_tpalet2( i, g_uTpalDef[i]);	/* def */
+	}
+	_iocs_tpalet2( 0, 0 );	/* Black */
 }
 
 /*===========================================================================================*/
@@ -108,18 +131,18 @@ void T_Clear(void)
 void T_PALET(void)
 {
 	/* テキストパレットの初期化(Pal0はSPと共通) */
-	TPALET2( 0, SetRGB( 0,  0,  0));	/* Black */
-	TPALET2( 1, SetRGB( 1,  0,  0));	/* Black2 */
-	TPALET2( 2, SetRGB(31,  0,  0));	/* Red */
-	TPALET2( 3, SetRGB(30, 26, 16));	/* Red2 */
-	TPALET2( 4, SetRGB(31, 31, 31));	/* White */
-	TPALET2( 5, SetRGB(30,  8,  0));	/* Orenge */
-	TPALET2( 6, SetRGB(30, 30,  0));	/* Yellow */
-	TPALET2( 7, SetRGB( 0, 31,  0));	/* Green */
-//	TPALET2( 8, SetRGB( 8,  8,  8));	/* Glay */
+	_iocs_tpalet2( 0, SetRGB( 0,  0,  0));	/* Black */
+	_iocs_tpalet2( 1, SetRGB( 1,  0,  0));	/* Black2 */
+	_iocs_tpalet2( 2, SetRGB(31,  0,  0));	/* Red */
+	_iocs_tpalet2( 3, SetRGB(30, 26, 16));	/* Red2 */
+	_iocs_tpalet2( 4, SetRGB(31, 31, 31));	/* White */
+	_iocs_tpalet2( 5, SetRGB(30,  8,  0));	/* Orenge */
+	_iocs_tpalet2( 6, SetRGB(30, 30,  0));	/* Yellow */
+	_iocs_tpalet2( 7, SetRGB( 0, 31,  0));	/* Green */
+//	_iocs_tpalet2( 8, SetRGB( 8,  8,  8));	/* Glay */
 	/* 8～15グラフィックをテキスト化した画像で使用 */
-	TPALET2( 8, SetRGB( 4,  4,  4));	/* Glay */
-	TPALET2(15, SetRGB(31, 31, 31));	/* White */
+	_iocs_tpalet2( 8, SetRGB( 4,  4,  4));	/* Glay */
+	_iocs_tpalet2(15, SetRGB(31, 31, 31));	/* White */
 }
 
 /*===========================================================================================*/

@@ -23,6 +23,9 @@ typedef struct
 }	ST_CRT;
 
 /* externêÈåæ */
+extern volatile uint16_t	*CRTC_R06;
+extern volatile uint16_t	*CRTC_R09;
+
 extern	void CRTC_INIT(uint8_t);
 extern	void CRTC_INIT_Manual(void);
 extern	int16_t	GetCRT(ST_CRT *, int16_t);

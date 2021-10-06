@@ -27,7 +27,8 @@ enum
 	Enemy2_G,
 	MyCar_G,
 	Debug_View_G,
-	Flip_G
+	Flip_G,
+	MAX_G
 };
 
 #define	CG_MAX		(26)	/* グラフィックパレット数に依存 */

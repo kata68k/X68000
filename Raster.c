@@ -39,7 +39,7 @@ static uint8_t	g_bRoadInitFlag = TRUE;
 static uint16_t	g_uMapCounter = 0u;
 
 /* 構造体定義 */
-ST_RASTER_INT g_stRasterInt[RASTER_MAX] = {0};
+ST_RASTER_INT g_stRasterInt[RASTER_H_MAX] = {0};
 static ST_RAS_INFO	g_stRasInfo = {0};
 
 static ST_ROAD_INFO	g_stRoadInfo = {0};
@@ -49,7 +49,7 @@ static ST_ROADDATA	g_stRoadData[ROADDATA_MAX] = {0};
 int16_t	GetRasterInfo(ST_RAS_INFO *);
 int16_t	SetRasterInfo(ST_RAS_INFO);
 void	Raster_Init(void);
-void	Raster_Main(uint8_t);
+int16_t	Raster_Main(uint8_t);
 static uint8_t Raster_Calc_H(int16_t *, int16_t, int16_t);
 static uint8_t Raster_Calc_V(int16_t *, int16_t, int16_t);
 
@@ -130,20 +130,25 @@ void Raster_Init(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void Raster_Main(uint8_t bMode)
+int16_t Raster_Main(uint8_t bMode)
 {
+	int16_t	ret = 0;
+#ifdef DEBUG	/* デバッグコーナー */
 	int16_t	view_offset_x, view_offset_y;
 	int16_t	hide_offset_x, hide_offset_y;
 	int16_t	BG_offset_x, BG_offset_y;
+#endif
 	
 	uint16_t	uRas_y;
 	uint16_t	uRas_st, uRas_mid, uRas_ed, uRas_size;
 
 	int16_t	Steer = 0;
 	int16_t	Scroll_ofst = 0;
-
+	
+	static uint8_t	ubSide = 0;
+	static uint8_t	bMode_old = 0xFF;
+	
 	ST_CRT			stCRT = {0};
-	ST_RASTER_INT	stRasterInt[RASTER_MAX] = {0};
 	ST_CARDATA 		stMyCar = {0};
 
 #ifdef DEBUG	/* デバッグコーナー */
@@ -152,7 +157,7 @@ void Raster_Main(uint8_t bMode)
 	uint16_t	uDebugNum;
 	GetDebugMode(&bDebugMode);
 	GetDebugNum(&uDebugNum);
-#endif
+
 	/* モード切替による設定値の変更 */
 	GetCRT(&stCRT, bMode);
 	view_offset_x	= stCRT.view_offset_x;
@@ -161,7 +166,28 @@ void Raster_Main(uint8_t bMode)
 	hide_offset_y	= stCRT.hide_offset_y;
 	BG_offset_x		= stCRT.BG_offset_x;
 	BG_offset_y		= stCRT.BG_offset_y;
+#endif
 
+	if(bMode == bMode_old)
+	{
+		return ret;	/* 画面着替えが発生しなかった場合は、処理を行わない */
+	}
+	ret = 1;
+	
+	/* 一つのバッファに偶数/奇数で２枚確保する */
+	if(bMode == 1u)		/* 上側判定 */
+	{
+		ubSide = 1;
+	}
+	else if(bMode == 2u)	/* 下側判定 */
+	{
+		ubSide = 0;
+	}
+	else					/* その他 */
+	{
+		ubSide = 1;
+	}
+	
 	/* 自車の情報を取得 */
 	GetMyCar(&stMyCar);
 	Steer = Mdiv16(stMyCar.Steering);	/* ステアリングポジション */
@@ -179,22 +205,15 @@ void Raster_Main(uint8_t bMode)
 	uRas_size = 0xFFFF;
 
 	/* ラスター位置 */
-	g_stRasInfo.st	= g_stRoadInfo.Horizon;					/* ラスター開始位置 */
-	g_stRasInfo.mid = g_stRoadInfo.Horizon_Base;			/* ラスター固定位置 *//* 水平線の位置が変化しないポイント *//* ハイウェイスターなら 64 = ROAD_SIZE*2/3 */
-	if(bMode == 0)		/* TPS */
-	{
-		g_stRasInfo.ed = Mmin(RASTER_MAX, V_SYNC_MAX);		/* ラスター終了位置 */
-	}
-	else				/* FPS */
-	{
-		g_stRasInfo.ed = Mmin(Y_MAX_WINDOW, V_SYNC_MAX);	/* ラスター終了位置 */
-	}
-
+	g_stRasInfo.st	= g_stRoadInfo.Horizon;			/* ラスター開始位置 */
+	g_stRasInfo.mid	= g_stRoadInfo.Horizon_Base;	/* ラスター固定位置 *//* 水平線の位置が変化しないポイント *//* ハイウェイスターなら 64 = ROAD_SIZE*2/3 */
+	g_stRasInfo.ed	= Y_MAX_WINDOW;					/* ラスター終了位置 */
+	
 	uRas_st		= g_stRasInfo.st;	/* 開始位置 */
 	uRas_mid	= g_stRasInfo.mid;	/* 中間位置 */
 	uRas_ed		= g_stRasInfo.ed;	/* 終了位置 */
-	uRas_size	= uRas_ed - uRas_st;				/* ラスターの範囲 */
-	g_stRasInfo.size	= uRas_size;				/* ラスターの範囲 */
+	uRas_size	= uRas_ed - uRas_st;	/* ラスターの範囲 */
+	g_stRasInfo.size	= uRas_size;	/* ラスターの範囲 */
 	SetRasterInfo(g_stRasInfo);
 	
 //#ifdef DEBUG	/* デバッグコーナー */
@@ -234,14 +253,15 @@ void Raster_Main(uint8_t bMode)
 	
 	Road_Pat_Start();	/* 初回は道のパレットの開始設定を行う */
 	
-	for(uRas_y=0; uRas_y < uRas_size; uRas_y+=RASTER_NEXT)
+	for(uRas_y=0; uRas_y < uRas_size; uRas_y++ )
 	{
 		uint16_t	uRev_uRas_y;
 		int16_t	ras_cal_x=0;
 		int16_t	ras_cal_y=0;
 		uint16_t	ras_pat=0;
-		uint16_t	ras_offset;
 		uint8_t	bRoad_pat = FALSE;
+
+		ST_RASTER_INT	stRasterInt;
 		
 		uRev_uRas_y = uRas_size - uRas_y;	/* uRas_size -> 0 */
 		
@@ -250,8 +270,6 @@ void Raster_Main(uint8_t bMode)
 #if 1
 		if(uRas_y == 0)
 		{
-			Scroll_ofst	= 0;
-			ras_cal_x = 0;
 			bRoad_pat = TRUE;
 		}
 
@@ -262,7 +280,7 @@ void Raster_Main(uint8_t bMode)
 		else
 		{
 			/* ステアリングポジション */
-			Scroll_ofst	= APL_sDiv( Steer * uRas_y, g_stRasInfo.size );	/* 車体の移動(高い位置ほど移動量が少ない) */
+			Scroll_ofst	= APL_sDiv( Steer * (uRas_y + 1), g_stRasInfo.size );	/* 車体の移動(高い位置ほど移動量が少ない) */
 		}
 		/* スクロールする幅×計算する高さ÷ラスタースクロールさせる高さ */
 		if(g_stRoadInfo.angle == 0)
@@ -275,7 +293,7 @@ void Raster_Main(uint8_t bMode)
 			
 			Scroll_w_clp = Mmax( Mmin( g_stRoadInfo.angle * g_stRasInfo.size, 255 ), -256 );
 			
-			ras_cal_x	= APL_sDiv( Scroll_w_clp, uRas_y);	/* カーブ(低い位置ほど移動量が少ない) */
+			ras_cal_x	= APL_sDiv( Scroll_w_clp, (uRas_y + 1));	/* カーブ(低い位置ほど移動量が少ない) */
 		}
 		ras_cal_x = (ras_cal_x + Scroll_ofst) & 0x1FFu;		/* 9bitマスク *//* Max224ぐらい */
 #else
@@ -303,8 +321,6 @@ void Raster_Main(uint8_t bMode)
 		/* ロードパターン */
 		Get_Road_Pat(&ras_pat, bRoad_pat);	/* ロードのパターン情報を取得 */
 		Set_Road_Pat_offset(uRas_y);		/* ロードパターン閾値の更新 */
-
-		ras_offset = uRas_st + uRas_y;
 
 //#ifdef DEBUG	/* デバッグコーナー */
 #if 0
@@ -335,26 +351,30 @@ void Raster_Main(uint8_t bMode)
 						col);
 		}
 #endif
-		stRasterInt[ras_offset].x = (uint16_t)ras_cal_x;
-		stRasterInt[ras_offset].y = (uint16_t)ras_cal_y;
-		stRasterInt[ras_offset].pat = ras_pat;
+		stRasterInt.x = (uint16_t)ras_cal_x;
+		stRasterInt.y = (uint16_t)ras_cal_y;
+		stRasterInt.pat = ras_pat;
 
-		g_stRasterInt[ras_offset] = stRasterInt[ras_offset];
-
-		stRasterInt[ras_offset+1].x = (uint16_t)ras_cal_x;	/* 隙間の複製 */
-		stRasterInt[ras_offset+1].y = (uint16_t)ras_cal_y;	/* 隙間の複製 */
-		stRasterInt[ras_offset+1].pat = ras_pat;		/* 隙間の複製 */
-		
-		g_stRasterInt[ras_offset+1] = stRasterInt[ras_offset+1];
+		g_stRasterInt[Mmul2(uRas_y) + ubSide] = stRasterInt;
 	}
-	stRasterInt[0].y = g_stRasInfo.st;					/* 割り込み位置の設定 */
-	g_stRasterInt[0] = stRasterInt[0];
+	
 	/* BGのY座標を選ぶラスタの割り込み位置に対して表示したいBGのY座標から */
 	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
-	stRasterInt[1].y = ROAD_ST_POINT - g_stRasInfo.st;	/* 割り込みがかかるまでの表示位置(ラスタ割り込み位置によるずれの考慮は不要)	*/
-	g_stRasterInt[1] = stRasterInt[1];
+	if(g_uCRT_Tmg != 0)	/* ラスタ２度読みの場合(31kHz) */
+	{
+		g_stRasterInt[(RASTER_H_MAX - 2) + ubSide].y = Mmul2(uRas_st);	/* 割り込み位置の設定 */
+	}
+	else	/* ノンインターレースモードの場合(15kHz) */
+	{
+		g_stRasterInt[(RASTER_H_MAX - 2) + ubSide].y = uRas_st;	/* 割り込み位置の設定 */
+	}
+	g_stRasterInt[(RASTER_H_MAX - 4) + ubSide].y = ROAD_ST_POINT - uRas_st;	/* 割り込みがかかるまでの表示位置(ラスタ割り込み位置によるずれの考慮は不要)	*/
 	
-	SetRasterIntData(NULL, 0);	/* ラスター割り込みデータ設定完了 */
+	SetRasterIntData(ubSide);	/* ラスター割り込みデータ設定完了 */
+	
+	bMode_old = bMode;
+
+	return ret;
 }
 
 #if 0
@@ -415,56 +435,49 @@ static uint8_t Raster_Calc_V(int16_t *y, int16_t Num, int16_t RevNum)
 {
 	uint8_t bRet = 0;
 	int16_t RoadPoint_y = 0;
-
-	if(Num == 0u)	
-	{
-		bRet = 0x00;
-	}
+	int16_t	Point_y, Point_y_def;
+	int16_t	MinClip, MaxClip;
+	int16_t	uRasStart;
+	
 	/* Y座標 */
+	uRasStart = Mmin(g_stRasInfo.st, g_stRasInfo.mid);
+	MinClip = ROAD_ST_POINT - (uRasStart + Num);
+	MaxClip = ROAD_ED_POINT - (uRasStart + Num);
+	Point_y_def = ROAD_ST_POINT - g_stRasInfo.mid;	/* 標準位置 */
+	
+	if( g_stRasInfo.mid > g_stRoadInfo.Horizon )	/* 水平線の位置が通常より上側の処理 */
 	{
-		int16_t	Point_y, Point_y_def;
-		int16_t	MinClip, MaxClip;
-		int16_t	uRasStart;
+		int16_t	Road_strch = 0;
 		
-		uRasStart = Mmin(g_stRasInfo.st, g_stRasInfo.mid);
-		MinClip = ROAD_ST_POINT - (uRasStart + Num);
-		MaxClip = ROAD_ED_POINT - (uRasStart + Num);
-		Point_y_def = ROAD_ST_POINT - g_stRasInfo.mid;	/* 標準位置 */
-		
-		if( g_stRasInfo.mid > g_stRoadInfo.Horizon )	/* 水平線の位置が通常より上側の処理 */
-		{
-			int16_t	Road_strch = 0;
-			
-			uint16_t	uSize;
+		uint16_t	uSize;
 
-			uSize = g_stRasInfo.mid - g_stRoadInfo.Horizon;
-			Road_strch = APL_uDiv( uSize * RevNum, g_stRasInfo.size );
+		uSize = g_stRasInfo.mid - g_stRoadInfo.Horizon;
+		Road_strch = APL_uDiv( uSize * RevNum, g_stRasInfo.size );
 
-			RoadPoint_y = Mmax(Point_y_def + Road_strch, Point_y_def);
+		RoadPoint_y = Mmax(Point_y_def + Road_strch, Point_y_def);
 
-			bRet = 0xFF;
-		}
-		else	/* 水平線の位置が通常より下側の処理 */
-		{
-			int16_t	Road_strch = 0;
-			uint16_t	uSize;
-
-			uSize = g_stRoadInfo.Horizon - g_stRasInfo.mid;
-			Road_strch = APL_uDiv( uSize * RevNum, g_stRasInfo.size );
-
-			RoadPoint_y = Mmax(Point_y_def - Road_strch, Point_y_def);
-
-			bRet = 0xb7;
-		}
-		
-		Point_y = Mmax(Mmin(RoadPoint_y, MaxClip), MinClip);	/* 上下限クリップ */
-		if(RoadPoint_y == MaxClip)
-		{
-			bRet = TRUE;	/* MaxClip */
-		}
-		*y = Point_y & 0x1FFu;	/* 9bitマスク */
+		bRet = 0xFF;
 	}
-		
+	else	/* 水平線の位置が通常より下側の処理 */
+	{
+		int16_t	Road_strch = 0;
+		uint16_t	uSize;
+
+		uSize = g_stRoadInfo.Horizon - g_stRasInfo.mid;
+		Road_strch = APL_uDiv( uSize * RevNum, g_stRasInfo.size );
+
+		RoadPoint_y = Mmax(Point_y_def - Road_strch, Point_y_def);
+
+		bRet = 0xb7;
+	}
+	
+	Point_y = Mmax(Mmin(RoadPoint_y, MaxClip), MinClip);	/* 上下限クリップ */
+	if(RoadPoint_y == MaxClip)
+	{
+		bRet = TRUE;	/* MaxClip */
+	}
+	*y = Point_y & 0x1FFu;	/* 9bitマスク */
+	
 	return bRet;
 }
 

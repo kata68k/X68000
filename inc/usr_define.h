@@ -51,8 +51,9 @@
 
 /* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
 #define RASTER_NEXT	(2)
-#define RASTER_MIN	(16)		//表示開始位置(40,16)	/* ラスタ開始位置は、CRTCのR6と同じ */
-#define RASTER_MAX	(256)		//表示終了位置(552,256)
+#define RASTER_MIN	(16)			//表示開始位置(16)	/* ラスタ開始位置は、CRTCのR6と同じ */
+#define RASTER_L_MAX	(256)		//表示終了位置(240)
+#define RASTER_H_MAX	(512)		//表示終了位置(480)
 
 #define ROAD_ST_POINT	(128)	/* BGの道の開始位置 */
 #define ROAD_ED_POINT	(224)	/* BGの道の終了位置 */

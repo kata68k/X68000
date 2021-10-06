@@ -8,7 +8,9 @@
 
 #include "inc/usr_macro.h"
 #include "CRTC.h"
+#include "OverKata.h"
 #include "Input.h"
+#include "MFP.h"
 #include "PCG.h"
 
 /* グローバル変数 */
@@ -112,8 +114,24 @@ void CRTC_INIT(uint8_t uNum)
 								0x45, 0x06, 0x12, 0x32, 0x237, 0x05, 0x28, 0x228, 0x111,	/* 超連射68k 31kHz */
 								0x25, 0x01, 0x00, 0x20, 0x103, 0x02, 0x10, 0x100, 0x100};	/* 超連射68k 15kHz */
 
-	CRTMOD(0x100 + 10 + uNum);	/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+	CRTMOD(0x100 + 10 + uNum);	/* uNum = 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
 
+	if(uNum == 0)	/* 31kHz mode 10 */
+	{
+		g_uRas_NexrCount = Mmul2(RASTER_NEXT);	/* ラスター割り込みスキップカウント最小値で初期化 */
+		g_uCRT_Tmg = 1;
+	}
+	else if(uNum == 1)	/* 15kHz mode 11*/
+	{
+		g_uRas_NexrCount = RASTER_NEXT;	/* ラスター割り込みスキップカウント最小値で初期化 */
+		g_uCRT_Tmg = 0;
+	}
+	else			
+	{
+		g_uRas_NexrCount = RASTER_NEXT;	/* ラスター割り込みスキップカウント最小値で初期化 */
+		g_uCRT_Tmg = 0;
+	}
+	
 	return;	/* 今は使わない */
 
 	pat = 1 + uNum;
@@ -474,7 +492,7 @@ int16_t CRT_INIT(void)
 	
 #if 1
 //	CRTC_INIT_Manual();
-	CRTC_INIT(1);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+	CRTC_INIT(0);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
 #else
 
 	*CRTC_R07 = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
@@ -569,14 +587,20 @@ int16_t Set_CRT_Contrast(int8_t bContrast)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t wait_vdisp(int16_t count)				/* 約count／60秒待つ	*/
+int16_t wait_vdisp(int16_t count)	/* 約count／60秒待つ	*/
 {
 	int16_t ret = 0;
 	volatile uint8_t *pGPIP = (uint8_t *)0xe88001;
 	
-	while(count--){
-		while(!((*pGPIP) & GP_VDISP));	/* 垂直表示期間待ち	*/
-		while((*pGPIP) & GP_VDISP);		/* 垂直帰線期間待ち	*/
+	/* GPIP4 VDISP @kamadox さん */
+	/* 0 は垂直ブランキング期間。すなわち、垂直フロントポーチ + 垂直同期パルス + 垂直バックポーチ。*/
+	/* 1 は垂直映像期間。*/
+	/* メーカー由来の資料は垂直帰線期間／垂直表示期間という書き方になっており、*/
+	/* これが垂直同期信号であるかのような誤解を招いている。*/
+	while(count--)
+	{
+		while(((*pGPIP) & GP_VDISP) == 0u);	/* 垂直ブランキング期間待ち	*/
+		while(((*pGPIP) & GP_VDISP) != 0u);	/* 垂直映像期間待ち	*/
 	}
 
 	return ret;

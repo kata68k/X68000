@@ -776,15 +776,6 @@ void View_Line(unsigned short mode, unsigned short color)
 //		T_Fill(     0, h-sq-1,   sq,   sq, 0xFFFF, 15);	/* 左下 B */
 		T_Fill(w-sq-1, h-sq-1,   sq,   sq, 0xFFFF,  3);	/* 右下 W */
 	}
-
-	puts("CRTCHK.x Ver0.92");
-	printf("Mode[%2d] %s\n", mode, sCRT_MODE_Mess[mode]);
-	puts("SPACE = next");
-	puts("BS    = back");
-	puts("ESC   = exit");
-
-	/*カーソルを消します。*/
-	B_CUROFF();
 }
 
 void G_Palette(void)
@@ -863,6 +854,20 @@ int	Get_ROM_Ver(void)
 	return ver;
 }
 
+int Disp_Mode(int crtmod, unsigned int counter)
+{
+	puts("CRTCHK.x Ver0.93");
+	printf("Mode[%2d] %s\n", crtmod, sCRT_MODE_Mess[crtmod]);
+	puts("SPACE = next");
+	puts("BS    = back");
+	puts("ESC   = exit");
+	printf("Free Run Counter[%5d]\n", counter);
+	_iocs_b_locate(0,0);
+
+	/*カーソルを消します。*/
+	B_CUROFF();
+}
+
 int main(int argc, char *argv[])
 {
 	int superchk;
@@ -871,6 +876,7 @@ int main(int argc, char *argv[])
 	int Clip31;
 	int Clip;
 	unsigned int loop = 1;
+	unsigned int counter = 0;
 
 	int crtmod_old;
 	int crtmod=16;
@@ -1000,6 +1006,8 @@ int main(int argc, char *argv[])
 		{
 			KeyEdge = 0;
 		}
+		
+		Disp_Mode(crtmod, counter++);
 		
 		_dos_kflushio(0xFF);	/* キーバッファをクリア */
 	}

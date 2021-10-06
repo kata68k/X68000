@@ -163,7 +163,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		}
 		my = Mmin(Mdiv16(y*y), Y_MAX_WINDOW);
 		
-		ras_num = Mmin((stRasInfo.st + RASTER_NEXT + my), stRasInfo.ed);	/* ラスター情報の配列番号を算出 */
+		ras_num = Mmin(my, stRasInfo.ed);	/* ラスター情報の配列番号を算出 */
 		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
 
 		if(stRasInfo.st < stRasInfo.mid)
@@ -175,7 +175,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			st = stRasInfo.st - stRasInfo.mid;
 		}
 
-		x = Mmul2(ras_num - (stRasInfo.st + RASTER_NEXT));	/* 96に対して200なのでおよそ2倍 */
+		x = Mmul2(ras_num);	/* 96に対して200なのでおよそ2倍 */
 		
 		/* センター */
 		if( ras_x < 256 )	/* 左カーブ */

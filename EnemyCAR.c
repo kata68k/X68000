@@ -189,7 +189,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			dis = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
 			if(y <= 0)
 			{
-				y = stRasInfo.st + RASTER_NEXT;
+				y = stRasInfo.st;
 			}
 			cal = Mdiv256(Mabs(dis) * y);	/* 奥行の比率で移動量が変わる */
 			
@@ -201,15 +201,15 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			{
 				y -= cal;
 				
-				if(y <= (stRasInfo.st + RASTER_NEXT))
+				if(y <= stRasInfo.st)
 				{
 					Out_Of_Disp = -1;	/* 先を越された */
 				}
 			}
 			/* 位置 */
-			my = Mmax(y - (stRasInfo.st + RASTER_NEXT), 0);
+			my = Mmax(y - stRasInfo.st, 0);
 
-			ras_num = Mmin( y, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
+			ras_num = Mmin( y - stRasInfo.st, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
 
 			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
 			

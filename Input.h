@@ -28,6 +28,7 @@
 #define KEY_b_RLDN		(0x0800)
 #define KEY_b_HELP		(0x1000)
 #define KEY_b_TAB		(0x2000)
+#define KEY_b_G			(0x4000)
 
 #define KEY_TRUE	1
 #define KEY_FALSE	0
