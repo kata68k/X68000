@@ -190,7 +190,7 @@ int16_t Raster_Main(uint8_t bMode)
 	
 	/* 自車の情報を取得 */
 	GetMyCar(&stMyCar);
-	Steer = Mdiv16(stMyCar.Steering);	/* ステアリングポジション */
+	Steer = Mdiv128(stMyCar.Steering);	/* ステアリングポジション */
 
 	/* ロードパターン */
 	Road_Pat_Main();

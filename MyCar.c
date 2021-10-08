@@ -304,7 +304,7 @@ static int16_t	MyCar_Steering(void)
 	/* 外部要因 */
 	g_stMyCar.Steering = Steering_old + SteeringDiff + ExtFctDiff;
 	/* ステアリングクリップ */
-	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, 3800), -3800);
+	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, (int16_t)0x7FFF), (int16_t)0x8000);
 	
 	return ret;
 }
@@ -658,7 +658,7 @@ static int16_t	MyCar_Crash(void)
 #endif
 	
 	/* 当たり判定の生成 */
-	myCarSx = ROAD_CT_POINT + (g_stMyCar.Steering >> 8) - 8;
+	myCarSx = ROAD_CT_POINT + Mdiv256(g_stMyCar.Steering) - 8;
 	myCarEx = myCarSx + 16;
 	myCarSy = Y_MAX_WINDOW - 32;
 	myCarEy = myCarSy + 16;
@@ -871,7 +871,7 @@ int16_t	MyCar_CourseOut(void)
 	int16_t	vx;
 	vx	= g_stMyCar.Steering;
 
-	if( Mabs(vx) > 2800 )	/* コース外 */
+	if( Mabs(vx) > 22400 )	/* コース外 */
 	{
 		int16_t	rpm	= g_stMyCar.uEngineRPM;
 		

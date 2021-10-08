@@ -55,6 +55,9 @@ uint8_t	g_bFlip = FALSE;
 uint8_t	g_bFlip_old = FALSE;
 uint8_t	g_bExit = TRUE;
 
+volatile uint16_t	g_uGameStatus;
+
+
 #ifdef DEBUG	/* デバッグコーナー */
 uint8_t		g_bDebugMode = FALSE;
 uint8_t		g_bFPS_PH = 0u;
@@ -134,9 +137,6 @@ int16_t main(void)
 	uint8_t	bCRTMode = TRUE;
 	uint8_t	bCRTMode_flag;
 
-	uint8_t	bBG = TRUE;
-	uint8_t	bBG_flag;
-	
 	uint8_t	bMode;
 	
 	ST_TASK		stTask = {0}; 
@@ -271,10 +271,10 @@ int16_t main(void)
 	do	/* メインループ処理 */
 	{
 		uint32_t time_st, time_now;
-		int16_t	input = 0;
 #ifdef DEBUG	/* デバッグコーナー */
 		uint8_t	bTimePass = 0;
 #endif
+		g_uGameStatus = 1;
 		
 		/* 終了処理 */
 		if(loop == 0)
@@ -301,30 +301,39 @@ int16_t main(void)
 		bMode = g_mode;
 
 		/* 入力処理 */
-		get_keyboard(&input, 0, 1);		/* キーボード入力 */
-		if(bAnalogStickMode == TRUE)
+		if( (g_Vwait != 0) || (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
 		{
-			get_ajoy(&input, 0, 1, 1);	/* アナログジョイスティック入力 0:X680x0 1:etc */
+			int16_t	input = 0;
+			
+			get_keyboard(&input, 0, 1);		/* キーボード入力 */
+			if(bAnalogStickMode == TRUE)
+			{
+				get_ajoy(&input, 0, 1, 1);	/* アナログジョイスティック入力 0:X680x0 1:etc */
+			}
+			else
+			{
+				get_djoy(&input, 0, 1);		/* ジョイスティック入力 */
+			}
+			g_Input = input;
 		}
-		else
-		{
-			get_djoy(&input, 0, 1);		/* ジョイスティック入力 */
-		}
-		g_Input = input;
 		
 		/* 終了 */
-		if((input & KEY_b_ESC ) != 0u)	/* ＥＳＣキー */
+		if((g_Input & KEY_b_ESC ) != 0u)	/* ＥＳＣキー */
 		{
 			SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
 		}
+#if 1
 		/* アナログスティック／デジタルスティック切替 */
-		if(ChatCancelSW((input & KEY_b_TAB)!=0u, &bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
+		if(ChatCancelSW((g_Input & KEY_b_TAB)!=0u, &bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
 		{
 			if(bAnalogStickMode == FALSE)	bAnalogStickMode = TRUE;
 			else							bAnalogStickMode = FALSE;
 		}
+#endif
+
+#if 1
 		/* CRT 31kHz/15kHz切替 */
-		if(ChatCancelSW((input & KEY_b_HELP)!=0u, &bCRTMode_flag) == TRUE)	/* HELPで31kHz/15kHz切替 */
+		if(ChatCancelSW((g_Input & KEY_b_HELP)!=0u, &bCRTMode_flag) == TRUE)	/* HELPで31kHz/15kHz切替 */
 		{
 			if(bCRTMode == TRUE)
 			{
@@ -337,15 +346,10 @@ int16_t main(void)
 				bCRTMode = TRUE;
 			}
 		}
-		/* BG */
-		if(ChatCancelSW((input & KEY_b_G)!=0u, &bBG_flag) == TRUE)	/* デバッグ検証用 */
-		{
-			if(bBG == FALSE)	bBG = TRUE;
-			else				bBG = FALSE;
-		}
+#endif
 		
 #ifdef DEBUG	/* デバッグコーナー */
-		if(ChatCancelSW((input & KEY_b_SP)!=0u, &bDebugMode_flag) == TRUE)	/* スペースでデバッグON/OFF */
+		if(ChatCancelSW((g_Input & KEY_b_SP)!=0u, &bDebugMode_flag) == TRUE)	/* スペースでデバッグON/OFF */
 		{
 			if(bDebugMode == FALSE)	bDebugMode = TRUE;
 			else					bDebugMode = FALSE;
@@ -363,6 +367,8 @@ int16_t main(void)
 			g_unTime_Pass[0] = time_now;	/* 一時保存 */
 		}
 #endif
+		g_uGameStatus = 2;
+		
 		switch(stTask.bScene)
 		{
 			case SCENE_INIT:	/* 初期化シーン */
@@ -405,7 +411,7 @@ int16_t main(void)
 			}
 			case SCENE_TITLE:	/* タイトルシーン */
 			{
-				if(input == KEY_A)	/* Aボタン */
+				if(g_Input == KEY_A)	/* Aボタン */
 				{
 					Music_Stop();	/* 音楽再生 停止 */
 					
@@ -475,7 +481,7 @@ int16_t main(void)
 				}
 				
 				if( (DemoCount >= 10u) || /* デモシーケンス満了 */
-					(input == KEY_A) )	/* Aボタン */
+					(g_Input == KEY_A) )	/* Aボタン */
 				{
 					Music_Stop();	/* 音楽再生 停止 */
 				
@@ -519,7 +525,7 @@ int16_t main(void)
 			case SCENE_START:	/* ゲーム開始シーン */
 			{
 				/* コースを描画する */
-				if(input == KEY_B)	/* Bボタン */
+				if(g_Input == KEY_B)	/* Bボタン */
 				{
 					g_Vwait = 0;	/* No Wait */
 				}
@@ -531,14 +537,13 @@ int16_t main(void)
 				if( Road_Map_Draw(0) < 0 )	/* コース描画完了判定 */
 				{
 					g_Vwait = 1;	/* Wait 1 */
-					Music_Play(12);	/* Mach-2 */
 					SetTaskInfo(SCENE_START_E);	/* ゲームスタートタスクへ設定 */
 				}
 				break;
 			}
 			case SCENE_START_E:	/* ゲーム開始シーン(終了処理) */
 			{
-//				Music_Play(1);	/* ローディング中 */
+				Music_Play(1);	/* ローディング中 */
 
 				Set_CRT_Contrast(0);	/* コントラスト暗 */
 				
@@ -577,8 +582,7 @@ int16_t main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
-//				Music_Play(3);	/* メインBGM */
-//				Music_Play(13);	/* Mach-3 */
+				Music_Play(3);	/* メインBGM */
 				Music_Stop();	/* 音楽再生 停止 */
 				M_SetMusic(0);	/* 効果音再生の設定 */
 
@@ -592,89 +596,57 @@ int16_t main(void)
 				int16_t	Torque = 0;
 				int16_t	Raster = 0;
 
-				if((input & KEY_b_Q) != 0u)	/* Ｑ */
+				if((g_Input & KEY_b_Q) != 0u)	/* Ｑ */
 				{
 					SetTaskInfo(SCENE_GAME_E);	/* ゲームシーン(終了処理)へ設定 */
 				}
 				
+		g_uGameStatus = 3;
+				
 				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
 				{
-					if(bBG == FALSE)
-					{
-						/* 自車の情報を取得 */
-						Torque = MyCarInfo_Update(input);	/* 自車の情報を更新 */
+					/* 自車の情報を取得 */
+					Torque = MyCarInfo_Update(g_Input);	/* 自車の情報を更新 */
 #ifdef DEBUG	/* デバッグコーナー */
-						if(g_bDebugMode == TRUE)
-						{
-							GetNowTime(&time_now);
-							g_unTime_Pass[bTimePass] = Mmax(time_now - g_unTime_Pass[0], g_unTime_Pass[bTimePass]);	/* 2 */
-							bTimePass++;
-							g_unTime_Pass[0] = time_now;	/* 一時保存 */
-						}
+					if(g_bDebugMode == TRUE)
+					{
+						GetNowTime(&time_now);
+						g_unTime_Pass[bTimePass] = Mmax(time_now - g_unTime_Pass[0], g_unTime_Pass[bTimePass]);	/* 2 */
+						bTimePass++;
+						g_unTime_Pass[0] = time_now;	/* 一時保存 */
+					}
 #endif
-						MyCarInfo_Update16ms(Torque);
+					MyCarInfo_Update16ms(Torque);
 
 #ifdef DEBUG	/* デバッグコーナー */
-						if(g_bDebugMode == TRUE)
-						{
-							GetNowTime(&time_now);
-							g_unTime_Pass[bTimePass] = Mmax(time_now - g_unTime_Pass[0], g_unTime_Pass[bTimePass]);	/* 3 */
-							bTimePass++;
-							g_unTime_Pass[0] = time_now;	/* 一時保存 */
-						}
+					if(g_bDebugMode == TRUE)
+					{
+						GetNowTime(&time_now);
+						g_unTime_Pass[bTimePass] = Mmax(time_now - g_unTime_Pass[0], g_unTime_Pass[bTimePass]);	/* 3 */
+						bTimePass++;
+						g_unTime_Pass[0] = time_now;	/* 一時保存 */
+					}
 #endif
-						/* ラスター処理 */
-						Raster = Raster_Main(bMode);	/* コースの処理 */
+					/* ラスター処理 */
+					Raster = Raster_Main(bMode);	/* コースの処理 */
 
 #ifdef DEBUG	/* デバッグコーナー */
-						if(g_bDebugMode == TRUE)
-						{
-							GetNowTime(&time_now);
-							g_unTime_Pass[bTimePass] = Mmax(time_now - g_unTime_Pass[0], g_unTime_Pass[bTimePass]);	/* 4 */
-							bTimePass++;
-							g_unTime_Pass[0] = time_now;	/* 一時保存 */
-						}
-#endif
-					}
-					else
+					if(g_bDebugMode == TRUE)
 					{
-						/* ラスター処理 */
-						Raster = Raster_Main(bMode);	/* コースの処理 */
+						GetNowTime(&time_now);
+						g_unTime_Pass[bTimePass] = Mmax(time_now - g_unTime_Pass[0], g_unTime_Pass[bTimePass]);	/* 4 */
+						bTimePass++;
+						g_unTime_Pass[0] = time_now;	/* 一時保存 */
 					}
+#endif
 				}
-				
 
+		g_uGameStatus = 4;
 				/* 余った時間で処理 */
-				if(bBG == FALSE)
-				{
-					BG_main(time_st);	/* バックグランド処理 */
-					
-					//g_Vwait = 1;	/* Wait */
-					g_Vwait = 0;	/* No Wait */
-				}
-				else
-				{
-					/* BG_mainの一部 */
-					G_CLR_ALL_OFFSC(bMode);	/* グラフィックを消去 */
-
-#ifdef DEBUG	/* デバッグコーナー */
-					Debug_View(uFreeRunCount);	/* デバッグ情報表示 */
-#endif
-					//					Set_DI();	/* 割り込み禁止設定 */
-					
-					SetFlip(TRUE);	/* フリップ許可 */
-
-//					Set_EI();	/* 割り込み禁止解除 */
-					
-					if(input == KEY_B)	/* Bボタン */
-					{
-						g_Vwait = 1;	/* Wait 1 */
-					}
-					else
-					{
-						g_Vwait = 0;	/* No Wait */
-					}
-				}
+				BG_main(time_st);	/* バックグランド処理 */
+				
+				//g_Vwait = 1;	/* Wait */
+				g_Vwait = 0;	/* No Wait */
 				
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
@@ -685,6 +657,7 @@ int16_t main(void)
 					g_unTime_Pass[0] = time_now;	/* 一時保存 */
 				}
 #endif
+		g_uGameStatus = 5;
 				
 				break;
 			}
@@ -752,9 +725,12 @@ int16_t main(void)
 			g_unTime_cal_PH = unTime_cal_PH;
 		}
 #endif
+		g_uGameStatus = 6;
 
 		/* 同期待ち */
 		wait_vdisp(g_Vwait);
+
+		g_uGameStatus = 0;
 	}
 	while( loop );
 	
@@ -1510,7 +1486,7 @@ void Debug_View(uint16_t uFreeRunCount)
 					
 			//			sprintf(str, "R=%3d,V=%3d,D=%3d,L=%3d,%3d,%3d,%3d,%3d",
 				
-					sprintf(str, "V=%3d,L=%3d,R=%3d,%3d,%3d,%3d,%3d,%3d,%3d,%3d",
+					sprintf(str, "V=%3d,L=%3d,R=%4d,%4d,%4d,%4d,%4d,%4d,%4d,%4d",
 						(Vsync_count & 0xFF),
 						(Raster_count & 0xFF),
 						g_uRasterLine[0],

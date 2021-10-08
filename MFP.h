@@ -25,6 +25,7 @@ extern volatile uint16_t Hsync_count;
 extern volatile uint16_t Vsync_count;
 extern volatile uint16_t Raster_count;
 extern volatile uint16_t RasterLine_count;
+extern volatile uint16_t	g_uRasterSkipStatus;
 
 extern int16_t MFP_INIT(void);
 extern int16_t MFP_EXIT(void);

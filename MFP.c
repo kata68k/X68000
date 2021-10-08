@@ -28,6 +28,8 @@ volatile uint16_t	g_uRasterSideNow;
 volatile uint16_t	g_uRasterSide;
 volatile uint16_t	g_uRas_NexrCount;
 volatile uint16_t	g_uRas_Count;
+volatile uint16_t	g_uRasterSkipStatus;
+
 volatile uint16_t	g_uCRT_Tmg;
 
 volatile uint16_t	Hsync_count;
@@ -50,7 +52,7 @@ volatile uint16_t *BG1scroll_y	= (uint16_t *)0xEB0806;
 static uint8_t g_bTimer_D;
 static volatile uint32_t NowTime;
 static volatile uint32_t StartTime;
-#if 1
+#if 0
 static uint32_t g_unTime_cal=0, g_unTime_cal_PH=0, g_unTime_min_PH=0;
 #endif
 
@@ -472,7 +474,7 @@ static void interrupt Raster_Func(void)
 static void interrupt Vsync_Func(void)
 {
 	uint16_t x, y;
-#if 1
+#if 0
 	uint32_t time_now;
 	static uint32_t unTime_old = 0;
 #endif
@@ -500,10 +502,13 @@ static void interrupt Vsync_Func(void)
 		if(g_bRasterSET[0] == TRUE)	/* ラスタ割り込み処理中 */
 		{
 			/* ラスタ割り込み処理中なので何もしない */
+			g_uRasterSkipStatus = g_uGameStatus;
 		}
 		else						/* ラスタ割り込み処理中でない */
 		{
 			uint16_t uSide;
+			
+			g_uRasterSkipStatus = 0;
 			
 			/* ラスタ割り込み */
 			CRTCRAS((void *)0, 0);	/* stop */
@@ -546,12 +551,14 @@ static void interrupt Vsync_Func(void)
 	}
 	else	/* ラスタ割り込み不可 */
 	{
+#if 0	/* デバッグ表示 */
 		/* ラスター割り込み */
 		Raster_count = 0;
 		
 		g_unTime_cal = 0;
 		g_unTime_cal_PH = 0;
 		g_unTime_min_PH = 0;
+#endif
 	}
 	
 	if(g_bRasterSET[0] == TRUE)	/* ラスタ割り込み処理中 */
@@ -564,7 +571,7 @@ static void interrupt Vsync_Func(void)
 		FlipProc();
 	}
 	
-#if 1	/* デバッグ表示 */
+#if 0	/* デバッグ表示 */
 	if( g_bRasterSET[1] == TRUE )
 	{
 		g_uRasterLine[7] = g_uRasterLine[6];
@@ -574,7 +581,7 @@ static void interrupt Vsync_Func(void)
 		g_uRasterLine[3] = g_uRasterLine[2];
 		g_uRasterLine[2] = g_uRasterLine[1];
 		g_uRasterLine[1] = g_uRasterLine[0];
-		g_uRasterLine[0] = RasterLine_count;
+		g_uRasterLine[0] = RasterLine_count + (g_uRasterSkipStatus * 100);
 		
 		/* 処理時間計測 */
 		GetNowTime(&time_now);
@@ -585,6 +592,11 @@ static void interrupt Vsync_Func(void)
 			g_unTime_cal_PH = Mmax(g_unTime_cal, g_unTime_cal_PH);
 		}
 		unTime_old = time_now;
+		
+		if(g_bRasterSET[0] == TRUE)	/* ラスタ割り込み処理中 */
+		{
+//			Debug_View(Vsync_count);	/* デバッグ情報表示 */
+		}
 		
 		RasterLine_count = 0;
 	}

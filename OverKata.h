@@ -4,6 +4,7 @@
 #include "inc/usr_define.h"
 
 extern int16_t	g_CpuTime;
+extern volatile uint16_t	g_uGameStatus;
 
 extern int16_t	FlipProc(void);
 extern int16_t	SetFlip(uint8_t);

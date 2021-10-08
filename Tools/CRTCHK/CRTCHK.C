@@ -110,12 +110,48 @@ unsigned short tPallet[16] = {
 
 int		g_ROMVer;
 
+int Disp_Mode(int);
+int Disp_Counter(unsigned int, unsigned char);
 int Set_CRT_Mode(int , int);
 int Set_CRT_ModeEx(int, int);
 void View_Line(unsigned short, unsigned short);
 void G_Palette(void);
 void G_Palette16(void);
 void T_PALET(void);
+
+int Disp_Mode(int crtmod)
+{
+	_iocs_b_locate(0, 0);
+	puts("CRTCHK.x Ver0.93a");
+	printf("Mode[%2d] %s\n", crtmod, sCRT_MODE_Mess[crtmod]);
+	puts("SPACE = next");
+	puts("BS    = back");
+	puts("ESC   = exit");
+}
+
+int Disp_Counter(unsigned int counter, unsigned char raw)
+{
+	static int y = 0;
+	
+	if(y >= raw)
+	{
+		int i;
+		for(i=0; i<raw; i++)
+		{
+			_iocs_b_locate(0, 6 + i);
+			printf("%10d\n", counter - raw + i);
+		}
+	}
+	else
+	{
+		_iocs_b_locate(0, 6 + y);
+		printf("%10d\n", counter);
+
+		y++;
+	}
+	
+	
+}
 
 int Set_CRT_Mode(int mode, int init_flag)
 {
@@ -854,20 +890,6 @@ int	Get_ROM_Ver(void)
 	return ver;
 }
 
-int Disp_Mode(int crtmod, unsigned int counter)
-{
-	puts("CRTCHK.x Ver0.93");
-	printf("Mode[%2d] %s\n", crtmod, sCRT_MODE_Mess[crtmod]);
-	puts("SPACE = next");
-	puts("BS    = back");
-	puts("ESC   = exit");
-	printf("Free Run Counter[%5d]\n", counter);
-	_iocs_b_locate(0,0);
-
-	/*カーソルを消します。*/
-	B_CUROFF();
-}
-
 int main(int argc, char *argv[])
 {
 	int superchk;
@@ -1007,7 +1029,22 @@ int main(int argc, char *argv[])
 			KeyEdge = 0;
 		}
 		
-		Disp_Mode(crtmod, counter++);
+		Disp_Mode(crtmod);
+		if(crtmod == 16)
+		{
+			Disp_Counter(counter++, 16);
+		}
+		else if(crtmod < 16)
+		{
+			Disp_Counter(counter++, 8);
+		}
+		else
+		{
+			Disp_Counter(counter++, 12);
+		}
+		
+		/*カーソルを消します。*/
+		B_CUROFF();
 		
 		_dos_kflushio(0xFF);	/* キーバッファをクリア */
 	}
