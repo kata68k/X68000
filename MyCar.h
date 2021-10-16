@@ -45,6 +45,7 @@ extern	int16_t	MyCarInfo_Update16ms(int16_t);
 extern	int16_t	MyCar_Interior(uint8_t);
 extern	int16_t	MyCar_CourseOut(void);
 extern	int16_t	GetMyCarSpeed(int16_t *);
+extern	int16_t	MyCar_Mascot(int16_t);
 
 /* ƒƒ‚ */
 

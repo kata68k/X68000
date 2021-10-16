@@ -61,8 +61,8 @@
 #define ROAD_SIZE		(ROAD_ED_POINT-ROAD_ST_POINT)	/* BGの道のサイズ(96) */
 #define ROAD_0_MIN		(RASTER_MIN)	/* BGの道の最小(mode0)未定 */
 #define ROAD_0_MAX		(V_SYNC_MAX)	/* BGの道の最大(mode0)未定 */
-#define ROAD_1_MIN		(RASTER_MIN)	/* BGの道の最小(mode1) */
-#define ROAD_1_MAX		(Y_MAX_WINDOW)	/* BGの道の最大(mode1) */
+#define ROAD_1_MIN		(0)				/* BGの道の最小(mode1) */
+#define ROAD_1_MAX		(128)			/* BGの道の最大(mode1) */
 
 /* グラフィックパターン 0-7 max8 */
 #define DUMMY_CG		(0)	/* ダミー(0) */

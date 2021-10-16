@@ -161,6 +161,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		{
 			y += (uCount - uTime);	/* 変化量 */
 		}
+//		my = Mmin(y, Y_MAX_WINDOW);
 		my = Mmin(Mdiv16(y*y), Y_MAX_WINDOW);
 		
 		ras_num = Mmin(my, stRasInfo.ed);	/* ラスター情報の配列番号を算出 */

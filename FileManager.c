@@ -423,20 +423,23 @@ int16_t PCG_SP_dataload(int8_t *fname)
 		pcg_dat = (uint8_t*)MyMalloc( pcg_size );
 		if(pcg_dat != NULL)
 		{
-			uint32_t i,j;
+			uint32_t i,j,pat;
+			
+			pat = pcg_size / SP_16_SIZE;
 			
 			j = fread( pcg_dat
-				,  128		/* 1PCG = 128byte */
-				,  PCG_MAX	/* 256PCG */
+				,  SP_16_SIZE				/* 1PCG = 128byte */
+				,  pat	/* PCG */
 				,  fp
 				) ;
 			fclose( fp ) ;
-
-			for( i = 0 ; i < PCG_MAX ; i++ )
+#if 1
+			for( i = 0; i < pat; i++ )
 			{
 				_iocs_sp_defcg( i, 1, pcg_dat );
-				pcg_dat += 128;
+				pcg_dat += SP_16_SIZE;
 			}
+#endif
 		}
 //		MyMfree(pcg_dat);	/* メモリ解放 */
 	}
@@ -477,7 +480,7 @@ int16_t PCG_PAL_dataload(int8_t *fname)
 		/* スプライトパレットに転送 */
 		for( i = 0 ; i < 256 ; i++ )
 		{
-			SPALET( (i&15) | (1<<0x1F) , Mdiv16(i)+1 , pal_dat[i] ) ;
+			_iocs_spalet( (i&15) | (1<<0x1F) , Mdiv16(i)+1 , pal_dat[i] ) ;
 		}
 	}
 	

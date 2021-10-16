@@ -12,4 +12,5 @@
 11=MRIDER_2_story.zmd
 12=MRIDER_3_start.zmd
 13=MRIDER_4_bgm.zmd
+14=gn00c.zmd
 

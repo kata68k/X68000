@@ -34,6 +34,10 @@
 #define	G_PAL_MAX	(256)	/* 256色モード中のパレット数 */
 
 /* グローバル変数 */
+volatile uint16_t *VIDEO_REG1 = (uint16_t *)0xE82400;
+volatile uint16_t *VIDEO_REG2 = (uint16_t *)0xE82500;
+volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
+
 uint32_t	g_CG_List_Max	=	0u;
 uint8_t		*g_pCG_FileBuf[CG_MAX] = {NULL};
 uint16_t	g_CG_ColorCode[CG_MAX][G_PAL_MAX]	=	{0};
@@ -665,7 +669,11 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 void G_INIT(void)
 {
 	_iocs_g_clr_on();		/* グラフィックのクリア */
+	_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);	/* 全エリア */
+	_iocs_apage(0);			/* グラフィックの書き込み(全ページ) */
 	_iocs_vpage(0b1111);	/* グラフィック表示(page3:0n page2:0n page1:0n page0:0n) */
+	_iocs_wipe();			/* 消す */
+	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);	/* ホーム位置 */
 	G_VIDEO_INIT();			/* ビデオコントローラーの初期化 */
 }
 
@@ -678,10 +686,6 @@ void G_INIT(void)
 /*===========================================================================================*/
 void G_VIDEO_INIT(void)
 {
-	volatile uint16_t *VIDEO_REG1 = (uint16_t *)0xE82400;
-	volatile uint16_t *VIDEO_REG2 = (uint16_t *)0xE82500;
-	volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
-
 //											   210
 	*VIDEO_REG1 = Mbset(*VIDEO_REG1,   0x07, 0b001);	/* 512x512 256color 2men */
 //											   ||+--------------bit0 
@@ -744,9 +748,6 @@ void G_VIDEO_INIT(void)
 /*===========================================================================================*/
 void G_HOME(void)
 {
-	_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);
-	_iocs_wipe();
-	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);
 //	_iocs_home(1, X_OFFSET, Y_OFFSET);
 //	_iocs_home(2, X_OFFSET, 416);
 //	_iocs_home(3, X_OFFSET, 416);

@@ -63,7 +63,7 @@ int16_t	MyCar_CourseOut(void);
 int16_t	GetMyCarSpeed(int16_t *);
 void MyCar_Image(void);
 static int16_t	MyCar_Vibration(void);
-static int16_t	MyCar_Mascot(int16_t);
+int16_t	MyCar_Mascot(int16_t);
 static int16_t	MyCar_Tachometer(int16_t);
 static int16_t	MyCar_SteeringPos(int16_t);
 
@@ -1019,30 +1019,38 @@ static int16_t	MyCar_Vibration(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-static int16_t	MyCar_Mascot(int16_t Vibration)
+int16_t	MyCar_Mascot(int16_t Vibration)
 {
 	int16_t ret = 0;
 
-	uint16_t	nRatio = 0x80;
-#if 0
 	int16_t	x, y;
+	uint16_t	nRatio = 0x80;
+	uint16_t	Speed;
+	static	uint16_t	rad = 180;
+	static	uint8_t	ubRadFlag = TRUE;
+#if 0
 	uint8_t	palNum = 0;
 	uint8_t	sp_num=0;
 	
-	volatile uint16_t *PCG_src  = (uint16_t *)0xEBA000;
-	volatile uint16_t *PCG_dst  = (uint16_t *)0xEBA180;
-
-	static	uint16_t	rad = 180;
-	static	uint8_t	ubRadFlag = TRUE;
+	volatile uint16_t *PCG_src  = (uint16_t *)0xEBA800;
+	volatile uint16_t *PCG_dst  = (uint16_t *)0xEBA980;
 #endif
+
+	ST_PCG	*p_stPCG = NULL;
 
 #ifdef	DEBUG
 	GetDebugNum(&nRatio);
 #endif
 
 #if 0
+	Speed = g_stMyCar.VehicleSpeed;
+#else
+	Speed = Mdiv256(Vibration) & 0xFF;
+#endif
+
+#if 1
 	/* マスコットが揺れる */
-	if(g_stMyCar.VehicleSpeed == 0)
+	if(Speed == 0)
 	{
 		if(rad == 180)
 		{
@@ -1061,27 +1069,42 @@ static int16_t	MyCar_Mascot(int16_t Vibration)
 	{
 		uint16_t	width;
 		
-		width = 15 + (g_stMyCar.VehicleSpeed / 10);
+		width = 15 + (Speed / 10);
 		
 		if(ubRadFlag == TRUE)
 		{
-			rad+=Mmax(g_stMyCar.VehicleSpeed/30, 1);
+			rad+=Mmax(Speed/30, 1);
 			if(rad > 180 + width)ubRadFlag = FALSE;
 		}
 		else
 		{
-			rad-=Mmax(g_stMyCar.VehicleSpeed/30, 1);
+			rad-=Mmax(Speed/30, 1);
 			if(rad < 180 - width)ubRadFlag = TRUE;
 		}
 	}
 	
 
 	x = 16 + (( 32 * APL_Sin(rad)) >> 8);
+#if 0
 	y =  0 + ((-32 * APL_Cos(rad)) >> 8) - Vibration;
+#else
+	y =  0 + ((-32 * APL_Cos(rad)) >> 8);
+#endif
 
+
+#if 1
+	p_stPCG = PCG_Get_Info(ETC_PCG_KISARA);	/* キサラ */
+//	p_stPCG = PCG_Get_Info(ETC_PCG_SONIC);	/* ソニック */
+	if(p_stPCG != NULL)
+	{
+		p_stPCG->x = x;
+		p_stPCG->y = y;
+		p_stPCG->update	= TRUE;
+	}
+#else
 	palNum = 9;
-
 	PCG_Rotation((uint16_t *)PCG_dst, (uint16_t *)PCG_src, 3, 3, x, y, &sp_num, palNum, (nRatio-0x80), 180-rad);
+#endif
 
 #endif
 	

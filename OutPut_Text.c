@@ -846,7 +846,7 @@ int16_t Put_Message_To_Graphic(uint8_t *str, uint8_t bMode)
 	y = stCRT.hide_offset_y + 224;
 	
 	/* メッセージエリア クリア */
-	WINDOW( x, y, x + WIDTH, y + 16);	/* 描画可能枠再設定 */
+	_iocs_window( x, y, x + WIDTH, y + 16);	/* 描画可能枠再設定 */
 
 	Draw_Fill( x, y, x + WIDTH, y + 16, 0x01);	/* Screen0 指定パレットで塗りつぶし */
 	

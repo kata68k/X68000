@@ -106,6 +106,10 @@ typedef struct tagCG_LIST {
 } CG_LIST;
 
 /* ŠO•”QÆ •Ï” */
+extern	volatile uint16_t *VIDEO_REG1;
+extern	volatile uint16_t *VIDEO_REG2;
+extern	volatile uint16_t *VIDEO_REG3;
+
 extern	uint32_t	g_CG_List_Max;
 extern	CG_LIST		g_stCG_LIST[CG_MAX];
 

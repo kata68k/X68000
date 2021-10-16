@@ -55,6 +55,7 @@ typedef struct
 
 /* externéŒ¾ */
 extern	ST_RASTER_INT	g_stRasterInt[RASTER_H_MAX];
+extern	ST_ROAD_INFO	g_stRoadInfo;
 
 extern void	Raster_Init(void);
 extern int16_t Raster_Main(uint8_t);

@@ -10,6 +10,7 @@
 #include "OverKata.h"
 #include "CRTC.h"
 #include "Draw.h"
+#include "Graphic.h"
 #include "MFP.h"
 #include "Moon.h"
 #include "OutPut_Text.h"
@@ -41,8 +42,8 @@ volatile uint16_t	RasterLine_count;
 //volatile uint16_t *CRTC_R09		= (uint16_t *)0xE80012u;	/* ラスター割り込み位置 */
 //volatile uint16_t *CRTC_R12		= (uint16_t *)0xE80018u;	/* スクリーン0 X */
 //volatile uint16_t *CRTC_R14		= (uint16_t *)0xE8001Cu;	/* スクリーン1 X */
-volatile uint16_t *VIDEO_REG3	= (uint16_t *)0xE82600;	/* グラフィック表示 */
-//volatile uint16_t *BG_CTRL		= (uint16_t *)0xEB0808;
+//volatile uint16_t *VIDEO_REG3		= (uint16_t *)0xE82600u;	/* グラフィック表示 */
+//volatile uint16_t *BG_CTRL		= (uint16_t *)0xEB0808u;
 volatile uint16_t *BG0scroll_x	= (uint16_t *)0xEB0800;
 volatile uint16_t *BG0scroll_y	= (uint16_t *)0xEB0802;
 volatile uint16_t *BG1scroll_x	= (uint16_t *)0xEB0804;
@@ -453,6 +454,9 @@ static void interrupt Raster_Func(void)
 		CRTCRAS((void *)0, 0);		/* stop */
 		g_uRas_Count = g_uRasterFirstPos;		/* 最初に戻しておく */
 		*CRTC_R09 = 255;			/* 次のラスタ割り込み位置の設定 */
+		
+		*BG0scroll_y	= D_RAS_INT_MAX[g_uCRT_Tmg];	/* BG0のY座標の設定 */
+		*BG1scroll_y	= D_RAS_INT_MAX[g_uCRT_Tmg];	/* BG1のY座標の設定 */
 		
 		Raster_count++;	/* ラスタ割り込み一連の処理完了回数 */
 	}

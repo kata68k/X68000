@@ -15,7 +15,7 @@ int Draw_Pset(short x, short y, unsigned short color)
 	stPset.y = Mmin(y, Y_MAX_DRAW-1);
 	stPset.color = color;
 	
-	return PSET(&stPset);
+	return _iocs_pset(&stPset);
 }
 
 int Draw_Pget(short x, short y, unsigned short *color)
@@ -26,7 +26,7 @@ int Draw_Pget(short x, short y, unsigned short *color)
 	stPget.x  = x;
 	stPget.y  = y;
 	
-	ret = POINT(&stPget);
+	ret = _iocs_point(&stPget);
 
 	*color = stPget.color;
 	
@@ -44,7 +44,7 @@ int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsi
 	stLine.color = color;
 	stLine.linestyle = style;
 	
-	return LINE(&stLine);
+	return _iocs_line(&stLine);
 }
 
 int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
@@ -58,7 +58,7 @@ int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsig
 	stBox.color = color;
 	stBox.linestyle = style;
 	
-	return BOX(&stBox);
+	return _iocs_box(&stBox);
 }
 
 int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
@@ -71,7 +71,7 @@ int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
 	stFill.y2 = Mmin(y2, Y_MAX_DRAW-1);
 	stFill.color = color;
 	
-	return FILL(&stFill);
+	return _iocs_fill(&stFill);
 }
 
 int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat)
@@ -86,7 +86,7 @@ int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, shor
 	stCircle.end = ed;
 	stCircle.ratio = rat;
 	
-	return CIRCLE(&stCircle);
+	return _iocs_circle(&stCircle);
 }
 
 
