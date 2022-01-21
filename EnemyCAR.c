@@ -191,7 +191,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			{
 				y = stRasInfo.st;
 			}
-			cal = Mdiv256(Mabs(dis) * y);	/* ‰œs‚Ì”ä—¦‚ÅˆÚ“®—Ê‚ª•Ï‚í‚é */
+			cal = Mmin(Mdiv256(Mabs(dis) * y), 4);	/* ‰œs‚Ì”ä—¦‚ÅˆÚ“®—Ê‚ª•Ï‚í‚é */
 			
 			if(dis >= 0)
 			{

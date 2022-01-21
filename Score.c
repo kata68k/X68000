@@ -114,7 +114,7 @@ int16_t S_Add_Score(void)
 	{
 		g_stScore.ubScoreID++;
 	}
-	ADPCM_Play(18);	/* SEÅFPON */
+	//ADPCM_Play(18);	/* SEÅFPON */
 	
 	return ret;
 }

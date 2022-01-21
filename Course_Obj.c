@@ -7,6 +7,7 @@
 #include "Course_Obj.h"
 #include "OverKata.h"
 
+#include "APL_Math.h"
 #include "CRTC.h"
 #include "Draw.h"
 #include "FileManager.h"
@@ -130,12 +131,12 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		uint16_t	uTime;
 
 		ST_CRT	stCRT;
-		ST_RAS_INFO	stRasInfo;
 		ST_ROAD_INFO	stRoadInfo;
+		ST_RAS_INFO		stRasInfo;
 		
 		GetCRT(&stCRT, bMode);
-		GetRasterInfo(&stRasInfo);
 		GetRoadInfo(&stRoadInfo);
+		GetRasterInfo(&stRasInfo);
 
 		if((bNum & 0x01) == 0)
 		{
@@ -163,6 +164,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		}
 //		my = Mmin(y, Y_MAX_WINDOW);
 		my = Mmin(Mdiv16(y*y), Y_MAX_WINDOW);
+//		my = APL_uDiv( ((Y_MAX_WINDOW - y) + 128), (Y_MAX_WINDOW - y) );
 		
 		ras_num = Mmin(my, stRasInfo.ed);	/* ラスター情報の配列番号を算出 */
 		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
@@ -198,6 +200,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		{
 			dx = mx + cal;
 		}
+#if 1
 		if(dx > 256)
 		{
 			dx = 0x7FFF;
@@ -206,10 +209,10 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		{
 			dx = 0x7FFF;
 		}
-		
+#endif
 		z = x;
 		
-		if( (my > 0) && (my < Y_MAX_WINDOW) && (ret >= 0) && (dx < 256))
+		if( (y > 0) && (y < 36) && (ret >= 0) && (dx < 256))
 		{
 			
 			/* 水平線 */
@@ -239,7 +242,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		}
 		else
 		{
-			if(my >= Y_MAX_WINDOW)	/* 512から64引いた値（64より小さいと消えにくい） */
+			if(y >= 36)	/* 画面から消える判定は横移動の要素がつよい */
 			{
 				x = 0;
 				y = 0;
@@ -520,7 +523,6 @@ int16_t	Move_Course_BG(uint8_t bMode)
 {
 	int16_t	ret = 0;
 	
-	int16_t	Slope;
 	int16_t	Angle;
 	int16_t	Move;
 	ST_RAS_INFO	stRasInfo;
@@ -530,7 +532,6 @@ int16_t	Move_Course_BG(uint8_t bMode)
 	
 	GetRasterInfo(&stRasInfo);
 	GetRoadInfo(&stRoadInfo);
-	Slope = stRoadInfo.slope;
 	Angle = stRoadInfo.angle;
 
 	GetMyCar(&stMyCar);			/* 自車の情報を取得 */
@@ -539,14 +540,7 @@ int16_t	Move_Course_BG(uint8_t bMode)
 	{
 		if(Angle != 0)
 		{
-			if(stMyCar.ubThrottle != 0u)
-			{
-				BG_x += 0 - (Angle << 1);
-			}
-			else
-			{
-				BG_x += 0 - (Angle << 0);
-			}
+			BG_x = Angle;
 		}
 		else
 		{

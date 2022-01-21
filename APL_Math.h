@@ -13,4 +13,6 @@ extern	int16_t APL_Sin(int16_t);
 extern	int16_t APL_Tan256(int16_t);
 extern	uint32_t APL_uDiv(uint32_t, uint32_t);
 extern	int32_t APL_sDiv(int32_t, int32_t);
+extern	int16_t APL_AngleDiff(int16_t, int16_t);
+
 #endif	/* APL_MATH_H */

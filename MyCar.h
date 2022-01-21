@@ -25,6 +25,7 @@ typedef struct
 	uint16_t	uEngineRPM;		/* エンジン回転数 */
 	int16_t	VehicleSpeed;		/* 車速 */
 	int16_t	Steering;			/* ステア */
+	int16_t	Angle;				/* 向き */
 	uint8_t	ubShiftPos;			/* ギア段 */
 	uint8_t	ubThrottle;			/* スロットル開度 */
 	uint8_t	ubBrakeLights;		/* ブレーキライト */
@@ -35,6 +36,7 @@ typedef struct
 }	ST_CARDATA;
 
 /* extern宣言 */
+extern	int16_t	g_speed;
 
 extern	int16_t	MyCar_G_Load(void);
 extern	int16_t	GetMyCar(ST_CARDATA *stDat);
@@ -42,7 +44,7 @@ extern	int16_t	SetMyCar(ST_CARDATA stDat);
 extern	int16_t	MyCarInfo_Init(void);
 extern	int16_t	MyCarInfo_Update(int16_t);
 extern	int16_t	MyCarInfo_Update16ms(int16_t);
-extern	int16_t	MyCar_Interior(uint8_t);
+extern	int16_t	MyCar_Interior(void);
 extern	int16_t	MyCar_CourseOut(void);
 extern	int16_t	GetMyCarSpeed(int16_t *);
 extern	int16_t	MyCar_Mascot(int16_t);

@@ -58,7 +58,7 @@ extern	ST_RASTER_INT	g_stRasterInt[RASTER_H_MAX];
 extern	ST_ROAD_INFO	g_stRoadInfo;
 
 extern void	Raster_Init(void);
-extern int16_t Raster_Main(uint8_t);
+extern int16_t Raster_Main(void);
 extern int16_t GetRasterInfo(ST_RAS_INFO *);
 extern int16_t SetRasterInfo(ST_RAS_INFO);
 extern int16_t GetRasterPos(uint16_t *, uint16_t *, uint16_t);

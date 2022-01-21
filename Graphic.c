@@ -11,6 +11,7 @@
 #include "inc/apicglib.h"
 #include "Graphic.h"
 
+#include "OverKata.h"
 #include "Course_Obj.h"
 #include "CRTC.h"
 #include "Draw.h"
@@ -73,7 +74,7 @@ int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , u
 int32_t	G_CLR(void);
 int16_t G_CLR_HS(void);
 int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);
-int16_t	G_CLR_ALL_OFFSC(uint8_t);
+int16_t	G_CLR_ALL_OFFSC(void);
 int16_t	G_FILL_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t, uint8_t);
 int16_t	G_Load(uint8_t, uint16_t, uint16_t, uint16_t);
 int16_t	G_Load_Mem(uint8_t, int16_t, int16_t, uint16_t);
@@ -1445,11 +1446,14 @@ int16_t G_CLR_AREA(int16_t x, uint16_t w, int16_t y, uint16_t h, uint8_t Screen)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t G_CLR_ALL_OFFSC(uint8_t bMode)
+int16_t G_CLR_ALL_OFFSC(void)
 {
 	int16_t	ret = 0;
+	uint8_t bMode;
 	
 	ST_CRT	stCRT = {0};
+	
+	GetGameMode(&bMode);
 	GetCRT(&stCRT, bMode);
 	
 	/* 描画可能枠再設定 */
@@ -2361,8 +2365,8 @@ int16_t G_ClipAREA_Chk_Width(	int16_t *pPos_x, uint16_t uSrc_w,
 	{
 		case 0:
 		{
-			x_min = X_MIN_DRAW + X_OFFSET;
-			x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
+			x_min = X_MIN_DRAW;
+			x_max = X_MIN_DRAW + WIDTH;
 			break;
 		}
 		case 1:

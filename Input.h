@@ -55,6 +55,10 @@ typedef struct tagANALOG {
 	uint16_t	btn_data;	/* ボタンデータ */
 } JOY_ANALOG_BUF;
 
+extern	int16_t	g_Input;
+extern	uint8_t	g_bAnalogStickMode;
+extern	uint8_t	g_bAnalogStickMode_flag;
+
 extern uint16_t	get_keyboard( uint16_t *, uint8_t , uint8_t );
 extern uint16_t	get_djoy(uint16_t *, uint8_t, uint8_t );
 extern uint16_t	get_ajoy(uint16_t *, uint8_t, uint8_t, uint8_t );

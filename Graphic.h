@@ -135,7 +135,7 @@ extern	int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint1
 extern	int32_t	G_CLR(void);
 extern	int16_t G_CLR_HS(void);
 extern	int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);
-extern	int16_t	G_CLR_ALL_OFFSC(uint8_t);
+extern	int16_t	G_CLR_ALL_OFFSC(void);
 extern	int16_t	G_FILL_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t, uint8_t);
 extern	int16_t	G_Load(uint8_t, uint16_t, uint16_t, uint16_t);
 extern	int16_t	G_Load_Mem(uint8_t, int16_t, int16_t, uint16_t);

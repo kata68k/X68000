@@ -9,7 +9,11 @@
 #include "Input.h"
 #include "Music.h"
 
+int16_t		g_Input;
 int16_t		g_AnalogMode = 0xFFFF;
+uint8_t		g_bAnalogStickMode = FALSE;
+uint8_t		g_bAnalogStickMode_flag;
+
 JOY_ANALOG_BUF	g_Analog_Info;
 
 /* 関数のプロトタイプ宣言 */

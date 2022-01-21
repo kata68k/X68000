@@ -177,6 +177,7 @@ int16_t APL_Sin(int16_t);
 int16_t APL_Tan256(int16_t);
 uint32_t APL_uDiv(uint32_t, uint32_t);
 int32_t APL_sDiv(int32_t, int32_t);
+int16_t APL_AngleDiff(int16_t, int16_t);
 
 /* ŠÖ” */
 
@@ -353,11 +354,7 @@ int32_t APL_sDiv(int32_t Denominator, int32_t Numerator)
 	
 	if(Numerator == 0)
 	{
-		if(Denominator == 0)
-		{
-			cal = 0;
-		}
-		else if(Denominator > 0)
+		if(Denominator > 0)
 		{
 			cal = INT_MAX;
 		}
@@ -368,10 +365,52 @@ int32_t APL_sDiv(int32_t Denominator, int32_t Numerator)
 	}
 	else
 	{
-		cal = ((Denominator << 7u) / Numerator) >> 7u;
+		if(Denominator == 0)
+		{
+			cal = 0;
+		}
+		else
+		{
+			cal = Denominator / Numerator;
+		}
 	}
 	
 	return cal;
+}
+
+
+/*===========================================================================================*/
+/* ŠÖ”–¼	F	APL_AngleDiff																*/
+/* ˆø”		F	BaseAngle:0`360[deg]	Angle:0`360[deg]											*/
+/* –ß‚è’l	F	-180 ` 180[deg] 																*/
+/*-------------------------------------------------------------------------------------------*/
+/* ‹@”\		F	‚Q‚Â‚ÌŠp“x‚©‚ç·(‰sŠp‘¤)‚ð‹‚ß‚é											*/
+/*===========================================================================================*/
+int16_t APL_AngleDiff(int16_t BaseAngle, int16_t Angle)
+{
+	int16_t ret = 0;
+	int16_t Diff = 0;
+	
+	if(BaseAngle == Angle)
+	{
+		/* ‰½‚à‚µ‚È‚¢ */
+	}
+	else
+	{
+		Diff = Angle - BaseAngle;
+		if(Diff > 180)
+		{
+			Diff -= 360;
+		}
+		
+		if(Diff < -180)
+		{
+			Diff += 360;
+		}
+	}
+	ret = Diff;
+	
+	return ret;
 }
 
 #endif	/* APL_MATH_C */

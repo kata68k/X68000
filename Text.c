@@ -2,6 +2,7 @@
 #define	TEXT_C
 
 #include <iocslib.h>
+#include <doslib.h>
 
 #include "inc/usr_macro.h"
 #include "Text.h"
@@ -16,7 +17,9 @@
 #include "Score.h"
 
 /* グローバル変数 */
-static uint16_t g_uTpalDef[16];
+int32_t g_TpalDef[16];
+uint8_t g_bTpalDef_Flag = TRUE;
+
 /* 構造体 */
 static ST_TEXTINFO	g_stTextInfo = {0};
 
@@ -53,20 +56,22 @@ int16_t T_Set_TextInfo(ST_TEXTINFO);
 void T_INIT(void)
 {
 	uint16_t i;
-	static uint8_t g_bTpalDef_Flag = TRUE;
 	
 	if(g_bTpalDef_Flag == TRUE)
 	{
 		for(i=0; i < 16u; i++)
 		{
-			g_uTpalDef[i] = _iocs_tpalet2( i, -1 );
+			g_TpalDef[i] = _iocs_tpalet2( i, -1 );
+//			printf("tpalet2[%d]=%d\n", i, g_TpalDef[i]);
+//			KeyHitESC();	/* デバッグ用 */
 		}
 	}
 	g_bTpalDef_Flag = FALSE;
 	
-	B_CUROFF();			/* カーソルを消します */
-	MS_CUROF();			/* マウスカーソルを消します */
-	SKEY_MOD(0, 0, 0);	/* ソフトウェアキーボードを消します */
+	_iocs_os_curof();			/* カーソルを消します */
+	_iocs_b_curoff();			/* カーソルを消します */
+	_iocs_ms_curof();			/* マウスカーソルを消します */
+	_iocs_skey_mod(0, 0, 0);	/* ソフトウェアキーボードを消します */
 }
 
 /*===========================================================================================*/
@@ -80,12 +85,17 @@ void T_EXIT(void)
 {
 	uint16_t i;
 	
-	B_CURON();	/* カーソルを表示します */
+	_iocs_os_curon();		/* カーソルを表示します */
+	_iocs_b_curon();		/* カーソルを表示します */
+	_dos_c_fnkmod(0);		/* ファンクションキー行の設定 */
+	_dos_c_window(0,31);	/* スクロール範囲の設定 */
 	
 	/* テキストパレットをデフォルトに戻す */
 	for(i=0; i < 16u; i++)
 	{
-		_iocs_tpalet2( i, g_uTpalDef[i]);	/* def */
+		_iocs_tpalet2( i, g_TpalDef[i]);	/* def */
+//		printf("tpalet2[%d]=%d\n", i, g_TpalDef[i]);
+//		KeyHitESC();	/* デバッグ用 */
 	}
 	_iocs_tpalet2( 0, 0 );	/* Black */
 }
@@ -118,7 +128,7 @@ void T_Clear(void)
 	stTxFill.vram_page = 3;
 	_iocs_txfill(&stTxFill);
 
-	B_CUROFF();			/* カーソルを消します */
+	_iocs_b_curoff();			/* カーソルを消します */
 }
 
 /*===========================================================================================*/

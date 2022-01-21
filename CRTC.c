@@ -510,24 +510,27 @@ int16_t CRT_INIT(void)
 //										   ||||||+----------bit9 MEN	同時アクセスマスク
 #endif
 	/* CRTの設定 */
-	g_stCRT[0].view_offset_x	= X_OFFSET;
+	/* 画面（オフセットなし） */
+	g_stCRT[0].view_offset_x	= X_MIN_DRAW;
 	g_stCRT[0].view_offset_y	= Y_MIN_DRAW;
-	g_stCRT[0].hide_offset_x	= X_OFFSET;
-	g_stCRT[0].hide_offset_y	= Y_OFFSET;
+	g_stCRT[0].hide_offset_x	= X_MIN_DRAW;
+	g_stCRT[0].hide_offset_y	= Y_MIN_DRAW + Y_OFFSET;
 	g_stCRT[0].BG_offset_x		= 0 + SP_X_OFFSET;
 	g_stCRT[0].BG_offset_y		= Y_HORIZON_0 + SP_Y_OFFSET;
 	
-	g_stCRT[1].view_offset_x	= X_OFFSET;
-	g_stCRT[1].view_offset_y	= Y_OFFSET;
-	g_stCRT[1].hide_offset_x	= X_OFFSET;
+	/* 画面（オフセットあり 表示：下側） */
+	g_stCRT[1].view_offset_x	= X_MIN_DRAW + X_OFFSET;
+	g_stCRT[1].view_offset_y	= Y_MIN_DRAW + Y_OFFSET;
+	g_stCRT[1].hide_offset_x	= X_MIN_DRAW + X_OFFSET;
 	g_stCRT[1].hide_offset_y	= Y_MIN_DRAW;
 	g_stCRT[1].BG_offset_x		= 0;
 	g_stCRT[1].BG_offset_y		= Y_HORIZON_1;
 
-	g_stCRT[2].view_offset_x	= X_OFFSET;
+	/* 画面（オフセットあり 表示：上側） */
+	g_stCRT[2].view_offset_x	= X_MIN_DRAW + X_OFFSET;
 	g_stCRT[2].view_offset_y	= Y_MIN_DRAW;
-	g_stCRT[2].hide_offset_x	= X_OFFSET;
-	g_stCRT[2].hide_offset_y	= Y_OFFSET;
+	g_stCRT[2].hide_offset_x	= X_MIN_DRAW + X_OFFSET;
+	g_stCRT[2].hide_offset_y	= Y_MIN_DRAW + Y_OFFSET;
 	g_stCRT[2].BG_offset_x		= 0;
 	g_stCRT[2].BG_offset_y		= Y_HORIZON_1;
 	

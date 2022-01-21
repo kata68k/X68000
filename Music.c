@@ -351,8 +351,9 @@ int32_t Music_Play(uint8_t bPlayNum)
 	if(bPlayNum > m_list_max)return ret;
 
 	Music_Stop();	/* 音楽停止 */
+	
 #if		ZM_V2 == 1
-	zmd_play(&music_list[bPlayNum][0]);	
+	ret = zmd_play(&music_list[bPlayNum][0]);	
 #elif	ZM_V3 == 1
 	ret = zm_play_zmd(music_dat_size[bPlayNum], &music_dat[bPlayNum][0]);
 #elif	MC_DRV == 1
@@ -360,6 +361,7 @@ int32_t Music_Play(uint8_t bPlayNum)
 #else
 	#error "No Music Lib"
 #endif
+	_iocs_b_curoff();			/* カーソルを消します */
 
 	return	ret;
 }
@@ -691,7 +693,7 @@ int32_t	M_Play(int16_t Key)
 	int32_t	err = 0;
 	int32_t	uCh = 0;
 	int32_t	uTrk = 0;
-	static uint8_t ubChanel = 0u;
+	static int8_t bChanel = 0u;
 	static uint8_t ubCount = 0u;
 
 #ifdef DEBUG	/* デバッグコーナー */
@@ -701,15 +703,15 @@ int32_t	M_Play(int16_t Key)
 	GetDebugNum(&uDebugNum);
 #endif
 	
-	uCh = (FM_CH_MAX - FM_USE_CH + 1u) + ubChanel;
+	uCh = (FM_CH_MAX - FM_USE_CH + 1u) + bChanel;
 	uTrk = 60 + uCh;
-	if(ubChanel < FM_USE_CH - 1u)
+	if(bChanel < FM_USE_CH - 1u)
 	{
-		ubChanel++;
+		bChanel++;
 	}
 	else
 	{
-		ubChanel = 0u;
+		bChanel = 0;
 	}
 
 	err = m_alloc( uTrk, MML_BUF );	/* trk(1-80) */
@@ -720,7 +722,7 @@ int32_t	M_Play(int16_t Key)
 #ifdef DEBUG	/* デバッグコーナー */
 	if(bDebugMode == TRUE)
 	{
-		if(Key > 0x80)
+		if(Key < 0x80)
 		{
 			sprintf(uMML, "@%dv15o2l4q1@k%d d+&", uDebugNum, Mdiv8(Key) );	/* OK */
 		}

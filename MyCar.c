@@ -30,9 +30,9 @@
 /* define定義 */
 
 /* グローバル変数 */
-int16_t	g_speed = 0;
-static int16_t g_Input;
-static int16_t g_SteeringDiff;
+int16_t	g_speed;
+static int16_t	g_Input;
+static int16_t	g_SteeringDiff;
 
 /* グローバルデータ */
 uint16_t	uTM[6] = { 0, 2857, 1950, 1444, 1096, 761 };/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 */
@@ -55,10 +55,11 @@ static int16_t	MyCar_Steering(void);
 static int16_t	MyCar_ShiftPos(void);
 static int16_t	MyCar_Accel(void);
 static int16_t	MyCar_Brake(void);
+static int16_t	MyCar_Angle(void);
 static int16_t	MyCar_EngineSpeed(int16_t);
 static int16_t	MyCar_Crash(void);
 static int16_t	MyCar_VehicleSpeed(void);
-int16_t	MyCar_Interior(uint8_t);
+int16_t	MyCar_Interior(void);
 int16_t	MyCar_CourseOut(void);
 int16_t	GetMyCarSpeed(int16_t *);
 void MyCar_Image(void);
@@ -123,10 +124,13 @@ int16_t	MyCarInfo_Init(void)
 {
 	int16_t	ret = 0;
 	
+	g_speed = 0;
+	
 	g_stMyCar.ubCarType		= 0u;	/* 車の種類 */
 	g_stMyCar.uEngineRPM	= 0u;	/* エンジン回転数 */
 	g_stMyCar.VehicleSpeed	= 0;	/* 車速 */
 	g_stMyCar.Steering		= 0;	/* ステア */
+	g_stMyCar.Angle			= 0;	/* 向き */
 	g_stMyCar.ubShiftPos	= 0u;	/* ギア段 */
 	g_stMyCar.ubThrottle	= 0u;		/* スロットル開度 */
 	g_stMyCar.ubBrakeLights	= FALSE;	/* ブレーキライト */
@@ -160,6 +164,8 @@ int16_t	MyCarInfo_Update(int16_t input)
 	Torque += MyCar_Accel();		/* アクセル操作 */
 	
 	Torque += MyCar_Brake();		/* ブレーキ操作 */
+	
+	Torque += MyCar_Angle();		/* クルマの向き */
 	
 	Torque += MyCar_Crash();		/* 衝突判定 */
 	
@@ -199,113 +205,105 @@ static int16_t	MyCar_Steering(void)
 {
 	int16_t	ret = 0;
 
-	int16_t	Angle;
+	int8_t	bOn = 0;
+	static int16_t	Steering = 0;
+	int16_t	Steering_old = 0;
 	int16_t	SteeringDiff = 0;
-	int16_t	ExtFctDiff = 0;
-	int16_t	Steering_old;
+	
 	int16_t	AnalogMode = 0;
+	JOY_ANALOG_BUF	stAnalog_Info;
 
-	ST_ROAD_INFO	stRoadInfo;
-	JOY_ANALOG_BUF stAnalog_Info;
+	AnalogMode = GetAnalog_Info(&stAnalog_Info);	/* アナログスティック情報取得 */
 	
-	AnalogMode = GetAnalog_Info(&stAnalog_Info);	/* アナログ情報取得 */
-	
-	GetRoadInfo(&stRoadInfo);
-	Angle = stRoadInfo.angle;
-	Steering_old = g_stMyCar.Steering;
+	Steering_old = g_stMyCar.Steering;	/* 前回値 */
 	
 	if((g_Input & KEY_RIGHT) != 0u)
 	{
-		if((g_stMyCar.ubOBD & OBD_SPIN_R) != 0u)	/* 右スピン */
-		{
-			g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_SPIN_R);
-			ADPCM_Stop();	/* 効果音停止 */
-			ADPCM_Play(4);	/* ブレーキ音 */
-		}
-		ret -= 1;	/* TorqueDW パワステ駆動減 */
-
 		if(AnalogMode == 0)	/* アナログモード */
 		{
-			SteeringDiff += (stAnalog_Info.r_stk_lr - 0x80);
+			Steering = (stAnalog_Info.r_stk_lr - 0x80);
 		}
 		else
 		{
-			SteeringDiff += Mmul16(g_speed);	/* 右 */
+			if(Steering < 0)
+			{
+				Steering = Mdiv2(Steering);	/* 2分法 */
+				if(Steering == -1)	/* 算術シフトのマイナス側は０に収束しない対策 */
+				{
+					Steering = 0;
+				}
+			}
+			Steering += g_speed;	/* 右 */
 		}
+		bOn = 1;
+		ret -= 1;	/* TorqueDW パワステ駆動減 */
 	}
 	else if((g_Input & KEY_LEFT) != 0u)
 	{
-		if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
-		{
-			g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_SPIN_L);
-			ADPCM_Stop();	/* 効果音停止 */
-			ADPCM_Play(4);	/* ブレーキ音 */
-		}
-		ret -= 1;	/* TorqueDW パワステ駆動減 */
-
 		if(AnalogMode == 0)	/* アナログモード */
 		{
-			SteeringDiff -= (0x80 - stAnalog_Info.r_stk_lr);
+			Steering = (0x80 - stAnalog_Info.r_stk_lr);
 		}
 		else
 		{
-			SteeringDiff -= Mmul16(g_speed);	/* 左 */
+			if(Steering > 0)
+			{
+				Steering = Mdiv2(Steering);	/* 2分法 */
+				if(Steering == -1)	/* 算術シフトのマイナス側は０に収束しない対策 */
+				{
+					Steering = 0;
+				}
+			}
+			Steering -= g_speed;	/* 左 */
 		}
+		bOn = -1;
+		ret -= 1;	/* TorqueDW パワステ駆動減 */
 	}
 	else
 	{
-		
-	}
-	g_SteeringDiff = SteeringDiff;
-	
-	/* スピン中の車両挙動 */
-	/* スピン発生 */
-	if((g_stMyCar.ubOBD & OBD_SPIN_R) != 0u)	/* 右スピン */
-	{
-		ret -= 10;	/* TorqueDW スピン */
-		
-		ExtFctDiff += Mmul8(g_speed);	/* 右 */
-	}
-	else if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
-	{
-		ret -= 10;	/* TorqueDW スピン */
-
-		ExtFctDiff -= Mmul8(g_speed);	/* 左 */
-	}
-	else
-	{
-		/* 保持 */
-	}
-	
-	/* コーナリング */
 #if 1
-	if( g_speed != 0u )
-	{
-		if(Angle != 0)
+		if(g_speed != 0)	/* 車速アリ */
 		{
-			ret -= g_speed;	/* TorqueDW ハーフスピン */
-			
-			ExtFctDiff += Angle * g_speed;	/* バランス調整要 */
+			if(Steering == 0)
+			{
+				/* 何もしない */
+			}
+			else
+			{
+				Steering = Mdiv2(Steering);	/* 2分法 */
+				if(Steering == -1)	/* 算術シフトのマイナス側は０に収束しない対策 */
+				{
+					Steering = 0;
+				}
+			}
 		}
-//		else if(Angle < 0)
-//		{
-//			ExtFctDiff -= Angle * g_speed;	/* バランス調整要 */
-//		}
+#endif
+	}
+	Steering = Mmax(Mmin(Steering, 120), -120);
+	
+	g_stMyCar.Steering = Steering;	/* ステアリングのキレ角(絶対値) */
+
+	/* 外部出力 */
+	SteeringDiff = APL_AngleDiff(Steering_old, g_stMyCar.Steering);	/* 変化量 */
+	if(SteeringDiff == 0)
+	{
+		if(bOn == 0)
+		{
+		}
 		else
 		{
-			/* 前回値保持 */
+			if(bOn > 0)
+			{
+				SteeringDiff = g_speed;
+			}
+			else
+			{
+				SteeringDiff = -g_speed;
+			}
 		}
 	}
-	else{
-		/* 前回値保持 */
-	}
-#endif
-	
-	/* 外部要因 */
-	g_stMyCar.Steering = Steering_old + SteeringDiff + ExtFctDiff;
-	/* ステアリングクリップ */
-	g_stMyCar.Steering = Mmax(Mmin(g_stMyCar.Steering, (int16_t)0x7FFF), (int16_t)0x8000);
-	
+	g_SteeringDiff = SteeringDiff;	/* 変化量 */
+
 	return ret;
 }
 
@@ -433,6 +431,62 @@ static int16_t	MyCar_Brake(void)
 	{
 		g_stMyCar.ubBrakeLights = FALSE;	/* ブレーキランプ OFF */
 	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static int16_t	MyCar_Angle(void)
+{
+	int16_t	ret = 0;
+
+	int16_t	SteeringDiff = 0;
+	
+	ST_ROAD_INFO	stRoadInfo;
+	int16_t	RoadAngle;
+	int16_t	AngleDiff;
+
+	GetRoadInfo(&stRoadInfo);
+	RoadAngle = stRoadInfo.angle;
+	
+	/* ステアリング操作によるクルマの向き変化 */
+	SteeringDiff = g_SteeringDiff;
+	
+	AngleDiff = APL_AngleDiff(RoadAngle, g_stMyCar.Angle);			/* 車と道路の角度差分で車の位置が変わる */
+	
+	/* クルマの向き */
+	if( AngleDiff > 16 )
+	{
+		g_stMyCar.Angle = RoadAngle + 16;
+	}
+	else if( AngleDiff < -16 )
+	{
+		g_stMyCar.Angle = RoadAngle - 16;
+	}
+	else
+	{
+	}
+	g_stMyCar.Angle += SteeringDiff;	/* 車の向き */
+	
+	/* 0or360度を超えた処理 */
+	do
+	{
+		if(g_stMyCar.Angle >= 360)
+		{
+			g_stMyCar.Angle -= 360;
+		}
+		else if(g_stMyCar.Angle < 0)
+		{
+			g_stMyCar.Angle += 360;
+		}
+	}
+	while((g_stMyCar.Angle < 0) || (g_stMyCar.Angle > 360) );
 	
 	return ret;
 }
@@ -647,8 +701,13 @@ static int16_t	MyCar_Crash(void)
 	int16_t	myCarSx, myCarEx, myCarSy, myCarEy;
 	uint32_t	i;
 	uint32_t	uEnemyNum = 0;
+	int16_t	ExtFctDiff = 0;
+	int16_t	Pos = 0;
 
 	ST_ENEMYCARDATA	stEnemyCar = {0};
+
+	ST_ROAD_INFO	stRoadInfo;
+	int16_t	RoadAngle;
 	
 #ifdef DEBUG	/* デバッグコーナー */
 	uint8_t	bDebugMode;
@@ -656,9 +715,13 @@ static int16_t	MyCar_Crash(void)
 	GetDebugMode(&bDebugMode);
 	GetDebugNum(&uDebugNum);
 #endif
+
+	GetRoadInfo(&stRoadInfo);
+	RoadAngle = stRoadInfo.angle;
 	
 	/* 当たり判定の生成 */
-	myCarSx = ROAD_CT_POINT + Mdiv256(g_stMyCar.Steering) - 8;
+	Pos	= APL_AngleDiff(RoadAngle, g_stMyCar.Angle);
+	myCarSx = ROAD_CT_POINT + Pos - 8;
 	myCarEx = myCarSx + 16;
 	myCarSy = Y_MAX_WINDOW - 32;
 	myCarEy = myCarSy + 16;
@@ -706,63 +769,85 @@ static int16_t	MyCar_Crash(void)
 		g_stMyCar.ubOBD |= OBD_DAMAGE;	/* 故障 */
 		g_stMyCar.uEngineRPM = g_stMyCar.uEngineRPM >> 1;		/* 1/2 */
 	}
+	else
+	{
+		if((g_Input & KEY_RIGHT) != 0u)
+		{
+			if((g_stMyCar.ubOBD & OBD_SPIN_R) != 0u)	/* 右スピン */
+			{
+				g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_SPIN_R);
+				ADPCM_Stop();	/* 効果音停止 */
+				ADPCM_Play(4);	/* ブレーキ音 */
+			}
+		}
+		else if((g_Input & KEY_LEFT) != 0u)
+		{
+			if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
+			{
+				g_stMyCar.ubOBD = Mbclr(g_stMyCar.ubOBD, OBD_SPIN_L);
+				ADPCM_Stop();	/* 効果音停止 */
+				ADPCM_Play(4);	/* ブレーキ音 */
+			}
+		}
+		else
+		{
+			
+		}
+	}
 
+	/* スピン中の車両挙動 */
+	/* スピン発生 */
+	if((g_stMyCar.ubOBD & OBD_SPIN_R) != 0u)	/* 右スピン */
+	{
+		ExtFctDiff += g_speed;	/* 右 */
+	}
+	else if((g_stMyCar.ubOBD & OBD_SPIN_L) != 0u)	/* 左スピン */
+	{
+		ExtFctDiff -= g_speed;	/* 左 */
+	}
+	else
+	{
+		/* 保持 */
+	}
+	
+	/* コーナリング */
+#if 1
+	if( g_speed != 0u )
+	{
+		if(RoadAngle != 0)
+		{
+			ret -= g_speed;	/* TorqueDW ハーフスピン */
+			
+			ExtFctDiff += Mdiv256(RoadAngle * g_speed);	/* バランス調整要 */
+		}
+//		else if(RoadAngle < 0)
+//		{
+//			ExtFctDiff -= RoadAngle * g_speed;	/* バランス調整要 */
+//		}
+		else
+		{
+			/* 前回値保持 */
+		}
+	}
+	else{
+		/* 前回値保持 */
+	}
+#endif
+	
 	/* 敵車の車速 更新 */
 	if( bHit == TRUE )
 	{
 		GetEnemyCAR(&stEnemyCar, uEnemyNum);
-		stEnemyCar.VehicleSpeed = g_stMyCar.VehicleSpeed + 5;
+		if(stEnemyCar.VehicleSpeed == 0)
+		{
+			/* 何もしない */
+		}
+		else
+		{
+			stEnemyCar.VehicleSpeed = g_stMyCar.VehicleSpeed + 5;
+		}
 		SetEnemyCAR(stEnemyCar, uEnemyNum);	/* 敵車の更新 */
 	}
-	
-#ifdef DEBUG	/* デバッグコーナー */
-	if(bDebugMode == TRUE)
-	{
-		uint16_t color;
-		uint8_t	bMode;
-		
-		ST_CRT	stCRT;
-		
-		switch(g_stMyCar.ubOBD)
-		{
-			case OBD_NORMAL:
-			{
-				color = 0x0B;
-				break;
-			}
-			case OBD_DAMAGE:
-			{
-				color = 0x0A;
-				break;
-			}
-			case OBD_SPIN_L:
-			case OBD_SPIN_R:
-			{
-				color = 0x0C;
-				break;
-			}
-			case OBD_COURSEOUT:
-			{
-				color = 0x0E;
-				break;
-			}
-			default:
-			{
-				color = 0x00;
-				break;
-			}
-		}
-		
-		GetGameMode(&bMode);
-		GetCRT(&stCRT, bMode);
-		
-		Draw_Box(
-			stCRT.hide_offset_x + myCarSx,
-			stCRT.hide_offset_y + myCarSy,
-			stCRT.hide_offset_x + myCarEx,
-			stCRT.hide_offset_y + myCarEy, color, 0xFFFF);
-	}
-#endif
 	
 	return ret;
 }
@@ -836,7 +921,7 @@ static int16_t	MyCar_VehicleSpeed(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t	MyCar_Interior(uint8_t bMode)
+int16_t	MyCar_Interior(void)
 {
 	int16_t	ret = 0;
 
@@ -868,14 +953,16 @@ int16_t	MyCar_Interior(uint8_t bMode)
 int16_t	MyCar_CourseOut(void)
 {
 	int16_t	ret = 0;
-	int16_t	vx;
-	vx	= g_stMyCar.Steering;
+	int16_t	Pos;
 
-	if( Mabs(vx) > 22400 )	/* コース外 */
+	ST_ROAD_INFO	stRoadInfo;
+	GetRoadInfo(&stRoadInfo);
+	
+	Pos	= APL_AngleDiff(stRoadInfo.angle, g_stMyCar.Angle);	/* 道路と車の向きの角度差 */
+
+	if( Mabs(Pos) >= 120 )	/* コース外 */
 	{
-		int16_t	rpm	= g_stMyCar.uEngineRPM;
-		
-		g_stMyCar.uEngineRPM -= (rpm>>3);	/* 減速処理 */
+		g_stMyCar.uEngineRPM -= 50;	/* 減速処理 */
 
 		g_stMyCar.ubOBD |= OBD_COURSEOUT;	/* コースアウト */
 
@@ -1198,8 +1285,8 @@ static int16_t	MyCar_SteeringPos(int16_t Vibration)
 	Get_PicImageInfo( MYCAR_CG, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
 	
 	/* ステアリング位置 */
-	x =  16 + Mdiv16(g_SteeringDiff)       + SP_X_OFFSET - 4;
-	y = 112 + Mabs(Mdiv16(g_SteeringDiff)) + SP_Y_OFFSET;
+	x =  16 + Mdiv16(APL_Sin(g_stMyCar.Steering)) + SP_X_OFFSET - 4;
+	y = 128 - Mdiv16(APL_Cos(g_stMyCar.Steering)) + SP_Y_OFFSET - 4;
 	p_stPCG = PCG_Get_Info(MYCAR_PCG_STEERING_POS);	/* ステアリングポジション */
 	if(p_stPCG != NULL)
 	{
@@ -1220,34 +1307,21 @@ static int16_t	MyCar_SteeringPos(int16_t Vibration)
 	}
 
 	/* 画面を切り替える */
-	if(g_SteeringDiff == 0)
+	if(g_stMyCar.Steering == 0)
 	{
 		x = 1;
 		y = 0;
 	}
-	else if(g_SteeringDiff < 0)
+	else
 	{
-		if(Mabs(g_SteeringDiff) > 0x40)
+		if(g_stMyCar.Steering < 0)
 		{
 			x = 0;
 			y = 0;
 		}
 		else
 		{
-			x = 1;
-			y = 0;
-		}
-	}
-	else
-	{
-		if(Mabs(g_SteeringDiff) > 0x40)
-		{
 			x = 2;
-			y = 0;
-		}
-		else
-		{
-			x = 1;
 			y = 0;
 		}
 	}

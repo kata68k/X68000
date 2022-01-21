@@ -416,16 +416,30 @@ void PCG_INIT(void)
 /*===========================================================================================*/
 void PCG_VIEW(uint8_t bSW)
 {
-	if(bSW == TRUE)
+	if((bSW & Bit_0) != 0u)
 	{
 		_iocs_sp_on();				/* ƒXƒvƒ‰ƒCƒg•\Ž¦‚ð‚n‚m */
-		_iocs_bgctrlst(0, 1, 1);	/* ‚a‚f‚O•\Ž¦‚n‚m */
-		_iocs_bgctrlst(1, 1, 1);	/* ‚a‚f‚P•\Ž¦‚n‚m */
 	}
 	else
 	{
 		_iocs_sp_off();				/* ƒXƒvƒ‰ƒCƒg•\Ž¦‚ð‚n‚e‚e */
+	}
+	
+	if((bSW & Bit_1) != 0u)
+	{
+		_iocs_bgctrlst(0, 1, 1);	/* ‚a‚f‚O•\Ž¦‚n‚m */
+	}
+	else
+	{
 		_iocs_bgctrlst(0, 1, 0);	/* ‚a‚f‚O•\Ž¦‚n‚e‚e */
+	}
+
+	if((bSW & Bit_2) != 0u)
+	{
+		_iocs_bgctrlst(1, 1, 1);	/* ‚a‚f‚P•\Ž¦‚n‚m */
+	}
+	else
+	{
 		_iocs_bgctrlst(1, 1, 0);	/* ‚a‚f‚P•\Ž¦‚n‚e‚e */
 	}
 }

@@ -11,6 +11,7 @@
 #include "CRTC.h"
 #include "Draw.h"
 #include "Graphic.h"
+#include "Input.h"
 #include "MFP.h"
 #include "Moon.h"
 #include "OutPut_Text.h"
@@ -497,6 +498,31 @@ static void interrupt Vsync_Func(void)
 	vdispst = VDISPST((void *)0, 0, 0);	/* stop */
 	Set_EI();	/* 割り込み禁止解除 */
 #endif	/* MACS_MOON */
+	
+	/* 入力処理 */
+	{
+		int16_t	input = 0;
+		
+		get_keyboard(&input, 0, 1);		/* キーボード入力 */
+		if(g_bAnalogStickMode == TRUE)
+		{
+			get_ajoy(&input, 0, 1, 1);	/* アナログジョイスティック入力 0:X680x0 1:etc */
+		}
+		else
+		{
+			get_djoy(&input, 0, 1);		/* ジョイスティック入力 */
+		}
+		g_Input = input;
+
+#if 1
+		/* アナログスティック／デジタルスティック切替 */
+		if(ChatCancelSW((g_Input & KEY_b_TAB)!=0u, &g_bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
+		{
+			if(g_bAnalogStickMode == FALSE)	g_bAnalogStickMode = TRUE;
+			else							g_bAnalogStickMode = FALSE;
+		}
+#endif
+	}
 	
 	if( g_bRasterSET[1] == TRUE )	/* ラスタ割り込み可能 */
 	{

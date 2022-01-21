@@ -6,7 +6,7 @@ D:
 cd D:\’´“d“®ŠJ”­Žº\OverKata
 rem JOYDRV3.X data\SAMPLE.CNF
 MACSDRV.x
-MOON.x -f10 -m300
+MOON.x -f10 -m512
 PCM8A.X
 ZMUSIC.X -M -N -P512 -W0 -Sdata\music\init.ZMD -Bdata\se\OverKata.ZPD
 rem ZMSC.X -M -N  -P128 -W0 -B data\se\OverKata.ZPD
