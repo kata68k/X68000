@@ -670,11 +670,10 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 void G_INIT(void)
 {
 	_iocs_g_clr_on();		/* グラフィックのクリア */
-	_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);	/* 全エリア */
+	G_CLR();				/* クリッピングエリア全開＆消す */
 	_iocs_apage(0);			/* グラフィックの書き込み(全ページ) */
 	_iocs_vpage(0b1111);	/* グラフィック表示(page3:0n page2:0n page1:0n page0:0n) */
-	_iocs_wipe();			/* 消す */
-	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);	/* ホーム位置 */
+	G_HOME();				/* ホーム位置設定 */
 	G_VIDEO_INIT();			/* ビデオコントローラーの初期化 */
 }
 
@@ -749,6 +748,7 @@ void G_VIDEO_INIT(void)
 /*===========================================================================================*/
 void G_HOME(void)
 {
+	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);	/* ホーム位置 */
 //	_iocs_home(1, X_OFFSET, Y_OFFSET);
 //	_iocs_home(2, X_OFFSET, 416);
 //	_iocs_home(3, X_OFFSET, 416);
@@ -1559,9 +1559,19 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 	if(uMaxNum <= bCGNum)
 	{
 		ret = -1;
+	}
+
+	pSrcGR = g_stPicImage[bCGNum].pImageData;	/* Src PIC */
+	if(pSrcGR == NULL)
+	{
+		/* ファイルから読み込み */
+		ret = CG_File_Load(bCGNum);
+	}
+
+	if(ret < 0)
+	{
 		return	ret;
 	}
-//	pSrcGR = g_stPicImage[bCGNum].pImageData;	/* Src PIC */
 	
 	pSrcGR = Get_PicImageInfo( bCGNum, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
 	uSize8x	= (((uWidth+7)/8) * 8);	/* 8の倍数 */

@@ -19,6 +19,7 @@
 /* グローバル変数 */
 int32_t g_TpalDef[16];
 uint8_t g_bTpalDef_Flag = TRUE;
+static	uint8_t g_bTimerStopFlag;
 
 /* 構造体 */
 static ST_TEXTINFO	g_stTextInfo = {0};
@@ -34,7 +35,9 @@ void T_Time(void);
 void T_Score(void);
 void T_Speed(void);
 void T_Gear(void);
-void T_Main(void);
+void T_TimerStop(void);
+void T_TimerStart(void);
+uint16_t T_Main(void);
 int16_t T_PutTextInfo(ST_TEXTINFO);
 int16_t T_Scroll(uint32_t, uint32_t);
 int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
@@ -67,6 +70,15 @@ void T_INIT(void)
 		}
 	}
 	g_bTpalDef_Flag = FALSE;
+	g_bTimerStopFlag = TRUE;	/* stop */
+	
+	g_stTextInfo.uTimeCounter = 100;
+	g_stTextInfo.ulScore = 0;
+	g_stTextInfo.ulScoreMax = 10000;
+	g_stTextInfo.uVs = 0;
+	g_stTextInfo.uShiftPos = 1;
+	g_stTextInfo.uPosX = 0;
+	g_stTextInfo.uPosY = 0;
 	
 	_iocs_os_curof();			/* カーソルを消します */
 	_iocs_b_curoff();			/* カーソルを消します */
@@ -358,8 +370,32 @@ void T_Gear(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void T_Main(void)
+void T_TimerStop(void)
 {
+	g_bTimerStopFlag = TRUE;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void T_TimerStart(void)
+{
+	g_bTimerStopFlag = FALSE;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+uint16_t T_Main(void)
+{
+	uint16_t uRet = 0u;
+	
 	uint32_t time_now;
 	static uint32_t time_old = 0;
 	uint32_t unStart_time, unTimer;
@@ -380,7 +416,10 @@ void T_Main(void)
 	/* Time Count */
 	if(time_old != 0)
 	{
-		unPassTime += (unStart_time - time_old);
+		if(g_bTimerStopFlag == FALSE)
+		{
+			unPassTime += (unStart_time - time_old);
+		}
 		unTimer = 120000 - unPassTime;
 		if(120000 < unTimer)
 		{
@@ -393,6 +432,7 @@ void T_Main(void)
 		g_stTextInfo.uTimeCounter = uTimeCounter;
 	}
 	time_old = unStart_time;
+	uRet = g_stTextInfo.uTimeCounter;
 	
 	/* Score */
 	g_stTextInfo.ulScore = stScore.ulScore;
@@ -409,6 +449,7 @@ void T_Main(void)
 	/* 描画 */
 	T_PutTextInfo(g_stTextInfo);
 	
+	return uRet;
 }
 
 /*===========================================================================================*/

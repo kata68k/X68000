@@ -490,7 +490,7 @@ int16_t	Load_EnemyCAR(int16_t Num)
 	if(Num >= ENEMYCAR_TYP_MAX)return -1;
 	PatNumber = ENEMYCAR_CG + Num;
 
-	CG_File_Load( PatNumber );	/* グラフィックの読み込み */
+	G_Load_Mem( PatNumber, 0, 0, 0 );	/* ライバル車 */
 //	ret = G_Load_Mem( PatNumber, uOffset_X,	0,	0);	/* ライバル車 */
 	pSrcBuf = Get_PicImageInfo( PatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 	uWidth_dst = uWidth;

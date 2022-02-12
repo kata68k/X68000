@@ -1016,7 +1016,7 @@ void MyCar_Image(void)
 		uint16_t	uCG_Num;
 		
 		uCG_Num = MYCAR_CG + i;
-		CG_File_Load(uCG_Num);	/* グラフィックの読み込み */
+		G_Load_Mem( uCG_Num, 0, 0, 0 );	/* MYCAR_CG */
 
 		Get_PicImageInfo( uCG_Num, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
 		

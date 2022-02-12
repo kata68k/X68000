@@ -13,4 +13,6 @@
 12=MRIDER_3_start.zmd
 13=MRIDER_4_bgm.zmd
 14=gn00c.zmd
+15=DCR.zmd
+16=F1_gameover.zmd
 

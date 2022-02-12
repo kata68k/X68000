@@ -294,10 +294,10 @@ void PCG_INIT(void)
 			{
 				stPCG.Pat_w		= 1;
 				stPCG.Pat_h		= 1;
-				stPCG.Pat_AnimeMax	= 6;
-				stPCG.Pat_DataMax	= 6;
+				stPCG.Pat_AnimeMax	= 1;
+				stPCG.Pat_DataMax	= 1;
 				
-				PCG_Load_Data("data/sp/BG.SP", 0xB0, stPCG, uPCG_num, 0);
+				PCG_Load_Data("data/sp/BG.SP", 0xB2, stPCG, uPCG_num, 0);
 				PCG_Load_PAL_Data("data/sp/MASUO.PAL", 0x01, 0x07);
 				
 				uBufSize = stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
@@ -307,6 +307,30 @@ void PCG_INIT(void)
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, 0x07, 0xFF);	/* パターンコードテーブル */
 				}
 				
+				ubOK = TRUE;
+				break;
+			}
+			case ROAD_PCG_SIGNAL_1:	/* シグナルランプ1 */
+			case ROAD_PCG_SIGNAL_2:	/* シグナルランプ2 */
+			case ROAD_PCG_SIGNAL_3:	/* シグナルランプ3 */
+			{
+				stPCG.Pat_w		= 1;
+				stPCG.Pat_h		= 1;
+				stPCG.Pat_AnimeMax	= 1;
+				stPCG.Pat_DataMax	= 1;
+				
+				PCG_Load_Data("data/sp/BG.SP", 0x3E, stPCG, uPCG_num, 0);
+				PCG_Load_PAL_Data("data/sp/BG.PAL", 0x01, 0x01);
+				PCG_Load_PAL_Data("data/sp/BG.PAL", 0x0A, 0x0A);
+				
+				uBufSize = stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
+
+				/* スプライト定義設定 */
+				for(j=0; j < uBufSize; j++)
+				{
+					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, 0x0A, 0xFF);	/* パターンコードテーブル */
+				}
+
 				ubOK = TRUE;
 				break;
 			}
@@ -751,6 +775,7 @@ int16_t PCG_Main(void)
 	int16_t	ret = 0;
 	int16_t	uWidth = 0, uHeight = 0;
 	int16_t	x, y, count, pat_size, Anime_pat_size, pat_data;
+	int16_t	uPCG_prw;
 	int16_t	uPCG_num;
 	uint8_t	Plane_num;
 	uint8_t	Anime_num, Anime_num_old, DataMax;
@@ -828,20 +853,29 @@ int16_t PCG_Main(void)
 				}
 				
 				/* 表示 */
-				if(	g_stPCG_DATA[uPCG_num].update == TRUE)	/* 更新アリ */
+				if(	g_stPCG_DATA[uPCG_num].update == TRUE )	/* 更新アリ */
 				{
 					/* パターンデータ書き換え */
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) &= ~0xFFU;
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) |= (Plane_num + count);
-					
-					/* スプライトレジスタの設定 */
-					_iocs_sp_regst( (Plane_num + count) & (SP_PLN_MAX-1),
-									-1,
-									g_stPCG_DATA[uPCG_num].x + uWidth,
-									g_stPCG_DATA[uPCG_num].y + uHeight,
-									*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data),
-									3);
+					uPCG_prw = 3;
 				}
+				else
+				{
+					uPCG_prw = 0;
+				}
+				
+				/* 移動量 */
+				g_stPCG_DATA[uPCG_num].x += g_stPCG_DATA[uPCG_num].dx;
+				g_stPCG_DATA[uPCG_num].y += g_stPCG_DATA[uPCG_num].dy;
+				
+				/* スプライトレジスタの設定 */
+				_iocs_sp_regst( (Plane_num + count) & (SP_PLN_MAX-1),
+								-1,	/* mode:最上位ビット 1=垂直同期検出 0=垂直同期検出しない */
+								g_stPCG_DATA[uPCG_num].x + uWidth,
+								g_stPCG_DATA[uPCG_num].y + uHeight,
+								*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data),
+								uPCG_prw);
 				
 				uWidth += SP_W;
 				count++;
@@ -953,7 +987,7 @@ int16_t PCG_Load_Data(int8_t *sFileName, uint16_t uPCG_data_ofst,
 			}
 			case 1:
 			{
-				uSP_MoveSize = Mdiv2(SP_16_SIZE);
+				uSP_MoveSize = Mdiv2(SP_16_SIZE);	/* 8dot */
 				
 				for(j=0; j < stPCG.Pat_DataMax; j++)
 				{
@@ -971,7 +1005,7 @@ int16_t PCG_Load_Data(int8_t *sFileName, uint16_t uPCG_data_ofst,
 			}
 			case 2:
 			{
-				uSP_MoveSize = Mdiv4(SP_16_SIZE);
+				uSP_MoveSize = Mdiv4(SP_16_SIZE);	/* 4dot */
 
 				for(j=0; j < stPCG.Pat_DataMax; j++)
 				{

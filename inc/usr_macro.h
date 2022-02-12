@@ -30,13 +30,13 @@
 */
 /**
  * 指定された2つの引数のうち,最小のものを返す.
- * @param [in] a        最小値を選ぶ対象の変数1
+ * @param [in] a        判定対象の変数1
  * @param [in] b        最小値を選ぶ対象の変数2
  * @param [in] c        最大値を選ぶ対象の変数3
  * @retval 最小最大値
  * @attention 引数は複数回評価される.
  */
-#define Mminmax(a, b, c) ((a) > (c) ? (c) : ((a) < (b) ? (a) : (b)))
+#define Mminmax(a, b, c) ((a > c) ? c : ((a > b) ? a : b))
 
 /*
         Mabs - 絶対値取得 -

@@ -379,7 +379,7 @@ int16_t	Load_Course_Obj(int16_t Num)
 	if(Num >= COURSE_OBJ_TYP_MAX)return -1;
 	PatNumber = COURSE_OBJ_CG + Num;
 
-	CG_File_Load( PatNumber );	/* グラフィックの読み込み */
+	G_Load_Mem( PatNumber, 0, 0, 0 );	/* ヤシの木 */
 //	ret = G_Load_Mem( PatNumber, uOffset_X,	0,	0);	/* ヤシの木 */
 	pSrcBuf = Get_PicImageInfo( PatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 	uWidth_dst = uWidth;

@@ -1,6 +1,6 @@
 ECHO OFF
 rem 開発用
-cp -u L:\Develop\data\map\course01.csv D:\超電動開発室\OverKata\data\map\
+cp -u data\map\course01.csv D:\超電動開発室\OverKata\data\map\
 cp -u OverKata.x D:\超電動開発室\OverKata\
 D:
 cd D:\超電動開発室\OverKata
@@ -23,5 +23,5 @@ PCM8A.X -R
 MOON.x -r
 MACSDRV.x -r
 rem JOYDRV3.X -R
-L:
+K:
 

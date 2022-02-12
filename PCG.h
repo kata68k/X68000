@@ -20,6 +20,7 @@
 #define SP_8x8		(0)
 #define SP_16x16	(1)
 #define	SP_PLN_MAX	(128)
+#define	PCG_CODE_MASK	(0xFF)
 
 enum{
 	MYCAR_PCG_NEEDLE,			/* タコメーター針 */
@@ -31,6 +32,9 @@ enum{
 	SCORE_PCG_3,				/* スコア３ */
 	SCORE_PCG_4,				/* スコア４ */
 	ROAD_PCG_ARROW,				/* 矢印 */
+	ROAD_PCG_SIGNAL_1,			/* シグナルランプ */
+	ROAD_PCG_SIGNAL_2,			/* シグナルランプ */
+	ROAD_PCG_SIGNAL_3,			/* シグナルランプ */
 	ETC_PCG_SONIC,				/* ソニック */
 	ETC_PCG_KISARA,				/* キサラ */
 	ETC_PCG_MAN,				/* ピクト君 */

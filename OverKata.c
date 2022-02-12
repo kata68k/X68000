@@ -363,8 +363,6 @@ int16_t main(int16_t argc, int8_t** argv)
 		uint32_t time_now;
 		uint8_t	bTimePass = 0;
 #endif
-		g_uGameStatus = 1;
-		
 		/* 終了処理 */
 		if(loop == 0)
 		{
@@ -431,7 +429,6 @@ int16_t main(int16_t argc, int8_t** argv)
 			g_unTime_Pass[0] = time_now;	/* 一時保存 */
 		}
 #endif
-		g_uGameStatus = 2;
 		
 		switch(stTask.bScene)
 		{
@@ -445,26 +442,27 @@ int16_t main(int16_t argc, int8_t** argv)
 #endif
 				uFreeRunCount = 0;
 				
-				/* グラフィック */
-				
 				/* スプライト＆ＢＧ */
 				PCG_VIEW(0x00u);	/* スプライト＆ＢＧ非表示 */
 				/* テキスト */
 				T_Clear();	/* テキストクリア */
-				T_PALET();			/* テキストパレット設定 */
+				T_PALET();	/* テキストパレット設定 */
 
 				SetTaskInfo(SCENE_TITLE_S);	/* タイトルシーン(開始処理)へ設定 */
 				break;
 			}
 			case SCENE_TITLE_S:	/* タイトルシーン(開始処理) */
 			{
+				SetFlip(FALSE);			/* フリップ禁止 */
+				
 				Music_Play(2);	/* タイトル曲 */
 				
-				if(CG_File_Load(TITLE_CG) >= 0)	/* グラフィックの読み込み */
-				{
-					G_Load_Mem( TITLE_CG, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
-				}
+				/* グラフィック */
+				G_Load_Mem( TITLE_CG, X_OFFSET, Y_OFFSET, 0 );	/* タイトル画像 */
 			
+				/* テキスト */
+				T_Clear();		/* テキストクリア */
+				
 				BG_TextPut("OVER KATA", 96, 128);		/* タイトル文字 */
 				BG_TextPut("PUSH A BUTTON", 80, 160);	/* ボタン押してね */
 
@@ -549,7 +547,8 @@ int16_t main(int16_t argc, int8_t** argv)
 				
 				for(demo=0; demo<6; demo++)
 				{
-					CG_File_Load(DEMO_CG + demo);		/* グラフィックの読み込み */
+					G_Load_Mem(DEMO_CG + demo, 0, 0, 0);	/* グラフィックの読み込み */
+//					CG_File_Load(DEMO_CG + demo);		/* グラフィックの読み込み */
 				}
 
 				SetTaskInfo(SCENE_DEMO);	/* ゲーム開始シーン(開始処理)へ設定 */
@@ -591,8 +590,25 @@ int16_t main(int16_t argc, int8_t** argv)
 			}
 			case SCENE_START_S:	/* ゲーム開始シーン(開始処理) */
 			{
+				/* スプライト＆ＢＧ */
+				PCG_VIEW(0x00u);	/* スプライト＆ＢＧ非表示 */
+
+				/* グラフィック表示 */
+				G_CLR();		/* グラフィッククリア */
+				
+				/* テキスト表示 */
+				T_Clear();	/* テキストクリア */
+				
 				/* 動画 */
-				MOV_Play(0);	/* スタート */
+				if(g_uGameStatus == 0)
+				{
+					MOV_Play(0);	/* スタート */
+				}
+				else
+				{
+					MOV_Play(3);	/* ウソをつくな */
+				}
+				G_HOME();		/* ホーム位置再設定 */
 
 				//Music_Play(10);	/* TRUTH */
 				Music_Play(11);	/* Mach-1 */
@@ -664,19 +680,113 @@ int16_t main(int16_t argc, int8_t** argv)
 				T_Speed();		/* SPEED */
 				T_Gear();		/* GEAR */
 				T_SetBG_to_Text();	/* テキスト用作業用データ展開 */
+				T_TimerStop();	/* タイマー停止 */
+				
+				/* グラフィック表示 */
+				G_CLR();		/* グラフィッククリア */
+				
+				g_uGameStatus = 0;	/* ゲーム中 */
 				
 				SetTaskInfo(SCENE_GAME_S);	/* ゲーム(開始処理)タスクへ設定 */
 				break;
 			}
 			case SCENE_GAME_S:	/* ゲームシーン開始処理 */
 			{
-				Music_Play(3);	/* メインBGM */
-				Music_Stop();	/* 音楽再生 停止 */
-				M_SetMusic(0);	/* 効果音再生の設定 */
+				int16_t	i;
+				int16_t	x, y;
+				static int16_t	sig_count = 0;
 
-				Set_CRT_Contrast(-1);	/* コントラストdef */
+				ST_PCG	*p_stPCG = NULL;
+
+				if(sig_count == 0)
+				{
+					sig_count = 1;
+					
+					Music_Play(3);	/* メインBGM */
+					Music_Stop();	/* 音楽再生 停止 */
+					M_SetMusic(0);	/* 効果音再生の設定 */
+
+					Set_CRT_Contrast(-1);	/* コントラストdef */
+					
+					/* 自車の情報を取得 */
+					MyCarInfo_Update(g_Input);	/* 自車の情報を更新 */
+					MyCarInfo_Update16ms(0);
+					/* ラスター処理 */
+					Raster_Main();	/* コースの処理 */
+					
+					SetFlip(TRUE);	/* フリップ許可 */
+				}
+				else
+				{
+					MyCarInfo_Update16ms(0);
+				}
+
+				for(i=0; i<3; i++)
+				{
+					p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_1+i);	/* シグナルランプ */
+					/* シグナルランプ */
+					x =  104 + (i * 16) + SP_X_OFFSET;
+					y =  72 + SP_Y_OFFSET;
+					
+					if(p_stPCG != NULL)
+					{
+						p_stPCG->x = x;
+						p_stPCG->y = y;
+						if(sig_count < 5)
+						{
+							p_stPCG->update	= TRUE;
+						}
+						else
+						{
+							p_stPCG->update	= FALSE;
+						}
+					}
+				}
 				
-				SetTaskInfo(SCENE_GAME);	/* ゲームタスクへ設定 */
+				g_Vwait = 1;	/* Wait 1 */
+				
+				if( GetPassTime( 1000, &unDemo_time ) != 0u )	/* 所定時間何もなければ実行 */
+				{
+					switch(sig_count)
+					{
+					case 1:
+						ADPCM_Play(3);	/* SE:3 */
+						p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_1);	/* シグナルランプ */
+						p_stPCG->pPatCodeTbl[0] = SetBGcode(0, 0, 0x01, 0xFF);
+						break;
+					case 2:
+						ADPCM_Play(2);	/* SE:2 */
+						p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_2);	/* シグナルランプ */
+						p_stPCG->pPatCodeTbl[0] = SetBGcode(0, 0, 0x01, 0xFF);
+						break;
+					case 3:
+						ADPCM_Play(1);	/* SE:1 */
+						p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_3);	/* シグナルランプ */
+						p_stPCG->pPatCodeTbl[0] = SetBGcode(0, 0, 0x01, 0xFF);
+						break;
+					default:
+						ADPCM_Play(16);	/* SE:WAKAME */
+						p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_1);	/* シグナルランプ */
+						p_stPCG->pPatCodeTbl[0] = SetBGcode(0, 0, 0x0A, 0xFF);
+						p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_2);	/* シグナルランプ */
+						p_stPCG->pPatCodeTbl[0] = SetBGcode(0, 0, 0x0A, 0xFF);
+						p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_3);	/* シグナルランプ */
+						p_stPCG->pPatCodeTbl[0] = SetBGcode(0, 0, 0x0A, 0xFF);
+						break;
+					}
+					sig_count++;
+				}
+				
+				/* 余った時間で処理 */
+				BG_main(time_st);	/* バックグランド処理 */
+				
+				if(sig_count >= 5)
+				{
+					sig_count = 0;
+					T_TimerStart();	/* タイマー開始 */
+					
+					SetTaskInfo(SCENE_GAME);	/* ゲームタスクへ設定 */
+				}
 				break;
 			}
 			case SCENE_GAME:	/* ゲームシーン */
@@ -689,7 +799,6 @@ int16_t main(int16_t argc, int8_t** argv)
 					SetTaskInfo(SCENE_GAME_E);	/* ゲームシーン(終了処理)へ設定 */
 				}
 				
-		g_uGameStatus = 3;
 				
 				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
 				{
@@ -719,6 +828,10 @@ int16_t main(int16_t argc, int8_t** argv)
 #endif
 					/* ラスター処理 */
 					Raster = Raster_Main();	/* コースの処理 */
+					if(Raster > 1)	/* １ステージへ分のコース終了 */
+					{
+						g_uGameStatus = 1;	/* ステージクリア */
+					}
 
 #ifdef DEBUG	/* デバッグコーナー */
 					if(g_bDebugMode == TRUE)
@@ -731,9 +844,14 @@ int16_t main(int16_t argc, int8_t** argv)
 #endif
 				}
 
-		g_uGameStatus = 4;
 				/* 余った時間で処理 */
 				BG_main(time_st);	/* バックグランド処理 */
+				
+				/* 次のタスクへ */
+				if(g_uGameStatus != 0u)
+				{
+					SetTaskInfo(SCENE_GAME_E);	/* ゲームシーン(終了処理)へ設定 */
+				}
 				
 				//g_Vwait = 1;	/* Wait */
 				g_Vwait = 0;	/* No Wait */
@@ -747,35 +865,120 @@ int16_t main(int16_t argc, int8_t** argv)
 					g_unTime_Pass[0] = time_now;	/* 一時保存 */
 				}
 #endif
-		g_uGameStatus = 5;
 				
 				break;
 			}
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
 			{
 				Music_Stop();	/* 音楽再生 停止 */
-
-				/* 動画 */
-				MOV_Play(1);	/* うふふ */
-
+				
+				switch(g_uGameStatus)
+				{
+					case 1:	/* 次のステージ */
+					{
+						SetTaskInfo(SCENE_NEXT_STAGE_S);	/* 次のステージへ(開始処理)へ設定 */
+						break;
+					}
+					case 2:	/* 時間切れ */
+					{
+						SetTaskInfo(SCENE_GAME_OVER_S);		/* ゲームオーバーシーン(開始処理)へ設定 */
+						break;
+					}
+					default:	/* 意図しない遷移 */
+					{
+						SetTaskInfo(SCENE_GAME_OVER_S);		/* ゲームオーバーシーン(開始処理)へ設定 */
+						break;
+					}
+				}
+				break;
+			}
+			case SCENE_GAME_OVER_S:	/* ゲームオーバーシーン(開始処理) */
+			{
+				SetFlip(FALSE);			/* フリップ禁止 */
+				
+				/* グラフィック表示 */
+				G_CLR();		/* グラフィッククリア */
+				
 				/* スプライト＆ＢＧ */
 				PCG_VIEW(0x00u);	/* スプライト＆ＢＧ非表示 */
 
 				/* テキスト */
 				T_Clear();		/* テキストクリア */
+
+				/* 動画 */
+				MOV_Play(4);	/* ポリンキー */
+				G_HOME();		/* ホーム位置再設定 */
 				
-				SetTaskInfo(SCENE_INIT);	/* 初期化シーンへ設定 */
+				BG_TextPut("G A M E  O V E R", 64, 128);		/* GAME OVER文字 */
+				
+				Music_Play(16);	/* GameOver曲 */
+				
+				SetTaskInfo(SCENE_GAME_OVER);	/* ゲームオーバーシーンタスクへ設定 */
 				break;
 			}
 			case SCENE_GAME_OVER:	/* ゲームオーバーシーン */
 			{
+				if(g_Input == KEY_B)	/* Bボタン */
+				{
+					SetTaskInfo(SCENE_GAME_OVER_E);	/* ゲームオーバーシーン(終了処理)タスクへ設定 */
+				}
 				break;
 			}
-			case SCENE_HI_SCORE:	/* ハイスコアランキングシーン */
+			case SCENE_GAME_OVER_E:	/* ゲームオーバーシーン(終了処理) */
 			{
+				SetTaskInfo(SCENE_HI_SCORE_S);	/* ハイスコアランキングシーン(開始処理)タスクへ設定 */
 				break;
 			}
+			case SCENE_NEXT_STAGE_S:
+			{
+				SetFlip(FALSE);			/* フリップ禁止 */
+				
+				/* グラフィック表示 */
+				G_CLR();		/* グラフィッククリア */
+				
+				/* スプライト＆ＢＧ */
+				PCG_VIEW(0x00u);	/* スプライト＆ＢＧ非表示 */
+
+				/* テキスト */
+				T_Clear();		/* テキストクリア */
+
+				/* 動画 */
+				MOV_Play(5);	/* やるじゃない */
+				G_HOME();		/* ホーム位置再設定 */
+				
+				BG_TextPut("WE ARE NOW RUSHING INTO B ZONE.", 0, 128);	/* STAGE クリア文字 */
+				BG_TextPut("BE ON YOUR GUARD", 60, 140				);		/* STAGE クリア文字 */
+				
+				Music_Play(15);	/* クリア */
+				
+				g_Stage = Mmin(g_Stage++, 9);	/* 次のステージへ */
+
+				SetTaskInfo(SCENE_NEXT_STAGE);	/* 次のステージシーンへ設定 */
+				break;
+			}
+			case SCENE_NEXT_STAGE:
+			{
+				if(g_Input == KEY_B)	/* Bボタン */
+				{
+					SetTaskInfo(SCENE_NEXT_STAGE_E);	/* 次のステージシーン(終了処理)へ設定 */
+				}
+				break;
+			}
+			case SCENE_NEXT_STAGE_E:
+			{
+				SetTaskInfo(SCENE_START_S);	/* ゲームシーン(開始処理)へ設定 */
+				break;
+			}
+			case SCENE_HI_SCORE_S:	/* ハイスコアランキングシーン(開始処理) */
+			case SCENE_HI_SCORE:	/* ハイスコアランキングシーン */
+			case SCENE_HI_SCORE_E:	/* ハイスコアランキングシーン(終了処理) */
+			{
+				SetTaskInfo(SCENE_TITLE_S);	/* タイトルシーン(開始処理)へ設定 */
+				break;
+			}
+			case SCENE_OPTION_S:		/* オプションシーン */
 			case SCENE_OPTION:		/* オプションシーン */
+			case SCENE_OPTION_E:		/* オプションシーン(終了処理) */
 			{
 				break;
 			}
@@ -785,6 +988,7 @@ int16_t main(int16_t argc, int8_t** argv)
 
 				/* 動画 */
 				MOV_Play(2);	/* バイバイ */
+				G_HOME();		/* ホーム位置再設定 */
 				
 				loop = 0;	/* ループ終了 */
 				break;
@@ -812,12 +1016,10 @@ int16_t main(int16_t argc, int8_t** argv)
 			g_unTime_cal_PH = unTime_cal_PH;
 		}
 #endif
-		g_uGameStatus = 6;
 
 		/* 同期待ち */
 		wait_vdisp(g_Vwait);
 
-		g_uGameStatus = 0;
 	}
 	while( loop );
 
@@ -1023,6 +1225,7 @@ int16_t BG_main(uint32_t ulTimes)
 	ST_TASK		stTask = {0}; 
 	
 	static uint8_t	bFlipState = Clear_G;
+	static uint16_t uTimer_old = 0xFFFFu;
 	
 	if(g_bFlip == TRUE)		/* 画面切り替え中 */
 	{
@@ -1112,10 +1315,26 @@ int16_t BG_main(uint32_t ulTimes)
 			/* 自車の処理 */
 			case MyCar_G:
 			{
+				uint16_t uTimer;
+				
 				MyCar_Interior();		/* 自車のインテリア処理 */
 				S_Main_Score();			/* スコア表示 */
 				PCG_Main();				/* スプライト出力 */
-				T_Main();				/* テキスト画面の処理 */
+				uTimer = T_Main();		/* テキスト画面の処理 */
+				if(uTimer_old != uTimer)
+				{
+					if((uTimer > 0) && (uTimer < 10))
+					{
+						int16_t PCM_num;
+						PCM_num = 20 + uTimer;
+						ADPCM_Play(PCM_num);	/* SE:1～9 */
+					}
+				}
+				uTimer_old = uTimer;
+				if(uTimer == 0u)
+				{
+					g_uGameStatus = 2;	/* タイムオーバー */
+				}
 				break;
 			}
 #ifdef DEBUG	/* デバッグコーナー */
@@ -1184,17 +1403,11 @@ int16_t	FlipProc(void)
 	int16_t	ret = 0;
 	int16_t	x, y;
 	ST_CRT	stCRT = {0};
-	ST_TASK		stTask = {0}; 
 #ifdef DEBUG	/* デバッグコーナー */
 	uint32_t time_now;
 	static uint8_t	bFPS = 0u;
 	static uint32_t	unTime_FPS = 0u;
 #endif
-	GetTaskInfo(&stTask);	/* タスクの情報を得る */
-	if(stTask.bScene != SCENE_GAME)	/* SCENE_GAME以外ならフリップしない */
-	{
-		return ret;
-	}
 	
 	if(g_bFlip == FALSE)	/* 描画中なのでフリップしない */
 	{

@@ -41,6 +41,8 @@ static uint16_t	g_uMapCounter = 0u;
 static int16_t	PositionSum = 0;
 static int16_t	ViewAngle = 0;
 
+static int16_t	g_RoadArray[RASTER_H_MAX] = {0u};
+
 /* 構造体定義 */
 ST_RASTER_INT g_stRasterInt[RASTER_H_MAX] = {0};
 static ST_RAS_INFO	g_stRasInfo = {0};
@@ -140,6 +142,7 @@ int16_t Raster_Main(void)
 {
 	int16_t	ret = 0;
 	
+	uint16_t	i;
 	uint16_t	uRas_y;
 	uint16_t	uRas_st, uRas_mid, uRas_ed, uRas_size;
 
@@ -192,9 +195,20 @@ int16_t Raster_Main(void)
 	CarAngle = stMyCar.Angle;	/* アングル */
 	
 	/* ロードパターン */
-	if(Road_Pat_Main() != 0)
+	ret = Road_Pat_Main();
+
+	if(ret != 0)	/* コースデータの更新あり */
 	{
-		/* コースデータの更新あり */
+		switch(ret)
+		{
+		case 1:
+			;	/* コース情報更新 */
+			break;
+		case 2:
+			return ret;	/* コースEND */
+		default:
+			break;
+		}
 	}
 	RoadAngle = g_stRoadInfo.angle;	/* 道の角度 */
 	
@@ -234,6 +248,16 @@ int16_t Raster_Main(void)
 	uRas_size	= g_stRasInfo.size;	/* ラスターの範囲 */
 	
 	Road_Pat_Start();	/* 初回は道のパレットの開始設定を行う */
+	
+	for(i=0; i<RASTER_H_MAX; i++)
+	{
+		if(i+1 == RASTER_H_MAX)
+		{
+			break;
+		}
+		g_RoadArray[i+1] = g_RoadArray[i];
+	}
+	g_RoadArray[0] = g_stRoadInfo.slope;
 	
 	for(uRas_y=0; uRas_y < uRas_size; uRas_y++ )
 	{
@@ -305,7 +329,7 @@ static uint8_t Raster_Calc_H(int16_t *x, int16_t Num, int16_t RevNum)
 	Raster_SetDriverView(&Scroll_w_clp, RevNum, uRas_size);
 	
 	/* 道路の曲がり具合 */
-	Raster_SetBndngCnd(&Ras_x_offset, RevNum, uRas_size);
+	Raster_SetBndngCnd(&Ras_x_offset, uRas_y_p, uRas_size);
 	
 	*x = Scroll_ofst + Scroll_w_clp + Ras_x_offset;
 	
@@ -362,35 +386,8 @@ static int16_t Raster_SetDriverView(int16_t *x, int16_t Count, int16_t Size)
 static int16_t Raster_SetBndngCnd(int16_t *x, int16_t Count, int16_t Size)
 {
 	int16_t ret = 0;
-
-	if(g_stRoadInfo.slope == 0)
-	{
-	}
-	else
-	{
-#ifdef DEBUG	/* デバッグコーナー */
-		uint8_t	bMode;
-		int16_t	hide_offset_x, hide_offset_y;
-		ST_CRT	stCRT = {0};
-#endif
-		*x = Mdiv256(g_stRoadInfo.slope * (APL_Cos( APL_sDiv((45*Count) , Size))) ) - g_stRoadInfo.slope;	/* ラスタ開始0[deg]ラスタ終了180[deg]までのSin値にSlop値を掛け算する */
-		
-#ifdef DEBUG	/* デバッグコーナー */
-		/* モード切替による設定値の変更 */
-		GetGameMode(&bMode);
-		GetCRT(&stCRT, bMode);
-		hide_offset_x	= stCRT.hide_offset_x;
-		hide_offset_y	= stCRT.hide_offset_y;
-		Draw_Pset(	hide_offset_x + 128 - *x,
-					hide_offset_y + 128 - Count,
-					0x0A);
-#endif
-	}
 	
-//	*x = APL_sDiv(g_stRoadInfo.slope * APL_Sin( Count ), (int32_t)Size);	/* ラスタ開始0[deg]ラスタ終了180[deg]までのSin値にSlop値を掛け算する */
-//	*x = (int16_t)APL_sDiv(g_stRoadInfo.slope * Count, (int32_t)Size);
-//	*x = Mdiv256(uShift * APL_Sin( APL_sDiv((180 * Count) , Size)));	/* ラスタ開始0[deg]ラスタ終了180[deg]までのSin値にSlop値を掛け算する */
-//	*x = Mdiv256(uRev_uRas_y * APL_Cos(uShift));
+	*x = APL_sDiv(-g_RoadArray[Count], Count);
 	
 	return ret;
 }
@@ -788,12 +785,15 @@ static int16_t	Set_Road_Slope(void)
 {
 	int16_t	ret = 0;
 	static int8_t bSlope_Init = TRUE;
+	static int8_t bAngleFlag = TRUE;
 	static int16_t Angle_old = 0;
-	static uint16_t uCount = 0;
 	int16_t AngleDiff = 0;
 	int16_t	Angle;
 	int16_t	Slope;
+	int16_t	x, y, mv;
 	
+	ST_PCG	*p_stPCG = NULL;
+	p_stPCG = PCG_Get_Info(ROAD_PCG_ARROW);	/* 矢印 */
 	
 	Angle = g_stRoadInfo.angle;
 	Slope = g_stRoadInfo.slope;
@@ -801,30 +801,98 @@ static int16_t	Set_Road_Slope(void)
 	{
 		bSlope_Init = FALSE;
 		Angle_old = Angle;
-		uCount = 0;
+
+		x = 120 + SP_X_OFFSET;
+		y = g_stRasInfo.mid + SP_Y_OFFSET;
+		p_stPCG->x = x;
+		p_stPCG->y = y;
 	}
 	
 	if(Angle == Angle_old)		/* stop */
 	{
-		uCount = Minc(uCount, 1);
-
-		if(uCount >= 16)
+		Slope = Mdiv2(Slope);	/* 2分法 */
+		if(Slope == -1)	/* 算術シフトのマイナス側は０に収束しない対策 */
 		{
-			Slope = Mdiv2(Slope);	/* 2分法 */
-			if(Slope == -1)	/* 算術シフトのマイナス側は０に収束しない対策 */
-			{
-				Slope = 0;
-			}
+			Slope = 0;
 		}
 	}
 	else
 	{
-		uCount = 0;
 		AngleDiff = APL_AngleDiff(Angle_old, Angle);
 	}
 	
 	Slope += AngleDiff;
-	Slope = Mmax(Mmin(Slope, 128), -128);
+	Slope = Mminmax(Slope, -384, 384);
+
+	if(p_stPCG != NULL)
+	{
+		x = p_stPCG->x;
+		y = p_stPCG->y;
+		p_stPCG->dy = 0;
+		
+		if( (x < 80) || (x > 176) || (bAngleFlag == TRUE))
+		{
+			x = 120 + SP_X_OFFSET;
+		}
+		
+		if(AngleDiff == 0)
+		{
+			x = 120 + SP_X_OFFSET;
+			y = g_stRasInfo.mid + SP_Y_OFFSET;
+			p_stPCG->dx = 0;
+
+			p_stPCG->update	= FALSE;
+
+			if(bAngleFlag == TRUE)
+			{
+				bAngleFlag = FALSE;
+			}
+			else
+			{
+				bAngleFlag = TRUE;
+			}
+		}
+		else
+		{
+			mv = AngleDiff;
+			
+			if(AngleDiff < 0)
+			{
+				if(bAngleFlag == TRUE)
+				{
+					x = 120 + SP_X_OFFSET;
+				}
+				bAngleFlag = FALSE;
+				
+				if(mv == 0)
+				{
+					mv = 1;
+				}
+				p_stPCG->pPatCodeTbl[0] &= PCG_CODE_MASK;	/* パターン以外をクリア */
+				p_stPCG->pPatCodeTbl[0] |= SetBGcode2(0, 1, 0x07);
+			}
+			else
+			{
+				if(bAngleFlag == FALSE)
+				{
+					x = 120 + SP_X_OFFSET;
+				}
+				bAngleFlag = TRUE;
+				
+				if(mv == 0)
+				{
+					mv = -1;
+				}
+				p_stPCG->pPatCodeTbl[0] &= PCG_CODE_MASK;	/* パターン以外をクリア */
+				p_stPCG->pPatCodeTbl[0] |= SetBGcode2(0, 0, 0x07);
+			}
+			p_stPCG->dx = mv;
+			
+			p_stPCG->update	= TRUE;
+		}
+		p_stPCG->x = x;
+		p_stPCG->y = y;
+	}
 	
 	g_stRoadInfo.slope = Slope;
 	
@@ -844,7 +912,7 @@ static int16_t	Set_Road_Angle(void)
 {
 	int16_t	ret = 0;
 	int16_t	road_angle_diff = 0;
-	static int16_t	road_angle = 0;
+	int16_t	road_angle = 0;
 	static int16_t	road_angle_old = 0;
 
 	uint16_t	uRoad_data = 0;
@@ -875,7 +943,7 @@ static int16_t	Set_Road_Angle(void)
 		else
 		{
 			road_angle_diff = 0;
-			road_angle = g_stRoadInfo.angle;
+			road_angle_old = g_stRoadInfo.angle;
 		}
 	}
 	else
@@ -883,7 +951,7 @@ static int16_t	Set_Road_Angle(void)
 	{
 		road_angle_diff = 0x80 - (int16_t)uRoad_data;		/* 道の角度 */
 	}
-	road_angle += road_angle_diff;
+	road_angle = road_angle_old + road_angle_diff;
 	
 	if(road_angle >= 360)
 	{
@@ -1015,11 +1083,16 @@ static int16_t Road_Pat_Main(void)
 				g_uMapCounter = 0;
 			}
 			Set_Road_Background_Col(g_uMapCounter);
+
+			ret = 2;
+		}
+		else
+		{
+			ret = 1;
 		}
 
 		g_uRoadCycleCount++;	/* コース更新フリーランカウンタ */
 
-		ret = 1;
 	}
 	
 	/* 初期化時のみの動作 */
@@ -1123,7 +1196,8 @@ static int16_t Load_Road_Background(int16_t Num)
 	
 	ubPatNumber = BG_CG + (uint8_t)Num;
 	
-	CG_File_Load( ubPatNumber );	/* グラフィックの読み込み */
+//	CG_File_Load( ubPatNumber );	/* グラフィックの読み込み */
+	G_Load_Mem( ubPatNumber, 0, 0, 0 );	/* MYCAR_CG */
 	
 	pImage = Get_PicImageInfo( ubPatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 	
@@ -1260,6 +1334,7 @@ int16_t Road_Map_Draw(uint8_t bMode)
 	
 	if(s_uCount >= g_stRoadInfo.Courselength)
 	{
+		s_uCount = 0;
 		return  -1;
 	}
 	else if(s_uCount == 0)
