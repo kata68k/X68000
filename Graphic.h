@@ -13,6 +13,7 @@ enum
 	POS_RIGHT,
 };
 
+/* 画面内登場数 */
 enum
 {
 	Clear_G=0,
@@ -23,16 +24,35 @@ enum
 	Object3_G,
 	Object4_G,
 	Object5_G,
+	Object6_G,
+	Object7_G,
 	Enemy1_G,
 	Enemy2_G,
+	StartPoint_G,
+	GoalPoint_G,
 	MyCar_G,
 	Debug_View_G,
 	Flip_G,
 	MAX_G
 };
 
-#define	CG_MAX		(26)	/* グラフィックパレット数に依存 */
-#define	TRANS_PAL	(0x00)
+/* グラフィックパターン定義数 0-15 max16 */
+#define DUMMY_CG		(0)		/* ダミー		(1) */
+#define BG_CG			(1)		/* 背景			(1) */
+#define COURSE_OBJ_CG	(2)		/* 障害物		(kind of 4) */
+#define ENEMYCAR_CG		(6)		/* ライバル車	(kind of 8) */
+#define START_PT_CG		(14)	/* スタート位置	(1) */
+#define GOAL_PT_CG		(15)	/* ゴール位置	(1) */
+#define PAL_MAX_CG		(16)	/* 最大16パターン登録 */
+/* グラフィックテキストパターン定義数 max 3 */
+#define MYCAR_CG		(16)	/* 自車			(kind of 3) */
+/* フルグラフィック */
+#define TITLE_CG		(19)	/* タイトル */
+#define DEMO_CG			(20)	/* デモ */
+	/* … */
+#define	CG_MAX			(27)	/* グラフィックパレット数に依存 */
+
+#define	TRANS_PAL		(0x00)
 
 #define FILE_TYPE			(0x424D)	/* "BM"値 */
 #define FILE_HEADER_SIZE	(14)		/* BMPファイルヘッダサイズ */
@@ -72,14 +92,14 @@ typedef struct tagBITMAPFILEHEADER {
 
 typedef struct tagBITMAPINFOHEADER {
 	uint64_t	biSize;			/* ヘッダサイズ */
-	int64_t	biWidth;		/* 画像の幅(px) */
-	int64_t	biHeight;		/* 画像の高さ(px) */
+	int64_t		biWidth;		/* 画像の幅(px) */
+	int64_t		biHeight;		/* 画像の高さ(px) */
 	uint16_t	biPlanes;		/* プレーン数 常に１ */
 	uint16_t	biBitCount;		/* １画素あたりのデータサイズ */
 	uint64_t	biCompression;	/* 圧縮形式 */
 	uint64_t	biSizeImage;	/* 画像データ部のサイズ */
-	int64_t	biXPixPerMeter;	/* 横方向解像度(dot/m) */
-	int64_t	biYPixPerMeter;	/* 縦方向解像度(dot/m) */
+	int64_t		biXPixPerMeter;	/* 横方向解像度(dot/m) */
+	int64_t		biYPixPerMeter;	/* 縦方向解像度(dot/m) */
 	uint64_t	biClrUsed;		/* 格納されているパレット数(使用色数) */
 	uint64_t	biClrImportant;	/* 重要なパレットのインデックス */
 } BITMAPINFOHEADER;
@@ -123,15 +143,16 @@ extern	int16_t Set_PicImagePalletALL(void);
 extern	int16_t CG_File_Load(uint16_t);
 extern	void	G_INIT(void);
 extern	void	G_VIDEO_INIT(void);
-extern	void	G_HOME(void);
+extern	void	G_HOME(uint8_t);
 extern	void	G_VIEW(uint8_t);
 extern	void	G_Palette_INIT(void);
 extern	void	G_PaletteSetZero(void);
 extern	int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
+extern	int16_t G_Stretch_Pict_toVRAM(	int16_t, int16_t, uint8_t, uint8_t, uint8_t , uint8_t , uint16_t *, uint16_t, uint16_t, int8_t, uint8_t);
 extern	int16_t G_Stretch_Pict_To_Mem( uint16_t	*, uint16_t, uint16_t, uint16_t	*, uint16_t, uint16_t);
 extern	int16_t G_Copy_Pict_To_Mem(	uint16_t *, uint16_t , uint16_t , uint16_t *, uint16_t , uint16_t);
 extern	int16_t	G_BitBlt(int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t , int16_t , uint16_t , uint8_t , uint8_t , uint8_t , uint8_t );
-extern	int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , uint16_t , uint8_t , uint8_t , uint8_t );
+extern	int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , uint16_t , uint8_t , uint8_t , uint8_t, uint8_t );
 extern	int32_t	G_CLR(void);
 extern	int16_t G_CLR_HS(void);
 extern	int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);

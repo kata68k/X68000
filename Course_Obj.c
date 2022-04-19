@@ -17,6 +17,8 @@
 #include "Output_Text.h"
 #include "Raster.h"
 
+const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 198, 158, 126, 101, 79, 65, 51, 41, 33 };
+
 /* 変数定義 */
 uint8_t		*g_pCG_Course_ObjImageBuf[COURSE_OBJ_TYP_MAX][COURSE_OBJ_PAT_MAX];
 
@@ -34,6 +36,7 @@ int16_t	Sort_Course_Obj(void);
 int16_t	Load_Course_Obj(int16_t);
 int16_t	Load_Course_Data(uint8_t);
 int16_t	Move_Course_BG(uint8_t);
+int16_t	Set_Course_TmpObject(uint16_t, uint8_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -52,8 +55,8 @@ int16_t	InitCourseObj(void)
 	{
 		g_stCourse_Obj[i].ubType = 0;
 		g_stCourse_Obj[i].x = 0;
-		g_stCourse_Obj[i].y = (COURSE_OBJ_H_MAX * i);
-		g_stCourse_Obj[i].z = 0;
+		g_stCourse_Obj[i].y = Mmul4(COURSE_OBJ_H_MAX * i);
+		g_stCourse_Obj[i].z = COURSE_OBJ_PAT_MAX - 1;
 		g_stCourse_Obj[i].uTime = 0xFFFF;
 		g_stCourse_Obj[i].ubAlive = TRUE;
 	}
@@ -122,7 +125,6 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 	{
 		int16_t	x, y, z;
 		int16_t	dx, dy, dz;
-		int16_t	st, cal;
 		int16_t	mx, my;
 		uint16_t	ras_x, ras_y, ras_pat, ras_num;
 		uint8_t	bEven;
@@ -153,102 +155,75 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		z = g_stCourse_Obj[bNum].z;
 		ubType = g_stCourse_Obj[bNum].ubType;
 		uTime = g_stCourse_Obj[bNum].uTime;	/* 共通カウンタの前回値 */
+
+		
 		if(uTime == 0xFFFF)
 		{
 			uTime = uCount;
 		}
 
-		if(uCount > uTime)
+		my = uCount - uTime;	/* 変化量 */
+		if(my > 0)
 		{
-			y += (uCount - uTime);	/* 変化量 */
+			y += Mmax(my >> z, 1);
 		}
-//		my = Mmin(y, Y_MAX_WINDOW);
-		my = Mmin(Mdiv16(y*y), Y_MAX_WINDOW);
-//		my = APL_uDiv( ((Y_MAX_WINDOW - y) + 128), (Y_MAX_WINDOW - y) );
 		
-		ras_num = Mmin(my, stRasInfo.ed);	/* ラスター情報の配列番号を算出 */
-		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
-
-		if(stRasInfo.st < stRasInfo.mid)
-		{
-			st = 0;
-		}
-		else
-		{
-			st = stRasInfo.st - stRasInfo.mid;
-		}
-
-		x = Mmul2(ras_num);	/* 96に対して200なのでおよそ2倍 */
+		/* 車幅(片側)は、4mと定義する。 */
+		/* 4mで192dotであれば、1dotあたり0.021mと定義する。 */
+		/* 画面奥が1dotの道幅しかないので画面奥は192m先にとなる。 */
+		ras_num = Mmax(Mmin(y, stRasInfo.ed), 2);		/* ラスター情報の配列番号を算出 */
 		
+		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
+
 		/* センター */
-		if( ras_x < 256 )	/* 左カーブ */
-		{
-			mx = ROAD_CT_POINT + (  0 - ras_x);
-		}
-		else	/* 右カーブ */
-		{
-			mx = ROAD_CT_POINT + (512 - ras_x);
-		}
-		cal = x + 16 + Mmul2(st);	/* 16は道の最小幅 */
+		mx = (int16_t)Mu10b_To_s8b(ras_x);	/* 0-1023 => (-256 < 0 < 255) */
+		x += Mmul2(y);
 		
 		/* 差分 */
 		if(bEven == TRUE)	/* 左 */
 		{
-			dx = mx - cal;
+			mx += (int16_t)ROAD_CT_POINT - x;
 		}
 		else				/* 右 */
 		{
-			dx = mx + cal;
+			mx += (int16_t)ROAD_CT_POINT + x;
 		}
-#if 1
-		if(dx > 256)
+		/* 水平線 */
+		dx = mx;
+		dy = stRasInfo.st;
+		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
+		//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
+		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して16で割った(=7pat) */
+		//dz = Mmin( Mmax( 7 - (Mdiv16(Mmul256(z) / (z + ROAD_ED_POINT))) , 0), 7);
+		dz = z;
+		if(x >= g_nObjViewRateTbl[z])
 		{
-			dx = 0x7FFF;
-		}
-		if(dx < 0)
-		{
-			dx = 0x7FFF;
-		}
-#endif
-		z = x;
-		
-		if( (y > 0) && (y < 36) && (ret >= 0) && (dx < 256))
-		{
-			
-			/* 水平線 */
-			dy = stRasInfo.st;
-			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
-			//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
-			/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して16で割った(=7pat) */
-			dz = Mmin( Mmax( 7 - (Mdiv16(Mmul256(z) / (z + ROAD_ED_POINT))) , 0), 7);
-			/* 描画 */
-			Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
-											stCRT.hide_offset_y + dy,
-											dz,
-											bMode_rev,
-											ubType,
-											bEven);
-			x = dx;
-			z = dz;
-
-			if(Out_Of_Disp < 0)	/* 描画領域外 */
-			{
-				/* 出現ポイントで描画領域外となるので要検討 */
-//				x = 0;
-//				y = 0;
-//				z = 0;
-//				g_stCourse_Obj[bNum].ubAlive = FALSE;
-			}
+			dz = Mdec(z, 1);
+			y = 0;
 		}
 		else
 		{
-			if(y >= 36)	/* 画面から消える判定は横移動の要素がつよい */
-			{
-				x = 0;
-				y = 0;
-				z = 0;
-				g_stCourse_Obj[bNum].ubAlive = FALSE;
-			}
+			/* 前回値保持 */
+		}
+		z = dz;
+		
+		/* 描画 */
+		Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
+										stCRT.hide_offset_y + dy,
+										dz,
+										bMode_rev,
+										ubType,
+										bEven);
+#ifdef DEBUG	/* デバッグコーナー */
+		SetDebugPos(stCRT.hide_offset_x + dx, dx);
+#endif
+		
+		if(Out_Of_Disp != 0)
+		{
+			x = 0;
+			y = 0;
+			z = COURSE_OBJ_PAT_MAX - 1;
+			g_stCourse_Obj[bNum].ubAlive = FALSE;
 		}
 
 		g_stCourse_Obj[bNum].x = x;
@@ -265,7 +240,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		}
 		g_stCourse_Obj[bNum].x = 0;
 		g_stCourse_Obj[bNum].y = 0;
-		g_stCourse_Obj[bNum].z = 0;
+		g_stCourse_Obj[bNum].z = COURSE_OBJ_PAT_MAX - 1;
 		g_stCourse_Obj[bNum].uTime = uCount;
 		g_stCourse_Obj[bNum].ubAlive = TRUE;
 	}
@@ -284,6 +259,7 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 {
 	int16_t	ret = 0;
 
+	int16_t PatNumber;
 	uint16_t	*pSrcBuf = NULL;
 	uint32_t	uWidth=0, uHeight=0;
 	uint8_t		ubPos_H;
@@ -291,6 +267,8 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 	
 	if(ubType >= COURSE_OBJ_TYP_MAX)return -1;
 	if(Size >= COURSE_OBJ_PAT_MAX)return -1;
+	
+	PatNumber = COURSE_OBJ_CG + ubType;
 	
 	pSrcBuf = g_stPicCourse_ObjImage[ubType][Size].pImageData;
 	pInfo 	= g_stPicCourse_ObjImage[ubType][Size].pBMi;
@@ -306,7 +284,7 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 	{
 		ubPos_H = POS_LEFT;
 	}
-	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_CENTER);
+	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_CENTER, PatNumber);
 	
 	return	ret;
 }
@@ -321,29 +299,41 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 int16_t	Sort_Course_Obj(void)
 {
 	int16_t	ret = 0;
-	int16_t	i;
+	int16_t	i, ofst;
 	int16_t	count = 0;
+	int16_t	num;
 	ST_COURSE_OBJ	stTmp;
+	
+	num = Mdiv2(COURSE_OBJ_MAX);
 	
 	while(1)
 	{
-		for(i=0; i<COURSE_OBJ_MAX-1; i++)
+		for(i=0; i<num; i++)
 		{
-			if(g_stCourse_Obj[i].y > g_stCourse_Obj[i+1].y)
+			ofst = 0;	/* 左 */
+			if(g_stCourse_Obj[i+ofst].x > g_stCourse_Obj[i+ofst+2].x)
 			{
-				stTmp = g_stCourse_Obj[i+1];
-				g_stCourse_Obj[i+1] = g_stCourse_Obj[i];
-				g_stCourse_Obj[i] = stTmp;
-				count = 0;
+				stTmp = g_stCourse_Obj[i+ofst+2];
+				g_stCourse_Obj[i+ofst+2] = g_stCourse_Obj[i+ofst];
+				g_stCourse_Obj[i+ofst] = stTmp;
+				count++;
 			}
-			else
+			
+			ofst = 1;	/* 右 */
+			if(g_stCourse_Obj[i+ofst].x > g_stCourse_Obj[i+ofst+2].x)
 			{
+				stTmp = g_stCourse_Obj[i+ofst+2];
+				g_stCourse_Obj[i+ofst+2] = g_stCourse_Obj[i+ofst];
+				g_stCourse_Obj[i+ofst] = stTmp;
 				count++;
 			}
 		}
-		if(count >= (COURSE_OBJ_MAX - 1))
+		if(count == 0)	/* ソート完了 */
 		{
 			break;
+		}
+		else{			/* 再ソート */
+			count = 0;
 		}
 	}
 	
@@ -379,7 +369,9 @@ int16_t	Load_Course_Obj(int16_t Num)
 	if(Num >= COURSE_OBJ_TYP_MAX)return -1;
 	PatNumber = COURSE_OBJ_CG + Num;
 
-	G_Load_Mem( PatNumber, 0, 0, 0 );	/* ヤシの木 */
+	ret = G_Load_Mem( PatNumber, 0, 0, 0 );	/* ヤシの木 */
+	if(ret != 0)return ret;
+	
 //	ret = G_Load_Mem( PatNumber, uOffset_X,	0,	0);	/* ヤシの木 */
 	pSrcBuf = Get_PicImageInfo( PatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 	uWidth_dst = uWidth;
@@ -433,12 +425,12 @@ int16_t	Load_Course_Obj(int16_t Num)
 
 			/* 縮小先のサイズ(W) */
 			uW_tmp = uWidth_dst << 3;
-			uWidth_dst = Mmul_p1(uW_tmp);
+			uWidth_dst = Mmul_0p10(uW_tmp);
 			uWidth_dst = Mmax(uWidth_dst, 8);
 
 			/* 縮小先のサイズ(H) */
 			uH_tmp = uHeight_dst << 3;
-			uHeight_dst = Mmul_p1(uH_tmp);
+			uHeight_dst = Mmul_0p10(uH_tmp);
 			uHeight_dst = Mmax(uHeight_dst, 1);
 
 			pInfo->biWidth = uWidth_dst;
@@ -560,6 +552,61 @@ int16_t	Move_Course_BG(uint8_t bMode)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	Set_Course_TmpObject(uint16_t uCount, uint8_t ubPictNum)
+{
+	int16_t	ret = 0;
+
+	uint8_t	ubMode;
+	int8_t	bZoom;
+	int16_t	x, y;
+	uint16_t	ras_x, ras_y, ras_pat, ras_num;
+	uint16_t	*pSrcBuf = NULL;
+	uint32_t	uWidth, uHeight, uFileSize;
+	ST_CRT			stCRT;
+	ST_RAS_INFO		stRasInfo;
+
+#ifdef DEBUG	/* デバッグコーナー */
+	uint8_t	bDebugMode;
+	uint16_t	uDebugNum;
+	GetDebugMode(&bDebugMode);
+	GetDebugNum(&uDebugNum);
+#endif
+	
+	GetGameMode(&ubMode);	/* 現在のモード取得 */
+
+	pSrcBuf = Get_PicImageInfo( ubPictNum, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+
+	ras_num = uCount;
+	
+	GetRasterInfo(&stRasInfo);
+	ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
+	
+	GetCRT(&stCRT, ubMode);	/* 現在の画面座標を取得 */
+	x = stCRT.hide_offset_x - Mu10b_To_s8b((int16_t)ras_x) + Mdiv2(uWidth);
+	y = stCRT.hide_offset_y + Mu10b_To_s8b((int16_t)ras_y);
+	
+	bZoom = (int8_t)uCount - 9;
+
+	/* 描画対象をOFFスクリーンへ */
+	if(ubMode == 1)ubMode = 2;
+	else ubMode = 1;
+	
+	G_Stretch_Pict_toVRAM(x, y, 0, ubMode, POS_MID, POS_CENTER, pSrcBuf, uWidth, uHeight, bZoom, ubPictNum);
+
+#ifdef DEBUG
+//	printf("H(%d)=(%d, %d, %d)(%d, %d)(%d, %d)\n", ubMode, uCount, ubPictNum, bZoom, x, y, uWidth, uHeight);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+
+	return ret;
+}
 
 #endif	/* COURSE_OBJ_C */
 

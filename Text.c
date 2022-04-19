@@ -20,6 +20,7 @@
 int32_t g_TpalDef[16];
 uint8_t g_bTpalDef_Flag = TRUE;
 static	uint8_t g_bTimerStopFlag;
+static	uint8_t g_bTimerResetFlag;
 
 /* 構造体 */
 static ST_TEXTINFO	g_stTextInfo = {0};
@@ -37,7 +38,8 @@ void T_Speed(void);
 void T_Gear(void);
 void T_TimerStop(void);
 void T_TimerStart(void);
-uint16_t T_Main(void);
+void T_TimerReset(void);
+uint16_t T_Main(uint16_t *);
 int16_t T_PutTextInfo(ST_TEXTINFO);
 int16_t T_Scroll(uint32_t, uint32_t);
 int32_t T_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
@@ -71,6 +73,7 @@ void T_INIT(void)
 	}
 	g_bTpalDef_Flag = FALSE;
 	g_bTimerStopFlag = TRUE;	/* stop */
+	g_bTimerResetFlag = FALSE;
 	
 	g_stTextInfo.uTimeCounter = 100;
 	g_stTextInfo.ulScore = 0;
@@ -392,7 +395,19 @@ void T_TimerStart(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-uint16_t T_Main(void)
+void T_TimerReset(void)
+{
+	SetNowTime(0);
+	g_bTimerResetFlag = TRUE;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+uint16_t T_Main(uint16_t *Timer)
 {
 	uint16_t uRet = 0u;
 	
@@ -413,6 +428,14 @@ uint16_t T_Main(void)
 	/* 開始時間 */
 	GetStartTime(&unStart_time);
 	
+	/* タイマーリセット処理 */
+	if(g_bTimerResetFlag == TRUE)	/* タイマーリセット要求あり */
+	{
+		g_bTimerResetFlag = FALSE;	/* タイマーリセット要求解除 */
+		time_old = time_now;		/* リセット */
+		unPassTime = 0;				/* リセット */
+	}
+	
 	/* Time Count */
 	if(time_old != 0)
 	{
@@ -432,7 +455,7 @@ uint16_t T_Main(void)
 		g_stTextInfo.uTimeCounter = uTimeCounter;
 	}
 	time_old = unStart_time;
-	uRet = g_stTextInfo.uTimeCounter;
+	*Timer = g_stTextInfo.uTimeCounter;
 	
 	/* Score */
 	g_stTextInfo.ulScore = stScore.ulScore;

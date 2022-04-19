@@ -31,6 +31,7 @@ static uint16_t	g_uRoadAnime_old = 0u;
 static uint16_t	g_uRoadAnimeBase = 0u;
 static uint16_t	g_uRoadAnimeBase_old = 0u;
 static uint16_t	g_uRoadAnimeCount = 0u;
+static uint32_t	unRoadAnimeTime = 0xFFFFFFFFu;
 
 static uint16_t	g_uRoadCycleCount = 0u;
 static uint16_t	g_uCounter = 0u;
@@ -40,6 +41,13 @@ static uint16_t	g_uMapCounter = 0u;
 
 static int16_t	PositionSum = 0;
 static int16_t	ViewAngle = 0;
+static uint8_t	bMode_old = 0xFF;
+static uint8_t	ubSide = 0;
+static int8_t	bSlope_Init = TRUE;
+static int8_t	bAngleFlag = TRUE;
+static int16_t	Angle_old = 0;
+static int16_t	road_angle_old = 0;
+static uint16_t	uRoad_data_old = 0x80;
 
 static int16_t	g_RoadArray[RASTER_H_MAX] = {0u};
 
@@ -78,7 +86,7 @@ static int16_t	Set_Road_Slope(void);
 static int16_t	Set_Road_Angle(void);
 static int16_t	Set_Road_Distance(void);
 static int16_t	Set_Road_Object(void);
-static int16_t	Road_Pat_Main(void);
+int16_t	Road_Pat_Main(uint16_t *);
 int16_t	GetRoadCycleCount(uint16_t *);
 uint64_t	GetRoadDataAddr(void);
 int16_t	SetHorizon(uint8_t);
@@ -128,7 +136,50 @@ int16_t SetRasterInfo(ST_RAS_INFO stDat)
 /*===========================================================================================*/
 void Raster_Init(void)
 {
+	uint16_t	i;
+	
+	g_uRoadAnime = 0u;
+	g_uRoadAnime_old = 0u;
+	g_uRoadAnimeBase = 0u;
+	g_uRoadAnimeBase_old = 0u;
+	g_uRoadAnimeCount = 0u;
+	unRoadAnimeTime = 0xFFFFFFFFu;
+
+	g_uRoadCycleCount = 0u;
+	g_uCounter = 0u;
+	g_bRoadInitFlag = TRUE;
+
+	g_uMapCounter = 0u;
+
+	PositionSum = 0;
+	ViewAngle = 0;
+	bMode_old = 0xFF;
+	ubSide = 0;
+
+	bSlope_Init = TRUE;
+	bAngleFlag = TRUE;
+	Angle_old = 0;
+	road_angle_old = 0;
+	uRoad_data_old = 0x80;
+	
+	memset(&g_RoadArray, 0, sizeof(int16_t) * RASTER_H_MAX);
+	
+	memset(&g_stRasterInt, 0, sizeof(ST_RASTER_INT) * RASTER_H_MAX);
 	memset(&g_stRasInfo, 0, sizeof(ST_RAS_INFO));
+	
+	memset(&g_stRoadInfo, 0, sizeof(ST_ROAD_INFO));
+	memset(&g_stRoadData, 0, sizeof(ST_ROADDATA) * ROADDATA_MAX);
+	
+	for(i=0; i<RASTER_H_MAX; i++)
+	{
+		g_stRasterInt[i].x		= 0;
+		g_stRasterInt[i].y		= Y_HORIZON_1;
+		g_stRasterInt[i].pat	= 0;
+	}
+	g_stRasterInt[(RASTER_H_MAX - 2) + 0].y = Y_HORIZON_1;	/* 割り込み位置の設定 */
+	g_stRasterInt[(RASTER_H_MAX - 2) + 1].y = Y_HORIZON_1;	/* 割り込み位置の設定 */
+	g_stRasterInt[(RASTER_H_MAX - 4) + 0].y = ROAD_ST_POINT - Y_HORIZON_1;	/* 割り込みがかかるまでの表示位置(ラスタ割り込み位置によるずれの考慮は不要)	*/
+	g_stRasterInt[(RASTER_H_MAX - 4) + 1].y = ROAD_ST_POINT - Y_HORIZON_1;	/* 割り込みがかかるまでの表示位置(ラスタ割り込み位置によるずれの考慮は不要)	*/
 }
 
 /*===========================================================================================*/
@@ -155,8 +206,7 @@ int16_t Raster_Main(void)
 	int16_t		ras_cal_y=0;
 
 	uint8_t bMode;
-	static uint8_t	bMode_old = 0xFF;
-	static uint8_t	ubSide = 0;
+	uint16_t	uCRT_Tmg;
 	
 	ST_RASTER_INT	stRasterInt;
 	ST_CARDATA 		stMyCar = {0};
@@ -169,12 +219,18 @@ int16_t Raster_Main(void)
 #endif
 	
 	GetGameMode(&bMode);
-
+#if 0
 	if(bMode == bMode_old)
 	{
 		return ret;	/* 画面着替えが発生しなかった場合は、処理を行わない */
 	}
-	ret = 1;
+	else
+	{
+		ret = 1;	/* 更新をかける */
+	}
+#else
+	ret = 1;	/* 更新をかける */
+#endif
 	
 	/* 一つのバッファに偶数/奇数で２枚確保する */
 	if(bMode == 1u)		/* 上側判定 */
@@ -189,32 +245,17 @@ int16_t Raster_Main(void)
 	{
 		ubSide = 1;
 	}
+	Get_CRT_Tmg(&uCRT_Tmg);
 	
 	/* 自車の情報を取得 */
 	GetMyCar(&stMyCar);
 	CarAngle = stMyCar.Angle;	/* アングル */
 	
-	/* ロードパターン */
-	ret = Road_Pat_Main();
-
-	if(ret != 0)	/* コースデータの更新あり */
-	{
-		switch(ret)
-		{
-		case 1:
-			;	/* コース情報更新 */
-			break;
-		case 2:
-			return ret;	/* コースEND */
-		default:
-			break;
-		}
-	}
 	RoadAngle = g_stRoadInfo.angle;	/* 道の角度 */
 	
 	/* 自車の位置を算出 */
 	Diff = APL_AngleDiff(RoadAngle, CarAngle);	/* 車と道路の角度差分で車の位置が変わる */
-	ViewAngle = - Mdiv4(Diff);	/* -128 ot 0 to 128 */
+	ViewAngle = - Diff;	/* -128 ot 0 to 128 */
 	if(Mabs(Diff) < 8)
 	{
 		PositionSum = Mdiv2(PositionSum);	/* 2分法 */
@@ -277,16 +318,18 @@ int16_t Raster_Main(void)
 		Get_Road_Pat(&ras_pat, uRas_y);		/* ロードのパターン情報を取得 */
 		Set_Road_Pat_offset(uRas_y);		/* ロードパターン閾値の更新 */
 
-		stRasterInt.x = (uint16_t)(ras_cal_x & 0x1FFu);
-		stRasterInt.y = (uint16_t)(ras_cal_y & 0x1FFu);
+		stRasterInt.x = (uint16_t)(ras_cal_x & 0x3FFu);
+		stRasterInt.y = (uint16_t)(ras_cal_y & 0x3FFu);
 		stRasterInt.pat = ras_pat;
 
+		//memcpy(&g_stRasterInt[Mmul2(uRas_y) + ubSide], &stRasterInt, sizeof(ST_RASTER_INT));
 		g_stRasterInt[Mmul2(uRas_y) + ubSide] = stRasterInt;
 	}
 	
 	/* BGのY座標を選ぶラスタの割り込み位置に対して表示したいBGのY座標から */
 	/* 初回は0or512でないと空に道が出てくる */	/* ぷのひと さんのアドバイス箇所 */
-	if(g_uCRT_Tmg != 0)	/* ラスタ２度読みの場合(31kHz) */
+
+	if(uCRT_Tmg == 0)	/* ラスタ２度読みの場合(31kHz) */
 	{
 		g_stRasterInt[(RASTER_H_MAX - 2) + ubSide].y = Mmul2(uRas_st);	/* 割り込み位置の設定 */
 	}
@@ -297,6 +340,7 @@ int16_t Raster_Main(void)
 	g_stRasterInt[(RASTER_H_MAX - 4) + ubSide].y = ROAD_ST_POINT - uRas_st;	/* 割り込みがかかるまでの表示位置(ラスタ割り込み位置によるずれの考慮は不要)	*/
 	
 	SetRasterIntData(ubSide);	/* ラスター割り込みデータ設定完了 */
+	StartRaster();	/* ラスター割り込み許可 */
 	
 	bMode_old = bMode;
 
@@ -569,7 +613,7 @@ void Road_BG_Init(uint16_t uCourseNum)
 	
 	if(uCourseNum == 0u)uCourseNum = 1u;
 
-	Load_Road_Background(0);	/* コース背景の展開 */
+	Load_Road_Background(uCourseNum);	/* コース背景の展開 */
 	
 	/* コース障害物の展開 */
 	for(i = 0u; i < COURSE_OBJ_TYP_MAX; i++)
@@ -737,7 +781,6 @@ static int16_t	Set_Road_Height(void)
 {
 	int16_t	ret = 0;
 	int16_t	road_height;
-	static int16_t	road_height_old;
 	
 #ifdef DEBUG	/* デバッグコーナー */
 	uint8_t	bDebugMode;
@@ -746,8 +789,6 @@ static int16_t	Set_Road_Height(void)
 	GetDebugNum(&uDebugNum);
 #endif
 	
-	road_height_old = g_stRoadInfo.height;	/* 前回値更新 */
-		
 #ifdef DEBUG	/* デバッグコーナー */
 	if(bDebugMode == TRUE)
 	{
@@ -784,9 +825,6 @@ static int16_t	Set_Road_Height(void)
 static int16_t	Set_Road_Slope(void)
 {
 	int16_t	ret = 0;
-	static int8_t bSlope_Init = TRUE;
-	static int8_t bAngleFlag = TRUE;
-	static int16_t Angle_old = 0;
 	int16_t AngleDiff = 0;
 	int16_t	Angle;
 	int16_t	Slope;
@@ -913,10 +951,8 @@ static int16_t	Set_Road_Angle(void)
 	int16_t	ret = 0;
 	int16_t	road_angle_diff = 0;
 	int16_t	road_angle = 0;
-	static int16_t	road_angle_old = 0;
 
 	uint16_t	uRoad_data = 0;
-	static uint16_t	uRoad_data_old = 0x80;
 	
 #ifdef DEBUG	/* デバッグコーナー */
 	uint8_t	bDebugMode;
@@ -980,9 +1016,7 @@ static	int16_t	Set_Road_Distance(void)
 {
 	int16_t	ret = 0;
 	int16_t	road_distance;
-	static int16_t road_distance_old;
-	
-	road_distance_old = g_stRoadInfo.distance;	/* 前回値更新 */
+
 	road_distance = 0;
 	g_stRoadInfo.distance	= road_distance;	/*  */
 	
@@ -1018,10 +1052,9 @@ static int16_t	Set_Road_Object(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-static int16_t Road_Pat_Main(void)
+int16_t Road_Pat_Main(uint16_t *uRoadCounter)
 {
 	int16_t	ret = 0;
-	static uint32_t	unRoadAnimeTime = 0xFFFFFFFFu;
 	uint32_t	time_st = 0u;
 	int16_t	speed = 0;
 
@@ -1031,6 +1064,8 @@ static int16_t Road_Pat_Main(void)
 		speed = 1;
 		time_st = 0xFFFFu;
 		unRoadAnimeTime = 0u;
+
+		ret = 1;	/* 更新あり */
 	}
 	else
 	{
@@ -1070,29 +1105,28 @@ static int16_t Road_Pat_Main(void)
 		
 		S_Add_Score_Point(speed * 10);	/* 車速で加点 */
 		
-		g_uCounter++;	/* コースデータのカウンタ更新 */
-		
-		if(g_uCounter >= g_stRoadInfo.Courselength)
-		{
-			g_uCounter = 0u;
-			
-			/* 背景を変更 */
-			g_uMapCounter++;
-			if(g_uMapCounter >= MAPCOL_MAX)
-			{
-				g_uMapCounter = 0;
-			}
-			Set_Road_Background_Col(g_uMapCounter);
-
-			ret = 2;
-		}
-		else
-		{
-			ret = 1;
-		}
-
+		g_uCounter++;			/* コースデータのカウンタ更新 */
 		g_uRoadCycleCount++;	/* コース更新フリーランカウンタ */
 
+		ret = 1;	/* 更新あり */
+	}
+	
+	*uRoadCounter = g_uCounter;
+	
+	if(g_uCounter >= g_stRoadInfo.Courselength)
+	{
+		g_uCounter = 0u;
+		
+		/* 背景を変更 */
+		g_uMapCounter++;
+		if(g_uMapCounter >= MAPCOL_MAX)
+		{
+			g_uMapCounter = 0;
+		}
+		Set_Road_Background_Col(g_uMapCounter);
+
+		*uRoadCounter = 0xFFFF;
+		ret = 1;	/* 更新あり */
 	}
 	
 	/* 初期化時のみの動作 */
@@ -1194,12 +1228,12 @@ static int16_t Load_Road_Background(int16_t Num)
 	uint8_t ubPatNumber;
 	uint16_t x, y;
 	
-	ubPatNumber = BG_CG + (uint8_t)Num;
+	ubPatNumber = Mmin(Mmax(BG_CG + Num, BG_CG), BG_CG);
 	
-//	CG_File_Load( ubPatNumber );	/* グラフィックの読み込み */
-	G_Load_Mem( ubPatNumber, 0, 0, 0 );	/* MYCAR_CG */
+	ret = G_Load_Mem( ubPatNumber, 0, 0, 0 );	/* BG_CG */
+	if(ret != 0)return ret;
 	
-	pImage = Get_PicImageInfo( ubPatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+	pImage = Get_PicImageInfo( ubPatNumber, &uWidth, &uHeight, &uFileSize );	/* イメージ情報の取得 */
 	
 	if(pImage != NULL)
 	{
@@ -1221,7 +1255,7 @@ static int16_t Load_Road_Background(int16_t Num)
 				x = uWidth * i;
 //				y = Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN;
 				y = Y_MIN_DRAW;
-				G_BitBlt_From_Mem( x, y, 1, pSrcBuf, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP);	/* 背景(上側) */
+				ret = G_BitBlt_From_Mem( x, y, 1, pSrcBuf, uWidth, uHeight, 0xFF, POS_LEFT, POS_TOP, ubPatNumber);	/* 背景(上側) */
 //				G_Load_Mem( ubPatNumber, uWidth * i, Y_MIN_DRAW +        0 + Y_HORIZON_1 - uHeight + RASTER_MIN, 1);	/* 背景(上側) */
 			}
 		}
@@ -1340,6 +1374,8 @@ int16_t Road_Map_Draw(uint8_t bMode)
 	else if(s_uCount == 0)
 	{
 		_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);	/* 全領域書き換えOK */
+		
+		G_PaletteSetZero();					/* 0番パレット変更 */
 		
 		xofst = Mmul256(256);
 		yofst = Mmul256(0) + Mmul256((s_uCount/256) * 64);

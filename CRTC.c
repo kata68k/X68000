@@ -73,6 +73,8 @@ volatile uint16_t	*SP_CRTC_0C = (uint16_t *)0xEB080Cu;
 volatile uint16_t	*SP_CRTC_0E = (uint16_t *)0xEB080Eu;
 volatile uint16_t	*SP_CRTC_10 = (uint16_t *)0xEB0810u;
 
+volatile uint16_t	g_uCRT_Tmg;
+
 /* 構造体定義 */
 ST_CRT		g_stCRT[CRT_MAX] = {0};
 
@@ -89,6 +91,8 @@ int16_t	SetCRT(ST_CRT, int16_t);
 int16_t	CRT_INIT(void);
 int16_t	Get_CRT_Contrast(int8_t *);
 int16_t	Set_CRT_Contrast(int8_t);
+int16_t	Get_CRT_Tmg(uint16_t *);
+int16_t	Set_CRT_Tmg(uint16_t);
 int16_t wait_vdisp(int16_t);
 int16_t wait_h_sync(void);
 int16_t wait_v_sync(void);
@@ -104,6 +108,27 @@ int16_t wait_v_sync(void);
 /*===========================================================================================*/
 void CRTC_INIT(uint8_t uNum)
 {
+
+	CRTMOD(0x100 + 10 + uNum);	/* uNum = 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+
+	switch(uNum)
+	{
+		case 0:	/* 31kHz mode 10 */
+		{
+			g_uRas_NexrCount = Mmul2(RASTER_NEXT);	/* ラスター割り込みスキップカウント最小値で初期化 */
+			Set_CRT_Tmg(0);
+			break;
+		}
+		case 1:	/* 15kHz mode 11*/
+		default:
+		{
+			g_uRas_NexrCount = RASTER_NEXT;	/* ラスター割り込みスキップカウント最小値で初期化 */
+			Set_CRT_Tmg(1);
+			break;
+		}
+	}
+	
+#if 0
 #if 1
 	/* CRTC_レジスタの結果を反映したもの */
 	uint32_t i;
@@ -113,27 +138,6 @@ void CRTC_INIT(uint8_t uNum)
 								0x42, 0x06, 0x10, 0x36, 0x103, 0x02, 0x18, 0x0F8, 0x114,	/* pacland 15kHz */
 								0x45, 0x06, 0x12, 0x32, 0x237, 0x05, 0x28, 0x228, 0x111,	/* 超連射68k 31kHz */
 								0x25, 0x01, 0x00, 0x20, 0x103, 0x02, 0x10, 0x100, 0x100};	/* 超連射68k 15kHz */
-
-	CRTMOD(0x100 + 10 + uNum);	/* uNum = 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
-
-	if(uNum == 0)	/* 31kHz mode 10 */
-	{
-		g_uRas_NexrCount = Mmul2(RASTER_NEXT);	/* ラスター割り込みスキップカウント最小値で初期化 */
-		g_uCRT_Tmg = 1;
-	}
-	else if(uNum == 1)	/* 15kHz mode 11*/
-	{
-		g_uRas_NexrCount = RASTER_NEXT;	/* ラスター割り込みスキップカウント最小値で初期化 */
-		g_uCRT_Tmg = 0;
-	}
-	else			
-	{
-		g_uRas_NexrCount = RASTER_NEXT;	/* ラスター割り込みスキップカウント最小値で初期化 */
-		g_uCRT_Tmg = 0;
-	}
-	
-	return;	/* 今は使わない */
-
 	pat = 1 + uNum;
 	
 	for(i=0; i<8; i++)
@@ -182,8 +186,8 @@ void CRTC_INIT(uint8_t uNum)
 
 	dsp_regs();
 #endif
-
 	set_regs();
+#endif
 }
 
 /*===========================================================================================*/
@@ -492,7 +496,7 @@ int16_t CRT_INIT(void)
 	
 #if 1
 //	CRTC_INIT_Manual();
-	CRTC_INIT(0);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+	CRTC_INIT(1);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
 #else
 
 	*CRTC_R07 = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
@@ -579,6 +583,37 @@ int16_t Set_CRT_Contrast(int8_t bContrast)
 	{
 		_iocs_contrast(g_CRT_Contrast);	/* 初期値 */
 	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	Get_CRT_Tmg(uint16_t *p_uNum)
+{
+	int16_t ret = 0;
+	
+	*p_uNum = g_uCRT_Tmg;
+	
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	Set_CRT_Tmg(uint16_t uNum)
+{
+	int16_t ret = 0;
+	
+	g_uCRT_Tmg = uNum;
 	
 	return ret;
 }

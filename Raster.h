@@ -68,6 +68,7 @@ extern int16_t	SetRoadInfo(ST_ROAD_INFO);
 extern void Road_Init(uint16_t);
 extern void Road_BG_Init(uint16_t);
 extern uint64_t GetRoadDataAddr(void);
+extern int16_t	Road_Pat_Main(uint16_t *);
 extern int16_t GetRoadCycleCount(uint16_t *);
 extern int16_t Road_Map_Draw(uint8_t);
 

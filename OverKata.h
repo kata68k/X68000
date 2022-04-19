@@ -16,5 +16,7 @@ extern int16_t	GetDebugNum(uint16_t *);
 extern int16_t	SetDebugNum(uint16_t);
 extern int16_t	GetDebugMode(uint8_t *);
 extern int16_t	SetDebugMode(uint8_t);
+extern int16_t	GetDebugPos(int16_t *, int16_t *);
+extern int16_t	SetDebugPos(int16_t, int16_t);
 
 #endif	/* OVERKATA_H */

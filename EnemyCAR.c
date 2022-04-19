@@ -23,6 +23,7 @@
 
 /* グローバル変数 */
 uint8_t		*g_pCG_EnemyCARImageBuf[ENEMYCAR_TYP_MAX][ENEMYCAR_PAT_MAX];
+const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = {96, 77, 61, 49, 39, 31, 25, 20, 16, 13, 10};
 
 /* 構造体定義 */
 ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
@@ -59,7 +60,7 @@ int16_t	InitEnemyCAR(void)
 		stEnemyCar[i].VehicleSpeed = 60;
 		stEnemyCar[i].x = 0;
 		stEnemyCar[i].y = 0;
-		stEnemyCar[i].z = 4;
+		stEnemyCar[i].z = ENEMYCAR_PAT_MAX - 1;
 		stEnemyCar[i].ubBrakeLights = 0;
 		stEnemyCar[i].ubOBD = 0;
 		stEnemyCar[i].ubAlive = FALSE;
@@ -162,66 +163,66 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			GetRasterInfo(&stRasInfo);
 			GetRoadInfo(&stRoadInfo);
 
-#if 0
-			cal = Mdiv256(dist * y);	/* 奥行の比率で移動量が変わる */
-			if(cal == 0)
+			/* ライバル車との距離 */
+			if(g_pStEnemyCar[bNum]->VehicleSpeed == 0)
 			{
-				if(dist == 0)
-				{
-					/* 何もしない */
-				}
-				else if(dist > 0)
-				{
-					dist = 1;
-				}
-				else
-				{
-					dist = -1;
-				}
-				
+				dis = 1;
 			}
 			else
 			{
-				dist = cal;
+				dis = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
+			}
+			y += dis;
+			
+			if(y < 0)
+			{
+				Out_Of_Disp = -1;	/* 先を越された */
+			}
+			
+#if 0
+			/* 位置 */
+			switch(z)
+			{
+			case 0:
+				my = Mmax(Mmul_1p00(y), 0);
+				break;
+			case 1:
+				my = Mmax(Mmul_0p80(y), 0);
+				break;
+			case 2:
+				my = Mmax(Mmul_0p62(y), 0);
+				break;
+			case 3:
+				my = Mmax(Mmul_0p50(y), 0);
+				break;
+			case 4:
+				my = Mmax(Mmul_0p40(y), 0);
+				break;
+			case 5:
+				my = Mmax(Mmul_0p30(y), 0);
+				break;
+			case 6:
+			case 7:
+			case 8:
+				my = Mmax(Mmul_0p20(y), 0);
+				break;
+			case 9:
+			case 10:
+			case 11:
+				my = Mmax(Mmul_0p10(y), 0);
+				break;
+			default:
+				my = Mmax(Mmul_1p00(y), 0);
+				break;
 			}
 #endif
-			/* ライバル車との距離 */
-			dis = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
-			if(y <= 0)
-			{
-				y = stRasInfo.st;
-			}
-			cal = Mmin(Mdiv256(Mabs(dis) * y), 4);	/* 奥行の比率で移動量が変わる */
-			
-			if(dis >= 0)
-			{
-				y += cal;
-			}
-			else
-			{
-				y -= cal;
-				
-				if(y <= stRasInfo.st)
-				{
-					Out_Of_Disp = -1;	/* 先を越された */
-				}
-			}
-			/* 位置 */
-			my = Mmax(y - stRasInfo.st, 0);
+			my = y;
+			ras_num = Mmin( my, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
 
-			ras_num = Mmin( y - stRasInfo.st, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
-
-			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num);	/* 配列番号のラスター情報取得 */
+			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
 			
 			/* センター */
-			if( ras_x < 256 )	/* 左カーブ */
-			{
-				mx = ROAD_CT_POINT + (  0 - ras_x);
-			}
-			else	/* 右カーブ */
-			{
-				mx = ROAD_CT_POINT + (512 - ras_x);
-			}
+			mx = (int16_t)ROAD_CT_POINT - (int16_t)Mu10b_To_s8b(ras_x);	/* 0-511 => (-256 < 0 < 255) */
 			
 			if(x < 8)
 			{
@@ -235,13 +236,21 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 				mx += Mdiv128(cal);
 			}
 
-			if( (my > 0) && (ret >= 0) && (y < Y_MAX_WINDOW) && (Out_Of_Disp == 0))
+			if( (ret >= 0) && (my < Y_MAX_WINDOW) && (Out_Of_Disp == 0))
 			{
+				uint16_t i;
 				dx = mx;
-				dy = y;
-				cal = y - RASTER_MIN;
+				dy = my + stRasInfo.st;
+				z = 0;
 				/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を256倍して16で割った pat 0-10 */
-				z = Mmin( Mmax( 10 - ( Mdiv10( Mmul256(cal) / (cal + ROAD_ED_POINT) ) ) , 0), 10 );
+				for(i=ENEMYCAR_PAT_MAX-1; i > 0; i--)
+				{
+					if(g_nViewRateTbl[i] > my)
+					{
+						z = i;
+						break;
+					}
+				}
 				dz = z;
 				
 				/* 当たり判定の設定 */
@@ -255,28 +264,18 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 											stCRT.hide_offset_y + dy,
 											dz,
 											bMode_rev, ubType);
-				if(Out_Of_Disp < 0)	/* 描画領域外 */
+				if(Out_Of_Disp != 0)	/* 描画領域外 */
 				{
 					/* 出現ポイントで描画領域外となるので要検討 */
 //					g_pStEnemyCar[bNum]->ubAlive = FALSE;
 				}
 				else
 				{
-#ifdef DEBUG	/* デバッグコーナー */
-					if(bDebugMode == TRUE)
-					{
-						Draw_Box(
-							stCRT.hide_offset_x + dx - ((ENEMY_CAR_1_W >> dz)>>2),
-							stCRT.hide_offset_y + dy - ((ENEMY_CAR_1_H >> dz)>>1),
-							stCRT.hide_offset_x + dx + ((ENEMY_CAR_1_W >> dz)>>2),
-							stCRT.hide_offset_y + dy + ((ENEMY_CAR_1_H >> dz)>>1), 0x03, 0xFFFF);
-					}
-#endif
 				}
 			}
 			else
 			{
-				if(y >= Y_MAX_WINDOW)	/* 追い抜かした */
+				if(my >= Y_MAX_WINDOW)	/* 追い抜かした */
 				{
 					ADPCM_Play(14);	/* SE：自動車通過 */
 					S_Add_Score();	/* 加点 */
@@ -340,7 +339,7 @@ int16_t	SetAlive_EnemyCAR(void)
 			}
 			g_pStEnemyCar[i]->x = rand;
 			g_pStEnemyCar[i]->y = 0;
-			g_pStEnemyCar[i]->z = 4;
+			g_pStEnemyCar[i]->z = ENEMYCAR_PAT_MAX - 1;
 			g_pStEnemyCar[i]->sx = 0;
 			g_pStEnemyCar[i]->ex = 0;
 			g_pStEnemyCar[i]->sy = 0;
@@ -368,6 +367,7 @@ int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode, uint
 	int16_t	ret = 0;
 
 #if 1
+	int16_t PatNumber;
 	uint16_t	*pSrcBuf = NULL;
 	uint32_t	uWidth=0, uHeight=0;
 	BITMAPINFOHEADER *pInfo;
@@ -380,8 +380,10 @@ int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode, uint
 
 	uWidth	= pInfo->biWidth;
 	uHeight	= pInfo->biHeight;
+	PatNumber = ENEMYCAR_CG + ubType;
 	
-	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, POS_MID, POS_CENTER);
+	
+	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, POS_MID, POS_CENTER, PatNumber);
 #else
 	int16_t	i;
 	uint16_t	w, h;
@@ -403,9 +405,9 @@ int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode, uint
 		/* 縮小先のサイズ */
 		height_sum_o += uHeight_o;
 		uW_tmp = uWidth_o << 3;
-		uWidth_o = Mmul_p1(uW_tmp);
+		uWidth_o = Mmul_0p10(uW_tmp);
 		uH_tmp = uHeight_o << 3;
-		uHeight_o = Mmul_p1(uH_tmp);
+		uHeight_o = Mmul_0p10(uH_tmp);
 		
 		/* 次の縮小元 */
 		height_sum += uHeight;
@@ -490,7 +492,9 @@ int16_t	Load_EnemyCAR(int16_t Num)
 	if(Num >= ENEMYCAR_TYP_MAX)return -1;
 	PatNumber = ENEMYCAR_CG + Num;
 
-	G_Load_Mem( PatNumber, 0, 0, 0 );	/* ライバル車 */
+	ret = G_Load_Mem( PatNumber, 0, 0, 0 );	/* ライバル車 */
+	if(ret != 0)return ret;
+
 //	ret = G_Load_Mem( PatNumber, uOffset_X,	0,	0);	/* ライバル車 */
 	pSrcBuf = Get_PicImageInfo( PatNumber, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
 	uWidth_dst = uWidth;
@@ -551,12 +555,12 @@ int16_t	Load_EnemyCAR(int16_t Num)
 #endif
 			/* 縮小先のサイズ(W) */
 			uW_tmp = uWidth_dst << 3;
-			uWidth_dst = Mmul_p1(uW_tmp);
+			uWidth_dst = Mmul_0p10(uW_tmp);
 			uWidth_dst = Mmax(uWidth_dst, 8);
 			
 			/* 縮小先のサイズ(H) */
 			uH_tmp = uHeight_dst << 3;
-			uHeight_dst = Mmul_p1(uH_tmp);
+			uHeight_dst = Mmul_0p10(uH_tmp);
 			uHeight_dst = Mmax(uHeight_dst, 1);
 #if 1
 			pInfo->biWidth = uWidth_dst;

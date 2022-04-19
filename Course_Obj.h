@@ -32,5 +32,6 @@ extern	int16_t	Sort_Course_Obj(void);
 extern	int16_t	Load_Course_Obj(int16_t);
 extern	int16_t	Load_Course_Data(uint8_t);
 extern	int16_t	Move_Course_BG(uint8_t);
+extern	int16_t	Set_Course_TmpObject(uint16_t, uint8_t);
 
 #endif	/* OBJECT_H */

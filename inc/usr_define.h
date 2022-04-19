@@ -64,17 +64,6 @@
 #define ROAD_1_MIN		(0)				/* BGの道の最小(mode1) */
 #define ROAD_1_MAX		(128)			/* BGの道の最大(mode1) */
 
-/* グラフィックパターン 0-7 max8 */
-#define DUMMY_CG		(0)	/* ダミー(0) */
-#define BG_CG			(1)	/* 背景(1,2,3) */
-#define COURSE_OBJ_CG	(4)	/* 障害物(4,5,6,7) */
-#define ENEMYCAR_CG		(8)	/* ライバル車(8,9,10,11,12,13,14,15) */
-/* グラフィックテキスト max 1 */
-#define MYCAR_CG		(16)	/* 自車(t) */
-/* フルグラフィック */
-#define TITLE_CG		(19)	/* タイトル */
-#define DEMO_CG			(20)	/* デモ */
-
 /* 構造体 */
 
 /* データテーブル */

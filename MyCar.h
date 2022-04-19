@@ -42,7 +42,7 @@ extern	int16_t	MyCar_G_Load(void);
 extern	int16_t	GetMyCar(ST_CARDATA *stDat);
 extern	int16_t	SetMyCar(ST_CARDATA stDat);
 extern	int16_t	MyCarInfo_Init(void);
-extern	int16_t	MyCarInfo_Update(int16_t);
+extern	int16_t	MyCarInfo_Update(int16_t, int16_t *);
 extern	int16_t	MyCarInfo_Update16ms(int16_t);
 extern	int16_t	MyCar_Interior(void);
 extern	int16_t	MyCar_CourseOut(void);

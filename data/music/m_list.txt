@@ -1,7 +1,7 @@
 0=init.ZMD
 1=X68K.ZMD
 2=PT001MK.ZMD
-3=BMBJ03.zmd
+3=ns_1.zmd
 4=PT032MK.ZMD
 5=SJOME020.ZMD
 6=GR_OPN.zmd
@@ -12,7 +12,7 @@
 11=MRIDER_2_story.zmd
 12=MRIDER_3_start.zmd
 13=MRIDER_4_bgm.zmd
-14=gn00c.zmd
+14=HATR02.zmd
 15=DCR.zmd
 16=F1_gameover.zmd
 

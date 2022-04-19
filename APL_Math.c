@@ -178,6 +178,28 @@ int16_t APL_Tan256(int16_t);
 uint32_t APL_uDiv(uint32_t, uint32_t);
 int32_t APL_sDiv(int32_t, int32_t);
 int16_t APL_AngleDiff(int16_t, int16_t);
+int16_t APL_mul_1p90(int16_t);
+int16_t APL_mul_1p80(int16_t);
+int16_t APL_mul_1p75(int16_t);
+int16_t APL_mul_1p70(int16_t);
+int16_t APL_mul_1p60(int16_t);
+int16_t APL_mul_1p50(int16_t);
+int16_t APL_mul_1p40(int16_t);
+int16_t APL_mul_1p30(int16_t);
+int16_t APL_mul_1p25(int16_t);
+int16_t APL_mul_1p20(int16_t);
+int16_t APL_mul_1p10(int16_t);
+int16_t APL_mul_1p00(int16_t);
+int16_t APL_mul_0p91(int16_t);
+int16_t APL_mul_0p83(int16_t);
+int16_t APL_mul_0p77(int16_t);
+int16_t APL_mul_0p71(int16_t);
+int16_t APL_mul_0p66(int16_t);
+int16_t APL_mul_0p62(int16_t);
+int16_t APL_mul_0p58(int16_t);
+int16_t APL_mul_0p54(int16_t);
+int16_t APL_mul_0p52(int16_t);
+int16_t APL_mul_0p50(int16_t);
 
 /* 関数 */
 
@@ -430,6 +452,103 @@ int16_t APL_AngleDiff(int16_t BaseAngle, int16_t Angle)
 	ret = Diff;
 	
 	return ret;
+}
+
+
+/*==========================================================================================*/
+/* 関数名	：	APL_mul																		*/
+/* 引数		：	数値																		*/
+/* 戻り値	：	計算結果 																	*/
+/*------------------------------------------------------------------------------------------*/
+/* 機能		：	固定小数点演算																*/
+/*==========================================================================================*/
+int16_t APL_mul_1p90(int16_t x)
+{
+	return Mmul_1p90(x);
+}
+int16_t APL_mul_1p80(int16_t x)
+{
+	return Mmul_1p80(x);
+}
+int16_t APL_mul_1p75(int16_t x)
+{
+	return Mmul_1p75(x);
+}
+int16_t APL_mul_1p70(int16_t x)
+{
+	return Mmul_1p70(x);
+}
+int16_t APL_mul_1p60(int16_t x)
+{
+	return Mmul_1p60(x);
+}
+int16_t APL_mul_1p50(int16_t x)
+{
+	return Mmul_1p50(x);
+}
+int16_t APL_mul_1p40(int16_t x)
+{
+	return Mmul_1p40(x);
+}
+int16_t APL_mul_1p30(int16_t x)
+{
+	return Mmul_1p30(x);
+}
+int16_t APL_mul_1p25(int16_t x)
+{
+	return Mmul_1p25(x);
+}
+int16_t APL_mul_1p20(int16_t x)
+{
+	return Mmul_1p20(x);
+}
+int16_t APL_mul_1p10(int16_t x)
+{
+	return Mmul_1p10(x);
+}
+int16_t APL_mul_1p00(int16_t x)
+{
+	return (x);
+}
+int16_t APL_mul_0p91(int16_t x)
+{
+	return Mmul_0p91(x);
+}
+int16_t APL_mul_0p83(int16_t x)
+{
+	return Mmul_0p83(x);
+}
+int16_t APL_mul_0p77(int16_t x)
+{
+	return Mmul_0p77(x);
+}
+int16_t APL_mul_0p71(int16_t x)
+{
+	return Mmul_0p71(x);
+}
+int16_t APL_mul_0p66(int16_t x)
+{
+	return Mmul_0p66(x);
+}
+int16_t APL_mul_0p62(int16_t x)
+{
+	return Mmul_0p62(x);
+}
+int16_t APL_mul_0p58(int16_t x)
+{
+	return Mmul_0p58(x);
+}
+int16_t APL_mul_0p54(int16_t x)
+{
+	return Mmul_0p54(x);
+}
+int16_t APL_mul_0p52(int16_t x)
+{
+	return Mmul_0p52(x);
+}
+int16_t APL_mul_0p50(int16_t x)
+{
+	return Mmul_0p50(x);
 }
 
 #endif	/* APL_MATH_C */

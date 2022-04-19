@@ -33,6 +33,22 @@
 int16_t	g_speed;
 static int16_t	g_Input;
 static int16_t	g_SteeringDiff;
+static int16_t	Torque_old = 0xFFFF;
+static int16_t	Steering = 0;
+static uint8_t	bShiftPosFlag[3] = {FALSE};
+static int8_t	bThrottleON_Count = 0;
+static int8_t	bThrottle_Flag = FALSE;
+static uint8_t	ubShiftPos_N = FALSE;
+static uint8_t	ubShiftPos_UP = FALSE;
+static uint8_t	ubShiftPos_old = 0;
+static uint32_t	unExplosion_time = 0xFFFFFFFFu;
+static int16_t	Vibration = 0;
+static int16_t	VibrationCT = 0;
+static uint8_t	ubOBD_old = OBD_NORMAL;
+static int16_t	CrashCount;
+static uint16_t	rad = 180;
+static uint8_t	ubRadFlag = TRUE;
+
 
 /* グローバルデータ */
 uint16_t	uTM[6] = { 0, 2857, 1950, 1444, 1096, 761 };/* 変速比  1:2.857 2:1.95 3:1.444 4:1.096 5:0.761 */
@@ -49,7 +65,7 @@ int16_t	MyCar_G_Load(void);
 int16_t	GetMyCar(ST_CARDATA *stDat);
 int16_t	SetMyCar(ST_CARDATA stDat);
 int16_t	MyCarInfo_Init(void);
-int16_t	MyCarInfo_Update(int16_t);
+int16_t	MyCarInfo_Update(int16_t, int16_t *);
 int16_t	MyCarInfo_Update16ms(int16_t);
 static int16_t	MyCar_Steering(void);
 static int16_t	MyCar_ShiftPos(void);
@@ -125,6 +141,26 @@ int16_t	MyCarInfo_Init(void)
 	int16_t	ret = 0;
 	
 	g_speed = 0;
+	g_Input = 0;
+	g_SteeringDiff = 0;
+	
+	Torque_old = 0xFFFF;
+	Steering = 0;
+	bShiftPosFlag[0] = FALSE;
+	bShiftPosFlag[1] = FALSE;
+	bShiftPosFlag[2] = FALSE;
+	bThrottleON_Count = 0;
+	bThrottle_Flag = FALSE;
+	ubShiftPos_N = FALSE;
+	ubShiftPos_UP = FALSE;
+	ubShiftPos_old = 0;
+	unExplosion_time = 0xFFFFFFFFu;
+	Vibration = 0;
+	VibrationCT = 0;
+	ubOBD_old = OBD_NORMAL;
+	CrashCount = 0;
+	rad = 180;
+	ubRadFlag = TRUE;
 	
 	g_stMyCar.ubCarType		= 0u;	/* 車の種類 */
 	g_stMyCar.uEngineRPM	= 0u;	/* エンジン回転数 */
@@ -149,7 +185,7 @@ int16_t	MyCarInfo_Init(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t	MyCarInfo_Update(int16_t input)
+int16_t	MyCarInfo_Update(int16_t input, int16_t *pTorque)
 {
 	int16_t	ret = 0;
 
@@ -171,7 +207,17 @@ int16_t	MyCarInfo_Update(int16_t input)
 	
 	Torque += MyCar_CourseOut();	/* コースアウト時の処理 */
 	
-	ret = Torque;
+	if(Torque_old != Torque)
+	{
+		Torque_old = Torque;
+		ret = 1;
+	}
+	else
+	{
+		/* 何もしない */
+	}
+	
+	*pTorque = Mmax(Torque, 0);
 	
 	return ret;
 }
@@ -187,9 +233,9 @@ int16_t	MyCarInfo_Update16ms(int16_t Torque)
 {
 	int16_t	ret = 0;
 	
-	MyCar_EngineSpeed(Torque);		/* エンジン回転数の算出 */
+	ret |= MyCar_EngineSpeed(Torque);	/* エンジン回転数の算出 */
 	
-	MyCar_VehicleSpeed();			/* 車速の算出 */
+	ret |= MyCar_VehicleSpeed();		/* 車速の算出 */
 	
 	return ret;
 }
@@ -206,7 +252,6 @@ static int16_t	MyCar_Steering(void)
 	int16_t	ret = 0;
 
 	int8_t	bOn = 0;
-	static int16_t	Steering = 0;
 	int16_t	Steering_old = 0;
 	int16_t	SteeringDiff = 0;
 	
@@ -318,7 +363,6 @@ static int16_t	MyCar_ShiftPos(void)
 {
 	int16_t	ret = 0;
 
-	static uint8_t bShiftPosFlag[3] = {FALSE};
 #if 0
 	if( ((g_Input & KEY_A) != 0u) && ((g_Input & KEY_B) == 0u))	/* Aボタン(only) */
 	{
@@ -364,9 +408,6 @@ static int16_t	MyCar_Accel(void)
 {
 	int16_t	ret = 0;
 	
-	static int8_t	bThrottleON_Count = 0;
-	static int8_t	bThrottle_Flag = FALSE;
-
 	/* アクセル */
 	if(bThrottle_Flag == FALSE)
 	{
@@ -508,10 +549,6 @@ static int16_t	MyCar_EngineSpeed(int16_t Input_Torque)
 	uint16_t	uTorque_Cal;
 	int16_t		rpm;
 	int16_t		TargetRPM = 0;
-	static uint8_t ubShiftPos_N = FALSE;
-	static uint8_t ubShiftPos_UP = FALSE;
-	static uint8_t ubShiftPos_old = 0;
-	static	uint32_t	unExplosion_time = 0xFFFFFFFFu;
 
 #ifdef DEBUG	/* デバッグコーナー */
 	uint8_t	bDebugMode;
@@ -1006,6 +1043,7 @@ int16_t	GetMyCarSpeed(int16_t *speed)
 /*===========================================================================================*/
 void MyCar_Image(void)
 {
+	int16_t ret = 0;
 	int32_t i;
 	int32_t x = 0, y = 0;
 	
@@ -1016,7 +1054,8 @@ void MyCar_Image(void)
 		uint16_t	uCG_Num;
 		
 		uCG_Num = MYCAR_CG + i;
-		G_Load_Mem( uCG_Num, 0, 0, 0 );	/* MYCAR_CG */
+		ret = G_Load_Mem( uCG_Num, 0, 0, 0 );	/* MYCAR_CG */
+		if(ret != 0)break;
 
 		Get_PicImageInfo( uCG_Num, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
 		
@@ -1045,11 +1084,6 @@ void MyCar_Image(void)
 static int16_t	MyCar_Vibration(void)
 {
 	int16_t ret = 0;
-
-	static	int16_t	Vibration = 0;
-	static	int16_t	VibrationCT = 0;
-	static	uint8_t	ubOBD_old = OBD_NORMAL;
-	static	int16_t	CrashCount;
 
 	/* 画面を揺らす */
 	VibrationCT++;
@@ -1113,8 +1147,6 @@ int16_t	MyCar_Mascot(int16_t Vibration)
 	int16_t	x, y;
 	uint16_t	nRatio = 0x80;
 	uint16_t	Speed;
-	static	uint16_t	rad = 180;
-	static	uint8_t	ubRadFlag = TRUE;
 #if 0
 	uint8_t	palNum = 0;
 	uint8_t	sp_num=0;

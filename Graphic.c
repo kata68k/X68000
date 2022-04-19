@@ -12,6 +12,7 @@
 #include "Graphic.h"
 
 #include "OverKata.h"
+#include "APL_Math.h"
 #include "Course_Obj.h"
 #include "CRTC.h"
 #include "Draw.h"
@@ -39,10 +40,11 @@ volatile uint16_t *VIDEO_REG1 = (uint16_t *)0xE82400;
 volatile uint16_t *VIDEO_REG2 = (uint16_t *)0xE82500;
 volatile uint16_t *VIDEO_REG3 = (uint16_t *)0xE82600;
 
-uint32_t	g_CG_List_Max	=	0u;
-uint8_t		*g_pCG_FileBuf[CG_MAX] = {NULL};
+uint32_t	g_CG_List_Max						=	0u;
+uint8_t		*g_pCG_FileBuf[CG_MAX]				=	{NULL};
 uint16_t	g_CG_ColorCode[CG_MAX][G_PAL_MAX]	=	{0};
-uint8_t		g_CG_MaxColor[CG_MAX][3]	=	{0};
+uint8_t		g_CG_MaxColor[CG_MAX][3]			=	{0};
+uint8_t		g_CG_PalTbl[PAL_MAX_CG]				=	{0};
 
 /* グローバル構造体 */
 PICIMAGE	g_stPicImage[CG_MAX] = {0};
@@ -63,14 +65,15 @@ int16_t CG_File_Load_to_Mem(uint16_t);
 int16_t CG_Mem_Convert_Type(uint16_t);
 void G_INIT(void);
 void G_VIDEO_INIT(void);
-void G_HOME(void);
+void G_HOME(uint8_t);
 void G_Palette_INIT(void);
 void G_PaletteSetZero(void);
 int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
+int16_t G_Stretch_Pict_toVRAM(int16_t, int16_t, uint8_t, uint8_t, uint8_t, uint8_t, uint16_t *, uint16_t, uint16_t, int8_t, uint8_t);
 int16_t G_Stretch_Pict_To_Mem( uint16_t	*, uint16_t, uint16_t, uint16_t	*, uint16_t, uint16_t);
 int16_t G_Copy_Pict_To_Mem(	uint16_t *, uint16_t , uint16_t , uint16_t *, uint16_t , uint16_t);
 int16_t	G_BitBlt(int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t , int16_t , uint16_t , uint8_t , uint8_t , uint8_t , uint8_t );
-int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , uint16_t , uint8_t , uint8_t , uint8_t );
+int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , uint16_t , uint8_t , uint8_t , uint8_t, uint8_t);
 int32_t	G_CLR(void);
 int16_t G_CLR_HS(void);
 int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);
@@ -84,11 +87,13 @@ int16_t	G_Subtractive_Color(uint16_t *, uint16_t *, uint16_t, uint16_t, uint16_t
 int16_t	PutGraphic_To_Text(uint8_t , uint16_t , uint16_t );
 int16_t	PutGraphic_To_Symbol(uint8_t *, uint16_t , uint16_t , uint16_t );
 int16_t	G_Scroll(int16_t, int16_t, uint8_t);
-int16_t	G_ClipAREA_Chk_Width(	int16_t *, uint16_t , uint8_t , uint8_t);
-int16_t	G_ClipAREA_Chk_Height(	int16_t *, uint16_t , uint8_t , uint8_t);
+int16_t	G_ClipAREA_Chk_Width(	int16_t *, int16_t *, int16_t *, uint16_t , uint8_t , uint8_t);
+int16_t	G_ClipAREA_Chk_Height(	int16_t *, int16_t *, int16_t *, uint16_t , uint8_t , uint8_t);
 int16_t G_MedianCut(uint16_t *, uint16_t *, uint16_t , uint16_t , uint16_t, uint8_t, uint8_t);
 void G_MedianCut_Gen(YUV* , int32_t , int32_t , int32_t );
 void G_APIC_to_Mem(uint16_t *, uint16_t *, uint16_t uWidth, uint16_t uHeight);
+int16_t G_Pal_Set(uint8_t);
+int16_t G_Pal_Get(uint8_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -220,7 +225,6 @@ int16_t Set_PicImagePalletTmp(uint16_t *G_Pal_Tmp)
 		GPALET( i, *G_Pal_Tmp );	/* バックアップの書き戻し */
 		G_Pal_Tmp++;
 	}
-	
 	return ret;
 }
 
@@ -242,11 +246,11 @@ int16_t Set_PicImagePallet(uint8_t bNum)
 	{
 		case 1:	/* スプライトライク */
 		{
-			/* 0～15 */
-			offset_val = G_COLOR * bNum * G_COLOR_SP;	/* G_COLOR(32)色分のオフセット値を出す */
+			/* グラフィックパレット 0～15は、CG_LISTと１対１の関係 */
+			offset_val = G_Pal_Get(bNum) * G_COLOR * G_COLOR_SP;	/* G_COLOR色分のオフセット値を出す */
 			for(i=0; i< G_COLOR; i++)
 			{
-				GPALET( i+offset_val, g_CG_ColorCode[bNum][i] );
+				GPALET( offset_val + i, g_CG_ColorCode[bNum][i] );
 			}
 			break;
 		}
@@ -256,7 +260,7 @@ int16_t Set_PicImagePallet(uint8_t bNum)
 			offset_val = 8;	/* テキストパレット8パターン目から15パターン目まで使うので(0～7は予約領域) */
 			for(i=0; i< 8; i++)	/* 8～15番目を使う */
 			{
-				TPALET2( i+offset_val, g_CG_ColorCode[bNum][i+1] );
+				TPALET2( offset_val + i, g_CG_ColorCode[bNum][i+1] );
 			}
 			break;
 		}
@@ -319,10 +323,11 @@ int16_t CG_File_Load(uint16_t uListNum)
 //	printf("Get_PicImagePalletTmp = %d\n", uListNum );
 #endif
 
-	CG_File_Load_to_Mem(uListNum);		/* ファイルリストからメモリにPICを展開する */
+	ret = CG_File_Load_to_Mem(uListNum);		/* ファイルリストからメモリにPICを展開する */
 #ifdef DEBUG
 //	printf("CG_File_Load_to_Mem = %d\n", uListNum );
 #endif
+	if(ret != 0)return ret;
 	
 	CG_Mem_Convert_Type(uListNum);		/* メモリに展開された画像をType別に変換する */
 #ifdef DEBUG
@@ -333,13 +338,12 @@ int16_t CG_File_Load(uint16_t uListNum)
 #ifdef DEBUG
 //	printf("Set_PicImagePalletTmp = %d\n", uListNum );
 #endif
-	
 	Set_PicImagePallet(uListNum);		/* パレットをセットする */
 #ifdef DEBUG
 //	printf("Set_PicImagePallet = %d\n", uListNum );
 #endif
 
-	G_PaletteSetZero();					/* 念のため 0番パレット変更 */
+	//G_PaletteSetZero();					/* 念のため 0番パレット変更 */
 #ifdef DEBUG
 //	printf("G_PaletteSetZero = %d\n", uListNum );
 #endif
@@ -582,7 +586,9 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 			case 1:	/* スプライトライク */
 			{
 				uint8_t str[256] = {0};
-				sprintf(str, "data\\cg\\test%02d.G16", i );
+				sprintf(str, "data\\cg\\OK_tmp_G%02d.G16", i );
+				
+				G_Pal_Set(i);	/* 対象画像のパレットを設定 */
 				
 				if(File_Load( str, g_stPicImage[i].pImageData, sizeof(uint16_t), uSize8x * uHeight) < 0)
 				{
@@ -620,28 +626,31 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 //		KeyHitESC();	/* デバッグ用 */
 #endif
 		/* パレット */
-//		G_PaletteSetZero();	/* 0番パレット変更 */
-		Get_PicImagePallet(i);	/* パレットを保存 */
 		switch(ubGpal)
 		{
 			case 0:
 			default:
 			{
-				/* 何もしない */
+		//		G_PaletteSetZero();	/* 0番パレット変更 */
+				Get_PicImagePallet(i);	/* パレットを保存 */
 				break;
 			}
 			case 1:
 			{
 				uint8_t str[256] = {0};
-				sprintf(str, "data\\cg\\test%02d.P16", i );
-				File_Save( str, &g_CG_ColorCode[i][0], sizeof(uint16_t), 16 );
+				sprintf(str, "data\\cg\\OK_tmp_G%02d.P16", i );
+				
+				Get_PicImagePallet(i);	/* パレットを保存 */
+				
+				File_Save( str, &g_CG_ColorCode[i][0], sizeof(uint16_t), 16 );	/* パレットセーブ */
 				break;
 			}
 			case 2:
 			{
 				uint8_t str[256] = {0};
-				sprintf(str, "data\\cg\\test%02d.P16", i );
-				File_Load( str, &g_CG_ColorCode[i][0], sizeof(uint16_t), 16 );
+				sprintf(str, "data\\cg\\OK_tmp_G%02d.P16", i );
+				
+				File_Load( str, &g_CG_ColorCode[i][0], sizeof(uint16_t), 16 );	/* パレットロード */
 				break;
 			}
 		}
@@ -669,12 +678,19 @@ int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 /*===========================================================================================*/
 void G_INIT(void)
 {
+	int16_t	i;
+	
 	_iocs_g_clr_on();		/* グラフィックのクリア */
 	G_CLR();				/* クリッピングエリア全開＆消す */
 	_iocs_apage(0);			/* グラフィックの書き込み(全ページ) */
 	_iocs_vpage(0b1111);	/* グラフィック表示(page3:0n page2:0n page1:0n page0:0n) */
-	G_HOME();				/* ホーム位置設定 */
+	G_HOME(1);				/* ホーム位置設定 */
 	G_VIDEO_INIT();			/* ビデオコントローラーの初期化 */
+	
+	for(i=0; i < PAL_MAX_CG; i++)
+	{
+		g_CG_PalTbl[i] = 0xFF;
+	}
 }
 
 /*===========================================================================================*/
@@ -746,9 +762,30 @@ void G_VIDEO_INIT(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void G_HOME(void)
+void G_HOME(uint8_t bSW)
 {
-	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);	/* ホーム位置 */
+	int16_t	x, y;
+	uint8_t bMode;
+	ST_CRT	stCRT = {0};
+
+	GetGameMode(&bMode);	/* 画面モードを取得 */
+	
+	GetCRT(&stCRT, bMode);
+	if(bSW == 0)	/* 画面をフリップする */
+	{
+		/* オフスクリーン座標 */
+		x = stCRT.hide_offset_x;
+		y = stCRT.hide_offset_y;
+	}
+	else
+	{
+		/* 表示座標 */
+		x = stCRT.view_offset_x;
+		y = stCRT.view_offset_y;
+	}
+	_iocs_home( 0b0001, x, y );	/* オフ・スクリーン側へ切替 */
+	
+//	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);	/* ホーム位置 */
 //	_iocs_home(1, X_OFFSET, Y_OFFSET);
 //	_iocs_home(2, X_OFFSET, 416);
 //	_iocs_home(3, X_OFFSET, 416);
@@ -810,7 +847,7 @@ void G_PaletteSetZero(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-/* 直接VRAMに展開 */
+/* VRAMからVRAMに展開 */
 int16_t G_Stretch_Pict(
 			int16_t dst_x, uint16_t dst_w, int16_t dst_y, uint16_t dst_h, uint8_t ubDstScrn,
 			int16_t src_x, uint16_t src_w, int16_t src_y, uint16_t src_h, uint8_t ubSrcScrn)
@@ -884,7 +921,142 @@ int16_t G_Stretch_Pict(
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-/* メモリに展開 */
+/* メモリから直接VRAMに展開 */
+int16_t G_Stretch_Pict_toVRAM(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
+								uint8_t ubMode, uint8_t ubH, uint8_t ubV,
+								uint16_t *pSrcBuf, uint16_t src_w, uint16_t src_h, int8_t bZoom, uint8_t bCGNum)
+{
+	int16_t	ret = 0;
+	uint16_t	*pDstGR,	*pSrcGR;
+	uint16_t	*pSrcGR_tmp;
+	uint32_t	DstGR_H,	SrcGR_H;
+	int16_t dst_w, dst_h;
+	int16_t	dst_ex,	dst_ey;
+	int16_t	src_x,	src_y;
+	int16_t	src_ex,	src_ey;
+	int16_t	x_min,	x_max;
+	int16_t	y_min,	y_max;
+	int16_t	x, y;
+	int16_t	cal_x, cal_y;
+	int16_t	dst_z;
+	int16_t	src_z;
+	int16_t	Pal_offset;
+
+	int16_t (*pFunc[])(int16_t) = {
+		APL_mul_0p52,	/* 0 -9 */
+		APL_mul_0p54,	/* 1 -8 */
+		APL_mul_0p58,	/* 2 -7 */
+		APL_mul_0p62,	/* 3 -6 */
+		APL_mul_0p66,	/* 4 -5 */
+		APL_mul_0p71,	/* 5 -4 */
+		APL_mul_0p77,	/* 6 -3 */
+		APL_mul_0p83,	/* 7 -2 */
+		APL_mul_0p91,	/* 8 -1 */
+		APL_mul_1p00,	/* 9  0 */
+		APL_mul_1p10,	/* 10 1 */
+		APL_mul_1p20,	/* 11 2 */
+		APL_mul_1p30,	/* 12 3 */
+		APL_mul_1p40,	/* 13 4 */
+		APL_mul_1p50,	/* 14 5 */
+		APL_mul_1p60,	/* 15 6 */
+		APL_mul_1p70,	/* 16 7 */
+		APL_mul_1p80,	/* 17 8 */
+		APL_mul_1p90	/* 18 9 */
+	};
+
+	if(pSrcBuf == NULL)	return -1;
+	
+	if(bZoom < -9) bZoom = -9;
+	if(bZoom > 9) bZoom = 9;
+	dst_z = bZoom + 9;
+	src_z = 9 - bZoom;
+	
+	dst_w = (*pFunc[dst_z])(src_w);
+	dst_w = (((dst_w+7)/8) * 8);	/* 8の倍数 */
+	dst_h = (*pFunc[dst_z])(src_h);
+	
+	/* 描画したいエリアから完全にはみ出てるかどうかチェック */
+	ret = G_ClipAREA_Chk_Width(&dst_x, &x_min, &x_max, dst_w, ubMode, ubH);
+	if(ret != 0)return ret;
+	
+	ret = G_ClipAREA_Chk_Height(&dst_y, &y_min, &y_max, dst_h, ubMode, ubV);
+	if(ret != 0)return ret;
+	
+	dst_ex	= dst_x + dst_w;
+	dst_ey	= dst_y + dst_h;
+	
+	src_x = 0;
+	src_y = 0;
+	src_w = (((src_w+7)/8) * 8);	/* 8の倍数 */
+	src_ex	= src_x + src_w;
+	src_ey	= src_y + src_h;
+	
+	/* アドレス算出 */
+	if(ubDstScrn != 0)
+	{
+		DstGR_H = 0xC80000;	/* Screen1 */
+	}
+	else{
+		DstGR_H = 0xC00000;	/* Screen0 */
+	}
+	
+	SrcGR_H = (uint32_t)pSrcBuf;
+	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
+#ifdef DEBUG
+//	printf("d(%d, %d)(%d, %d)(%d, %d)\n", dst_x, dst_y, dst_w, dst_h, dst_ex, dst_ey);
+//	printf("s(%d, %d)(%d, %d)(%d, %d)\n", src_x, src_y, src_w, src_h, src_ex, src_ey);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+	
+#if 1
+	for(y = dst_y; y < dst_ey; y++)
+	{
+		if(y < y_min)continue;
+		if(y >= y_max)break;
+		
+		/* アドレス算出 */
+		pDstGR = (uint16_t *)(DstGR_H + Mmul2(Mmul512(y) + dst_x));
+
+		cal_y = src_y + (*pFunc[src_z])(y - dst_y);
+		if(cal_y >= src_ey)break;
+		
+		pSrcGR = (uint16_t *)(SrcGR_H + Mmul2(cal_y * src_w)) ;
+		pSrcGR_tmp = pSrcGR;
+	
+		for(x = dst_x; x < dst_ex; x++)
+		{
+			if(x < x_min)
+			{
+				pDstGR++;
+				continue;
+			}
+			if(x >= x_max)break;
+			
+			cal_x = (*pFunc[src_z])(x-dst_x);
+			if(cal_x >= src_ex)break;
+			
+			pSrcGR = pSrcGR_tmp + cal_x;
+			if(*pSrcGR != 0)	/* 透過色以外 */
+			{
+				*pDstGR = *pSrcGR + Pal_offset;
+			}
+			pDstGR++;
+		}
+	}
+#else
+
+#endif
+	return	ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* メモリからメモリに展開 */
 int16_t G_Stretch_Pict_To_Mem(	uint16_t *pDstBuf, uint16_t dst_w, uint16_t dst_h,
 								uint16_t *pSrcBuf, uint16_t src_w, uint16_t src_h)
 {
@@ -946,7 +1118,7 @@ int16_t G_Stretch_Pict_To_Mem(	uint16_t *pDstBuf, uint16_t dst_w, uint16_t dst_h
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-/* メモリに展開 */
+/* メモリからメモリに展開 */
 int16_t G_Copy_Pict_To_Mem(	uint16_t *pDstBuf, uint16_t dst_w, uint16_t dst_h,
 							uint16_t *pSrcBuf, uint16_t src_w, uint16_t src_h)
 {
@@ -1193,7 +1365,7 @@ int16_t G_BitBlt(int16_t dst_x, uint16_t dst_w, int16_t dst_y, uint16_t dst_h, u
 /* 表示先はx,y座標を画像の中心とした位置 */
 int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 							uint16_t *pSrcImage, uint16_t src_w, uint16_t src_h,
-							uint8_t ubMode, uint8_t ubH, uint8_t ubV)
+							uint8_t ubMode, uint8_t ubH, uint8_t ubV, uint8_t bCGNum)
 {
 	int16_t	ret = 0;
 	uint16_t	*pDstGR,	*pSrcGR;
@@ -1203,13 +1375,14 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 	int16_t	x, y;
 	int16_t	x_min, y_min;
 	int16_t	x_max, y_max;
+	int16_t	Pal_offset;
 	
-	/* 画像左上算出 */
-	ret = G_ClipAREA_Chk_Width(&dst_x, src_w, ubMode, ubH);
-	if(ret == -1)return -1;
+	/* 描画したいエリアから完全にはみ出てるかどうかチェック */
+	ret = G_ClipAREA_Chk_Width(&dst_x, &x_min, &x_max, src_w, ubMode, ubH);
+	if(ret != 0)return ret;
 	
-	ret = G_ClipAREA_Chk_Height(&dst_y, src_h, ubMode, ubV);
-	if(ret == -1)return -1;
+	ret = G_ClipAREA_Chk_Height(&dst_y, &y_min, &y_max, src_h, ubMode, ubV);
+	if(ret != 0)return ret;
 	
 	dst_ex	= dst_x + src_w;
 	dst_ey	= dst_y + src_h;
@@ -1227,42 +1400,7 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 
 	SrcGR_H = (uint32_t)pSrcImage;	/* Mem */
 	
-	/* 表示エリア内クリップ */
-	switch(ubMode)
-	{
-		case 0:
-		{
-			x_min = X_MIN_DRAW + X_OFFSET;
-			x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
-			y_min = Y_MIN_DRAW;
-			y_max = Y_MIN_DRAW + Y_MAX_WINDOW;
-			break;
-		}
-		case 1:
-		{
-			x_min = X_MIN_DRAW + X_OFFSET;
-			x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
-			y_min = Y_MIN_DRAW + Y_OFFSET;
-			y_max = Y_MIN_DRAW + Y_OFFSET + Y_MAX_WINDOW;
-			break;
-		}
-		case 2:
-		{
-			x_min = X_MIN_DRAW + X_OFFSET;
-			x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
-			y_min = Y_MIN_DRAW;
-			y_max = Y_MIN_DRAW + Y_MAX_WINDOW;
-			break;
-		}
-		default:
-		{
-			x_min = X_MIN_DRAW;
-			x_max = X_MAX_DRAW;
-			y_min = Y_MIN_DRAW;
-			y_max = Y_MAX_DRAW;
-			break;
-		}
-	}
+	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
 	
 	for(y = dst_y; y < dst_ey; y++)
 	{
@@ -1282,7 +1420,7 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 			{
 				if(*pSrcGR != 0)
 				{
-					*pDstGR = *pSrcGR;
+					*pDstGR = *pSrcGR + Pal_offset;
 				}
 			}
 			pDstGR++;
@@ -1566,11 +1704,10 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 	{
 		/* ファイルから読み込み */
 		ret = CG_File_Load(bCGNum);
-	}
-
-	if(ret < 0)
-	{
-		return	ret;
+		if(ret < 0)
+		{
+			return	ret;
+		}
 	}
 	
 	pSrcGR = Get_PicImageInfo( bCGNum, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
@@ -2337,13 +2474,11 @@ int16_t	G_Scroll(int16_t x, int16_t y, uint8_t bSCNum)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	配置したい位置とポジションから描画したい画像左上の座標位置を算出する		*/
 /*===========================================================================================*/
-int16_t G_ClipAREA_Chk_Width(	int16_t *pPos_x, uint16_t uSrc_w, 
+int16_t G_ClipAREA_Chk_Width(	int16_t *pPos_x, int16_t *x_min, int16_t *x_max, uint16_t uSrc_w, 
 								uint8_t ubMode, uint8_t ubH)
 {
 	int16_t	ret = 0;
 	int16_t	x;
-	int16_t	x_min;
-	int16_t	x_max;
 	
 	x = *pPos_x;
 	
@@ -2356,12 +2491,12 @@ int16_t G_ClipAREA_Chk_Width(	int16_t *pPos_x, uint16_t uSrc_w,
 		}
 		case POS_MID:
 		{
-			x -= Mdiv2(uSrc_w);
+			x -= (int16_t)Mdiv2(uSrc_w);
 			break;
 		}
 		case POS_RIGHT:
 		{
-			x -= uSrc_w;
+			x -= (int16_t)uSrc_w;
 			break;
 		}
 		default:
@@ -2375,33 +2510,43 @@ int16_t G_ClipAREA_Chk_Width(	int16_t *pPos_x, uint16_t uSrc_w,
 	{
 		case 0:
 		{
-			x_min = X_MIN_DRAW;
-			x_max = X_MIN_DRAW + WIDTH;
+			*x_min = X_MIN_DRAW;
+			*x_max = X_MIN_DRAW + WIDTH;
 			break;
 		}
 		case 1:
 		{
-			x_min = X_MIN_DRAW + X_OFFSET;
-			x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
+			*x_min = X_MIN_DRAW + X_OFFSET;
+			*x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
 			break;
 		}
 		case 2:
 		{
-			x_min = X_MIN_DRAW + X_OFFSET;
-			x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
+			*x_min = X_MIN_DRAW + X_OFFSET;
+			*x_max = X_MIN_DRAW + X_OFFSET + WIDTH;
 			break;
 		}
 		default:
 		{
-			x_min = X_MIN_DRAW;
-			x_max = X_MAX_DRAW;
+			*x_min = X_MIN_DRAW;
+			*x_max = X_MAX_DRAW;
 			break;
 		}
 	}
 	
 	/*表示エリア範囲内判定 */
-	if((x + uSrc_w) < x_min)ret = -1;
-	if(x >= x_max)ret = -1;
+	if((x + uSrc_w) < *x_min)
+	{
+		ret = x;
+	}
+	else if(x >= *x_max)
+	{
+		ret = x;
+	}
+	else
+	{
+		/* OK */
+	}
 	
 	*pPos_x = x;
 	
@@ -2415,13 +2560,11 @@ int16_t G_ClipAREA_Chk_Width(	int16_t *pPos_x, uint16_t uSrc_w,
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	配置したい位置とポジションから描画したい画像左上の座標位置を算出する		*/
 /*===========================================================================================*/
-int16_t G_ClipAREA_Chk_Height(	int16_t *pPos_y, uint16_t uSrc_h,
+int16_t G_ClipAREA_Chk_Height(	int16_t *pPos_y, int16_t *y_min, int16_t *y_max, uint16_t uSrc_h,
 								uint8_t ubMode, uint8_t ubV)
 {
 	int16_t	ret = 0;
 	int16_t	y;
-	int16_t	y_min;
-	int16_t	y_max;
 	
 	y = *pPos_y;
 	
@@ -2434,12 +2577,12 @@ int16_t G_ClipAREA_Chk_Height(	int16_t *pPos_y, uint16_t uSrc_h,
 		}
 		case POS_CENTER:
 		{
-			y -= Mdiv2(uSrc_h);
+			y -= (int16_t)Mdiv2(uSrc_h);
 			break;
 		}
 		case POS_BOTTOM:
 		{
-			y -= uSrc_h;
+			y -= (int16_t)uSrc_h;
 			break;
 		}
 		default:
@@ -2453,33 +2596,43 @@ int16_t G_ClipAREA_Chk_Height(	int16_t *pPos_y, uint16_t uSrc_h,
 	{
 		case 0:
 		{
-			y_min = Y_MIN_DRAW;
-			y_max = Y_MIN_DRAW + Y_MAX_WINDOW;
+			*y_min = Y_MIN_DRAW;
+			*y_max = Y_MIN_DRAW + Y_MAX_WINDOW;
 			break;
 		}
 		case 1:
 		{
-			y_min = Y_MIN_DRAW + Y_OFFSET;
-			y_max = Y_MIN_DRAW + Y_OFFSET + Y_MAX_WINDOW;
+			*y_min = Y_MIN_DRAW + Y_OFFSET;
+			*y_max = Y_MIN_DRAW + Y_OFFSET + Y_MAX_WINDOW;
 			break;
 		}
 		case 2:
 		{
-			y_min = Y_MIN_DRAW;
-			y_max = Y_MIN_DRAW + Y_MAX_WINDOW;
+			*y_min = Y_MIN_DRAW;
+			*y_max = Y_MIN_DRAW + Y_MAX_WINDOW;
 			break;
 		}
 		default:
 		{
-			y_min = Y_MIN_DRAW;
-			y_max = Y_MAX_DRAW;
+			*y_min = Y_MIN_DRAW;
+			*y_max = Y_MAX_DRAW;
 			break;
 		}
 	}
 	
 	/*表示エリア範囲内判定 */
-	if((y + uSrc_h) < y_min)ret = -1;
-	if(y >= y_max)ret = -1;
+	if((y + uSrc_h) < *y_min)
+	{
+		ret = y;
+	}
+	else if(y >= *y_max)
+	{
+		ret = y;
+	}
+	else
+	{
+		/* OK */
+	}
 	
 	*pPos_y = y;
 	
@@ -2674,7 +2827,11 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 		MyMfree(pAvgYUV);
 	}
 	
-	ubOffsetCol = ubImgNum * G_COLOR * G_COLOR_SP;
+#ifdef DEBUG
+	//printf("G_MedianCut[%d]\n", ubImgNum);
+	//KeyHitESC();	/* デバッグ用 */
+#endif
+	ubOffsetCol = 0;
 	/* 減色する色数が256以下ならパレットDIBなので、*/
 	/* カラーテーブルをBITMAPINFO構造体のカラーテーブルにコピーします。 */
 	if(nColors<=256)
@@ -2948,4 +3105,40 @@ void G_APIC_to_Mem(uint16_t *pSrcBuf, uint16_t *pDstBuf, uint16_t uWidth, uint16
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t G_Pal_Set(uint8_t ubImgNum)
+{
+	int16_t	ret = 0;
+	
+	if(ubImgNum >= PAL_MAX_CG)return -1;
+	
+	g_CG_PalTbl[ubImgNum] = ubImgNum;			/* パレットテーブルにセット */
+	
+	ret = g_CG_PalTbl[ubImgNum];
+	
+    return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t G_Pal_Get(uint8_t ubImgNum)
+{
+	int16_t	ret = 0;
+
+	if(ubImgNum >= PAL_MAX_CG)return 0;
+
+	ret = g_CG_PalTbl[ubImgNum];
+	
+    return ret;
+}
 #endif	/* GRAPHIC_C */

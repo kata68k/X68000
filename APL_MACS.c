@@ -74,6 +74,8 @@ int32_t MOV_Play(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
 
+	uint16_t	uCRT_Tmg;
+
 	if(bPlayNum >= g_mov_list_max)return ret;
 
 #ifdef 	MACS_MOON
@@ -111,7 +113,9 @@ int32_t MOV_Play(uint8_t bPlayNum)
 #endif	/* MACS_MOON */
 
 	/* 画面モード再設定 */
-	CRTC_INIT(1);
+	Get_CRT_Tmg(&uCRT_Tmg);
+	CRTC_INIT((uint8_t)uCRT_Tmg);
+	G_HOME(1);		/* ホーム位置再設定(動画の後は) */
 
 	return	ret;
 }

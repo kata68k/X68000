@@ -33,6 +33,8 @@ extern	int16_t	SetCRT(ST_CRT, int16_t);
 extern	int16_t	CRT_INIT(void);
 extern	int16_t	Get_CRT_Contrast(int8_t *);
 extern	int16_t	Set_CRT_Contrast(int8_t);
+extern	int16_t	Get_CRT_Tmg(uint16_t *);
+extern	int16_t	Set_CRT_Tmg(uint16_t);
 extern int16_t wait_vdisp(int16_t);
 extern int16_t wait_h_sync(void);
 extern int16_t wait_v_sync(void);
