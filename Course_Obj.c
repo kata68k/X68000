@@ -182,11 +182,11 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		/* ç∑ï™ */
 		if(bEven == TRUE)	/* ç∂ */
 		{
-			mx += (int16_t)ROAD_CT_POINT - x;
+			mx = (int16_t)ROAD_CT_POINT - mx - x;
 		}
 		else				/* âE */
 		{
-			mx += (int16_t)ROAD_CT_POINT + x;
+			mx = (int16_t)ROAD_CT_POINT + mx + x;
 		}
 		/* êÖïΩê¸ */
 		dx = mx;

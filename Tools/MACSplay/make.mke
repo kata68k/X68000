@@ -1,0 +1,19 @@
+#	makefile
+
+CC	= gcc
+CFLAGS	= -g -O0 -Wall
+AS	= has
+LD	= hlk
+LKFLAGS	= -r -z-stack=131072
+INC	= 
+LIBS	= libc.a libgnu.a libdos.a libiocs.a
+
+MACSplay.x:	MACSplay.o FileManager.o
+	$(LD) $^ -o $@ -l $(LIBS)
+	
+MACSplay.o:	MACSplay.c
+	$(CC) $(CFLAGS) -c $<
+	
+FileManager.o:	FileManager.c
+	$(CC) $(CFLAGS) -c $<
+
