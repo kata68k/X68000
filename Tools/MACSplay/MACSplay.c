@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <doslib.h>
 #include <iocslib.h>
 #include "inc/usr_define.h"
 #include "FileManager.h"
@@ -479,12 +480,12 @@ int16_t main(int16_t argc, int8_t *argv[])
 			int32_t	nMemSize;
 			int32_t	nHiMemChk;
 			
-			nMemSize = MaxMemSize(0);	/* ローカルメインメモリの空きチェック */
+			nMemSize = (int32_t)_dos_malloc(-1) - 0x81000000UL;	/* ローカルメインメモリの空きチェック */
 			nHiMemChk = HIMEM_CHK();	/* ハイメモリ実装チェック */
 			
 			if(nFileSize <= nMemSize)	/* ローカル */
 			{
-				puts("ローカルメモリで再生します");
+				printf("ローカルメモリで再生します(%d[kb] <= %d[kb])\n", nFileSize>>10, nMemSize>>10);
 				nOut = MACS_Load(argv[nFilePos], nFileSize);		/* ローカル再生 */
 			}
 			else if(nHiMemChk == 0)		/* ハイメモリ実装 */
@@ -507,7 +508,8 @@ int16_t main(int16_t argc, int8_t *argv[])
 			}
 			else						/* ハイメモリ or NG */
 			{
-				puts("error：HIMEMが見つかりません。");
+				puts("error：ローカルメモリの空きが不足です。");
+				puts("error：HIMEMが見つかりませんでした。");
 				ret = -1;
 			}
 		}
@@ -518,7 +520,6 @@ int16_t main(int16_t argc, int8_t *argv[])
 		switch(nOut)
 		{
 		case -4:
-			ADPCM_Stop();
 			puts("再生を中断しました。");
 			break;
 		default:
@@ -526,6 +527,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 			break;
 		}
 	} 
+	ADPCM_Stop();	/* 音を止める */
 	
 	return ret;
 }

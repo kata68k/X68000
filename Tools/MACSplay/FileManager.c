@@ -187,7 +187,7 @@ void *MyMalloc(int32_t Size)
 			}
 			else
 			{
-				printf("error:ƒƒ‚ƒŠ‚ªŠm•Û‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(%d)\n", (uint32_t)pPtr - 0x81000000 );
+				printf("error:ƒƒ‚ƒŠ‚ªŠm•Û‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½(0x%x)\n", (uint32_t)pPtr - 0x81000000 );
 			}
 			pPtr = NULL;
 		}
