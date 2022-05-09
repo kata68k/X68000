@@ -311,9 +311,8 @@ int32_t ADPCM_Stop(void)
 
 void HelpMessage(void)
 {
-	puts("MACS data Player「MACSplay.x」v1.00 (c)2022 カタ.");
 	puts("MACSデータの再生を行います。");
-	puts("  68030以降に限りローカルメモリが足りない場合はハイメモリを使って再生を行います。");
+	puts("  68030以降に限りメインメモリが足りない場合はハイメモリを使って再生を行います。");
 	puts("  ※ハイメモリでADPCMを再生する際は、PCM8A.X -w18 での常駐");
 	puts("    もしくは、060turbo.sys -ad を設定ください。");
 	puts("");
@@ -335,6 +334,8 @@ int16_t main(int16_t argc, int8_t *argv[])
 	int32_t nOut = 0;
 	int32_t	nFileSize = 0;
 	int32_t	nFilePos = 0;
+	
+	puts("MACS data Player「MACSplay.x」v1.01a (c)2022 カタ.");
 	
 	if(argc > 1)	/* オプションチェック */
 	{
@@ -395,7 +396,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 				if((bFlag == TRUE) && (bFlag2 == TRUE))
 				{
 					g_nEffect = Mbset(g_nEffect, 0x7F, Bit_4);
-					puts("-SL MACSDRVがスリープしている時でも再生する");
+					puts("MACSDRVがスリープしている時でも再生する");
 					continue;
 				}
 
@@ -404,7 +405,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 				if((bFlag == TRUE) && (bFlag2 == TRUE))
 				{
 					g_nEffect = Mbset(g_nEffect, 0x7F, Bit_5);
-					puts("-GR ｸﾞﾗﾌｨｯｸを表示したまま再生する");
+					puts("ｸﾞﾗﾌｨｯｸを表示したまま再生する");
 					continue;
 				}
 				
@@ -413,7 +414,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 				if((bFlag == TRUE) && (bFlag2 == TRUE))
 				{
 					g_nEffect = Mbset(g_nEffect, 0x7F, Bit_6);
-					puts("-SP ｽﾌﾟﾗｲﾄを表示したまま再生する");
+					puts("ｽﾌﾟﾗｲﾄを表示したまま再生する");
 					continue;
 				}
 
@@ -422,7 +423,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 				if((bFlag == TRUE) && (bFlag2 == TRUE))
 				{
 					g_nPCM8Achk = 1;
-					puts("-AD PCM8A.Xの常駐をチェックしない");
+					puts("PCM8A.Xの常駐をチェックしない");
 					continue;
 				}
 
@@ -436,8 +437,14 @@ int16_t main(int16_t argc, int8_t *argv[])
 
 					g_nEffect = Mbclr(g_nEffect, Bit_2);	/* -K キー入力終了を有効にする */
 					g_nEffect = Mbclr(g_nEffect, Bit_3);	/* -C アニメ終了時画面を初期化しないを有効にする */
-					puts("-Rx リピート再生するx=1～255回、x=0(無限ループ)");
-					//printf("Repeat = %d\n", g_nRepeat);
+					if(g_nRepeat == 0)
+					{
+						puts("無限ループで再生する");
+					}
+					else
+					{
+						printf("%d回リピート再生する\n", g_nRepeat);
+					}
 					continue;
 				}
 				
@@ -480,13 +487,13 @@ int16_t main(int16_t argc, int8_t *argv[])
 			int32_t	nMemSize;
 			int32_t	nHiMemChk;
 			
-			nMemSize = (int32_t)_dos_malloc(-1) - 0x81000000UL;	/* ローカルメインメモリの空きチェック */
+			nMemSize = (int32_t)_dos_malloc(-1) - 0x81000000UL;	/* メインメモリの空きチェック */
 			nHiMemChk = HIMEM_CHK();	/* ハイメモリ実装チェック */
 			
-			if(nFileSize <= nMemSize)	/* ローカル */
+			if(nFileSize <= nMemSize)	/* メインメモリ */
 			{
-				printf("ローカルメモリで再生します(%d[kb] <= %d[kb])\n", nFileSize>>10, nMemSize>>10);
-				nOut = MACS_Load(argv[nFilePos], nFileSize);		/* ローカル再生 */
+				printf("メインメモリで再生します(%d[kb] <= %d[kb])\n", nFileSize>>10, nMemSize>>10);
+				nOut = MACS_Load(argv[nFilePos], nFileSize);		/* メイン再生 */
 			}
 			else if(nHiMemChk == 0)		/* ハイメモリ実装 */
 			{
@@ -508,7 +515,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 			}
 			else						/* ハイメモリ or NG */
 			{
-				puts("error：ローカルメモリの空きが不足です。");
+				puts("error：メインメモリの空きが不足です。");
 				puts("error：HIMEMが見つかりませんでした。");
 				ret = -1;
 			}
