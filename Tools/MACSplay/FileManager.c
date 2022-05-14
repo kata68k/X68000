@@ -9,19 +9,23 @@
 #include <time.h>
 #include <doslib.h>
 #include <iocslib.h>
+#include <interrupt.h>
 
 #include "inc/usr_macro.h"
 
 #include "FileManager.h"
 
-
+asm("	.include	doscall.mac");
+		
 /* 関数のプロトタイプ宣言 */
 int16_t File_Load(int8_t *, void *, size_t, size_t);
 int16_t File_Save(int8_t *, void *, size_t, size_t);
 int16_t GetFileLength(int8_t *, int32_t *);
 void *MyMalloc(int32_t);
+void *MyMallocJ(int32_t);
 void *MyMallocHi(int32_t);
 int16_t MyMfree(void *);
+int16_t	MyMfreeJ(void *);
 int16_t	MyMfreeHi(void *);
 int32_t	MaxMemSize(int8_t);
 
@@ -165,14 +169,16 @@ int16_t	GetFileLength(int8_t *pFname, int32_t *pSize)
 void *MyMalloc(int32_t Size)
 {
 	void *pPtr = NULL;
-	
+
 	if(Size >= 0x1000000u)
 	{
 		printf("error:メモリ確保サイズが大きすぎます(0x%x)\n", Size );
 	}
 	else
+
 	{
 		pPtr = _dos_malloc(Size);	/* メモリ確保 */
+
 //		pPtr = malloc(Size);	/* メモリ確保 */
 		
 		if(pPtr == NULL)
@@ -183,7 +189,7 @@ void *MyMalloc(int32_t Size)
 		{
 			if((uint32_t)pPtr >= 0x82000000)
 			{
-				puts("error:メモリ不足です");
+				printf("error:メモリが確保できませんでした(0x%x)\n", (uint32_t)pPtr);
 			}
 			else
 			{
@@ -199,6 +205,53 @@ void *MyMalloc(int32_t Size)
 	}
 	
 	return pPtr;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void *MyMallocJ(int32_t Size)
+{
+	void *pPtr = NULL;
+	
+	PRAMREG(d0_reg, d0);		/* d0を変数d0_regに割り当てる */
+	
+	asm("\tmove.l 4(sp),d3");	/* スタックに格納された引数Sizeを(d3)へ代入 */
+	
+	asm("\tmove.l d3,-(sp)");	/* MALLOC3の引数にd3を入れる */
+	
+ 	asm("\tDOS _MALLOC3");		/* MALLOC3 */
+
+	asm("\taddq.l #4, sp");		
+	
+	pPtr = (void *)d0_reg;
+	
+	if(pPtr == NULL)
+	{
+		puts("error:メモリが確保できませんでした");
+	}
+	else if((uint32_t)pPtr >= 0x81000000)
+	{
+		if((uint32_t)pPtr >= 0x82000000)
+		{
+			printf("error:メモリが確保できませんでした(0x%x)\n", (uint32_t)pPtr);
+		}
+		else
+		{
+			printf("error:メモリが確保できませんでした(0x%x)\n", (uint32_t)pPtr - 0x81000000 );
+		}
+		pPtr = NULL;
+	}
+	else
+	{
+		printf("JMem Address 0x%p Size = %d[byte]\n", pPtr, Size);
+	}
+	
+	return (void*)pPtr;
 }
 
 /*===========================================================================================*/
@@ -269,6 +322,28 @@ int16_t	MyMfree(void *pPtr)
 		puts("error:メモリ解放に失敗");
 		ret = -1;
 	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	MyMfreeJ(void *pPtr)
+{
+	int16_t ret = 0;
+	
+	asm("\tmove.l 4(sp),d3");	/* スタックに格納された引数pPtrを(d3)へ代入 */
+	
+	asm("\tmove.l d3,-(sp)");	/* _MFREEの引数にd3を入れる */
+	
+ 	asm("\tDOS _MFREE");		/* _MFREE */
+
+	asm("\taddq.l #4, sp");		
 	
 	return ret;
 }

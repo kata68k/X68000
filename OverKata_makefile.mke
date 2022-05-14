@@ -9,7 +9,7 @@ LKFLAGS	=	-z-stack=131072
 
 INC		= 
 #LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
-LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L LIB/JOYLIB3.L
+LIBS	= libc.a libgnu.a libdos.a libiocs.a LIB/APICGLIB.a LIB/ZMUSIC.L LIB/JOYLIB3.L
 #LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMSC3LIB.L
 #LIBS	= libc.a libgnu.a LIB/APICGLIB.a LIB/mcclib.a
 LZH		= OverKata001
@@ -33,7 +33,7 @@ execonly:
 OverKata.x:	OverKata.o APL_MACS.o APL_Math.o CRTC.o Course_Obj.o EnemyCAR.o DMAC.o Draw.o \
 			FileManager.o Graphic.o Input.o MFP.o Moon.o Music.o MyCar.o OutPut_Text.o \
 			PCG.o Raster.o Score.o Task.o Text.o Trap14.o
-	$(LD) $^ -o $@ -l $(LIBS) -p OverKata.map
+	$(LD) $^ -o $@ -l $(LIBS)
 #	echo $^ > OverKata.d
 #	$(LD) -i OverKata.d -o $@ -l $(LIBS)
 
@@ -92,3 +92,4 @@ Moon.o:	Moon.s
 dist:
 	LHA a -t $(LZH)
 
+

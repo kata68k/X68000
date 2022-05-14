@@ -24,5 +24,5 @@ PCM8A.X -R
 MOON.x -r
 MACSDRV.x -r
 rem JOYDRV3.X -R
-L:
+W:
 

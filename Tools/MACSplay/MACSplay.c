@@ -6,13 +6,17 @@
 #include "inc/usr_define.h"
 #include "FileManager.h"
 
-#define _MACS_CALL	(0xD0)
-#define _HIMEM		(0xF8)
+#define IOCS_OFST		(0x100)
+#define IOCS_MACS_CALL	(0xD0)
+#define IOCS_HIMEM		(0xF8)
+#define IOCS_SYS_STAT	(0xAC)
+#define IOCS_ADPCMMOD	(0x67)
 
 int32_t	MACS_Play(int8_t *, int32_t, int32_t, int32_t, int32_t);
-int32_t	MACS_Load(int8_t *, int32_t);
+int32_t	MACS_Load(int8_t *, int32_t, int8_t);
 int32_t	MACS_Load_Hi(int8_t *, int32_t);
 int32_t	MACS_CHK(void);
+int32_t	SYS_STAT_CHK(void);
 int32_t	HIMEM_CHK(void);
 int32_t	PCM8A_CHK(void);
 int32_t ADPCM_Stop(void);
@@ -26,7 +30,7 @@ int32_t g_nEffect = 0;
 int32_t g_nPCM8Achk = 0;
 int32_t g_nRepeat = 1;
 
-/*	MACS_Play()
+/*	MACS_Play() MACS_Cal.docより
 *	Input:
 *		d1.w > コマンドコード
 *		d2.l > バッファサイズ
@@ -145,24 +149,38 @@ int32_t	MACS_Play(int8_t *pMacsBuff, int32_t nCommand, int32_t nBuffSize, int32_
 	struct	_regs	stInReg = {0}, stOutReg = {0};
 	int32_t	retReg;	/* d0 */
 	
-	stInReg.d0 = _MACS_CALL;	/* IOCS _MACS(macsdrv.x) */
-	stInReg.d1 = nCommand;		/* コマンドコード(w) */
-	stInReg.d2 = nBuffSize;		/* バッファサイズ(l) */
-	stInReg.d3 = nAbort;		/* アボートフラグ(w) */
-	stInReg.d4 = nEffect;		/* 特殊効果フラグ(l) */
+	stInReg.d0 = IOCS_MACS_CALL;	/* IOCS _MACS(macsdrv.x) */
+	stInReg.d1 = nCommand;			/* コマンドコード(w) */
+	stInReg.d2 = nBuffSize;			/* バッファサイズ(l) */
+	stInReg.d3 = nAbort;			/* アボートフラグ(w) */
+	stInReg.d4 = nEffect;			/* 特殊効果フラグ(l) */
 	stInReg.a1 = (int32_t)pMacsBuff;	/* MACSデータの先頭アドレス */
 	
 	retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
 	return retReg;
 }
 
-int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize)
+int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize, int8_t bMode)
 {
 	int32_t ret = 0;
 	int8_t	*pBuff = NULL;
 	int32_t nLoop;
 	
-	pBuff = (int8_t*)MyMalloc(nFileSize);	/* メモリ確保 */
+	switch(bMode)
+	{
+	case 0:
+		pBuff = (int8_t*)MyMalloc(nFileSize);	/* メモリ確保 */
+		break;
+	case 1:
+		pBuff = (int8_t*)MyMallocJ(nFileSize);	/* メモリ確保 */
+		break;
+	case 2:
+		pBuff = (int8_t*)MyMallocHi(nFileSize);	/* メモリ確保 */
+		break;
+	default:
+		pBuff = (int8_t*)MyMalloc(nFileSize);	/* メモリ確保 */
+		break;
+	}
 	
 	if(pBuff != NULL)
 	{
@@ -188,44 +206,25 @@ int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize)
 		}
 		while(nLoop);
 		
-		MyMfree(pBuff);		/* メモリ解放 */
-	}
-	
-	return ret;
-}
-
-int32_t	MACS_Load_Hi(int8_t *sFileName, int32_t nFileSize)
-{
-	int32_t ret = 0;
-	int8_t	*pBuff = NULL;
-	int32_t nLoop;
-	
-	pBuff = (int8_t*)MyMallocHi(nFileSize);	/* メモリ確保 */
-	
-	if(pBuff != NULL)
-	{
-		File_Load(sFileName, pBuff, sizeof(uint8_t), nFileSize );	/* ファイル読み込みからメモリへ保存 */
-		
-		nLoop = g_nRepeat;
-		do
+		switch(bMode)
 		{
-			if(g_nRepeat == 0)
-			{
-				nLoop = 1;
-			}
-			else
-			{
-				nLoop--;
-			}
-			ret = MACS_Play(pBuff, g_nCommand, g_nBuffSize, g_nAbort, g_nEffect);	/* 再生 */
-			if(ret < 0)
-			{
-				break;
-			}
+		case 0:
+			MyMfree(pBuff);		/* メモリ解放 */
+			break;
+		case 1:
+			MyMfreeJ(pBuff);	/* メモリ解放 */
+			break;
+		case 2:
+			MyMfreeHi(pBuff);	/* メモリ解放 */
+			break;
+		default:
+			MyMfree(pBuff);		/* メモリ解放 */
+			break;
 		}
-		while(nLoop);
-
-		MyMfreeHi(pBuff);	/* メモリ解放 */
+	}
+	else
+	{
+		ret = -1;
 	}
 	
 	return ret;
@@ -239,7 +238,7 @@ int32_t	MACS_CHK(void)
 	int32_t addr_MACSDRV;
 	int32_t data;
 	
-	addr_IOCS = ((0x100 + _MACS_CALL) * 4);
+	addr_IOCS = ((IOCS_OFST + IOCS_MACS_CALL) * 4);
 	
 	addr_MACSDRV = _iocs_b_lpeek((int32_t *)addr_IOCS);
 	addr_MACSDRV += 2;
@@ -255,6 +254,28 @@ int32_t	MACS_CHK(void)
 	return ret;
 }
 
+int32_t	SYS_STAT_CHK(void)
+{
+	struct	_regs	stInReg = {0}, stOutReg = {0};
+	int32_t	retReg;	/* d0 */
+	
+	stInReg.d0 = IOCS_SYS_STAT;	/* IOCS _SYS_STAT($AC) */
+	stInReg.d1 = 0;				/* MPUステータスの取得 */
+	
+	retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
+//	printf("SYS_STAT 0x%x\n", (retReg & 0x0F));
+    /* 060turbo.manより
+		$0000   MPUステータスの取得
+			>d0.l:MPUステータス
+					bit0～7         MPUの種類(6=68060)
+					bit14           MMUの有無(0=なし,1=あり)
+					bit15           FPUの有無(0=なし,1=あり)
+					bit16～31       クロックスピード*10
+	*/
+	
+	return (retReg & 0x0F);
+}
+
 int32_t	HIMEM_CHK(void)
 {
 	int32_t ret = 0;	/* 0:常駐 !0:常駐していない */
@@ -264,7 +285,7 @@ int32_t	HIMEM_CHK(void)
 	int32_t data;
 	int8_t data_b;
 	
-	addr_IOCS = ((0x100 + _HIMEM) * 4);
+	addr_IOCS = ((IOCS_OFST + IOCS_HIMEM) * 4);
 	
 	addr_HIMEM = _iocs_b_lpeek((int32_t *)addr_IOCS);
 	addr_HIMEM -= 6;
@@ -287,7 +308,7 @@ int32_t	PCM8A_CHK(void)
 	struct	_regs	stInReg = {0}, stOutReg = {0};
 	int32_t	retReg;	/* d0 */
 	
-	stInReg.d0 = 0x67;			/* IOCS _ADPCMMOD($67) */
+	stInReg.d0 = IOCS_ADPCMMOD;	/* IOCS _ADPCMMOD($67) */
 	stInReg.d1 = 'PCMA';		/* PCM8Aの常駐確認 */
 	
 	retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
@@ -335,7 +356,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 	int32_t	nFileSize = 0;
 	int32_t	nFilePos = 0;
 	
-	puts("MACS data Player「MACSplay.x」v1.01a (c)2022 カタ.");
+	puts("MACS data Player「MACSplay.x」v1.02 (c)2022 カタ.");
 	
 	if(argc > 1)	/* オプションチェック */
 	{
@@ -461,7 +482,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 				else
 				{
 					nFilePos = i;
-					printf("File Size = %d[MB](%d[KB], %d[byte])\n", nFileSize>>20, nFileSize>>10, nFileSize);
+//					printf("File Size = %d[MB](%d[KB], %d[byte])\n", nFileSize>>20, nFileSize>>10, nFileSize);
 				}
 			}
 		}
@@ -484,16 +505,36 @@ int16_t main(int16_t argc, int8_t *argv[])
 
 		if(nFileSize != 0)
 		{
+			int32_t	nSysStat;
 			int32_t	nMemSize;
 			int32_t	nHiMemChk;
+			int8_t	data_b;
 			
 			nMemSize = (int32_t)_dos_malloc(-1) - 0x81000000UL;	/* メインメモリの空きチェック */
-			nHiMemChk = HIMEM_CHK();	/* ハイメモリ実装チェック */
 			
+			data_b = _iocs_b_bpeek((int32_t *)0xCBC);	/* 機種判別 */
+//			printf("機種判別(MPU680%d0)\n", data_b);
+			
+			if(data_b != 0)	/* 68000以外のMPU */
+			{
+				nSysStat = SYS_STAT_CHK();	/* MPUの種類 */
+			}
+			else
+			{
+				nSysStat = (int32_t)data_b;	/* 0が入る */
+			}
+		
+			nHiMemChk = HIMEM_CHK();	/* ハイメモリ実装チェック */
+
 			if(nFileSize <= nMemSize)	/* メインメモリ */
 			{
 				printf("メインメモリで再生します(%d[kb] <= %d[kb])\n", nFileSize>>10, nMemSize>>10);
-				nOut = MACS_Load(argv[nFilePos], nFileSize);		/* メイン再生 */
+				nOut = MACS_Load(argv[nFilePos], nFileSize, 0);		/* メイン再生 */
+			}
+			else if((nHiMemChk != 0) && ((nSysStat == 4) || (nSysStat == 6)) )		/* ハイメモリ未実装 & 040/060EXCEL */
+			{
+				puts("拡張されたメモリで再生を試みます(040/060EXCEL)");
+				nOut = MACS_Load(argv[nFilePos], nFileSize, 1);		/* 拡張されたメモリで再生 */
 			}
 			else if(nHiMemChk == 0)		/* ハイメモリ実装 */
 			{
@@ -502,7 +543,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 				if( (nChk >= 0) || (g_nPCM8Achk > 0))	/* PCM8A常駐チェック or -ADで無効化 */
 				{
 					puts("ハイメモリで再生します");
-					nOut = MACS_Load_Hi(argv[nFilePos], nFileSize);	/* ハイメモリ再生 */
+					nOut = MACS_Load(argv[nFilePos], nFileSize, 2);	/* ハイメモリ再生 */
 				}
 				else
 				{
@@ -526,10 +567,14 @@ int16_t main(int16_t argc, int8_t *argv[])
 	{
 		switch(nOut)
 		{
+		case -1:
+			puts("再生に失敗しました。");
+			break;
 		case -4:
 			puts("再生を中断しました。");
 			break;
 		default:
+			puts("再生を完了しました。");
 			//printf("MACSplay.x = %d\n", nOut);
 			break;
 		}
@@ -538,3 +583,4 @@ int16_t main(int16_t argc, int8_t *argv[])
 	
 	return ret;
 }
+
