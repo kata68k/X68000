@@ -253,6 +253,7 @@ int16_t Raster_Main(void)
 	
 	RoadAngle = g_stRoadInfo.angle;	/* 道の角度 */
 	
+#if 1
 	/* 自車の位置を算出 */
 	Diff = APL_AngleDiff(RoadAngle, CarAngle);	/* 車と道路の角度差分で車の位置が変わる */
 	ViewAngle = - Diff;	/* -128 ot 0 to 128 */
@@ -269,6 +270,7 @@ int16_t Raster_Main(void)
 		PositionSum += Mdiv8(Diff);
 	}
 	PositionSum = Mmax(Mmin((PositionSum), 128), -128);
+#endif
 	
 	/* 初期化 */
 	uRas_st = 0;
@@ -1079,36 +1081,45 @@ int16_t Road_Pat_Main(uint16_t *uRoadCounter)
 
 		Road_Pat_Stop();	/* 道のアニメ停止 */
 	}
-	else if( (time_st - unRoadAnimeTime) < (362 / speed) )	/* 更新周期未満 */
-	{
-		/* センターラインの長さと間隔は５ｍ */
-		/* 60fps=17ms/f */
-		/* 最大速度307km/h(85m/s,0.0853m/ms) 1f=1.45m進む */
-		/* 最低速度6km/h(1.7m/s,0.0017m/ms) 1f=0.028m進む */
-		/* 1LSB 10km/h(2.8m/s,0.0028m/ms) 1f=0.047m進む */
-		/* 1times Cal 1m=4dot (17ms/f x 1/0.047 / speed) = (362/speed)*/
-
-		Road_Pat_Stop();	/* 道のアニメ停止 */
-	}
 	else
 	{
-		unRoadAnimeTime = time_st;	/* 時刻更新 */
+		uint32_t uTH;
+		uint32_t uTimeDiff;
 		
-		Road_Pat_Base_Update();	/* 道のアニメ更新 */
+		uTH = (362 / speed);
+		uTimeDiff = time_st - unRoadAnimeTime;
+		
+		if( uTimeDiff < uTH )	/* 更新周期未満 */
+		{
+			/* センターラインの長さと間隔は５ｍ */
+			/* 60fps=17ms/f */
+			/* 最大速度307km/h(85m/s,0.0853m/ms) 1f=1.45m進む */
+			/* 最低速度6km/h(1.7m/s,0.0017m/ms) 1f=0.028m進む */
+			/* 1LSB 10km/h(2.8m/s,0.0028m/ms) 1f=0.047m進む */
+			/* 1times Cal 1m=4dot (17ms/f x 1/0.047 / speed) = (362/speed)*/
 
-		Set_Road_Angle();		/* コースの曲がり具合 */
-		Set_Road_Height();		/* コースの標高 */
-		Set_Road_Slope();		/* コースの現在地から標高までの傾き */
-		Set_Road_Distance();	/* 水平線から現在地までの距離 */
-		
-		Set_Road_Object();		/* ライバル車の出現 */
-		
-		S_Add_Score_Point(speed * 10);	/* 車速で加点 */
-		
-		g_uCounter++;			/* コースデータのカウンタ更新 */
-		g_uRoadCycleCount++;	/* コース更新フリーランカウンタ */
+			Road_Pat_Stop();	/* 道のアニメ停止 */
+		}
+		else
+		{
+			unRoadAnimeTime = time_st;	/* 時刻更新 */
+			
+			Road_Pat_Base_Update();	/* 道のアニメ更新 */
 
-		ret = 1;	/* 更新あり */
+			Set_Road_Angle();		/* コースの曲がり具合 */
+			Set_Road_Height();		/* コースの標高 */
+			Set_Road_Slope();		/* コースの現在地から標高までの傾き */
+			Set_Road_Distance();	/* 水平線から現在地までの距離 */
+			
+			Set_Road_Object();		/* ライバル車の出現 */
+			
+			S_Add_Score_Point(speed * 10);	/* 車速で加点 */
+			
+			g_uCounter++;			/* コースデータのカウンタ更新 */
+			g_uRoadCycleCount++;	/* コース更新フリーランカウンタ */
+
+			ret = 1;	/* 更新あり */
+		}
 	}
 	
 	*uRoadCounter = g_uCounter;

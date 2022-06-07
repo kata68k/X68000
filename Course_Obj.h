@@ -16,10 +16,10 @@
 typedef struct
 {
 	uint8_t	ubType;			/* 種類 */
+	uint8_t	ubPos;			/* 位置(0：左、1：右) */
 	int16_t	x;				/* X座標 */
 	int16_t	y;				/* Y座標 */
 	int16_t	z;				/* Z座標(倍率) */
-	uint16_t	uTime;			/* 時間 */
 	uint8_t	ubAlive;		/* 表示の状態 */
 }	ST_COURSE_OBJ;
 

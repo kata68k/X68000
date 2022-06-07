@@ -54,10 +54,10 @@ int16_t	InitCourseObj(void)
 	for(i=0; i<COURSE_OBJ_MAX; i++)
 	{
 		g_stCourse_Obj[i].ubType = 0;
+		g_stCourse_Obj[i].ubPos = i % 2;
 		g_stCourse_Obj[i].x = 0;
 		g_stCourse_Obj[i].y = Mmul4(COURSE_OBJ_H_MAX * i);
 		g_stCourse_Obj[i].z = COURSE_OBJ_PAT_MAX - 1;
-		g_stCourse_Obj[i].uTime = 0xFFFF;
 		g_stCourse_Obj[i].ubAlive = TRUE;
 	}
 	
@@ -118,9 +118,21 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 {
 	int16_t	ret = 0;
 	uint16_t	uCount;
-
+	static uint16_t	uTime = 0xFFFF;
+	static uint16_t	uTimeDiff = 0;
+	
 	GetRoadCycleCount(&uCount);
-
+	
+	if(bNum == 0)
+	{
+		if(uTime == 0xFFFF)
+		{
+			uTime = uCount;
+		}
+		uTimeDiff = uCount - uTime;
+		uTime = uCount;
+	}
+	
 	if(g_stCourse_Obj[bNum].ubAlive == TRUE)
 	{
 		int16_t	x, y, z;
@@ -129,18 +141,21 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		uint16_t	ras_x, ras_y, ras_pat, ras_num;
 		uint8_t	bEven;
 		int16_t	Out_Of_Disp;
+		int16_t	speed = 0;
 		uint8_t	ubType;
-		uint16_t	uTime;
 
 		ST_CRT	stCRT;
 		ST_ROAD_INFO	stRoadInfo;
 		ST_RAS_INFO		stRasInfo;
+		ST_CARDATA		stMyCar;
 		
 		GetCRT(&stCRT, bMode);
 		GetRoadInfo(&stRoadInfo);
 		GetRasterInfo(&stRasInfo);
+		GetMyCar(&stMyCar);
+		GetMyCarSpeed(&speed);		/* 車速を得る */
 
-		if((bNum & 0x01) == 0)
+		if(g_stCourse_Obj[bNum].ubPos == 0)
 		{
 			bEven = TRUE;
 		}
@@ -154,58 +169,66 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		y = g_stCourse_Obj[bNum].y;
 		z = g_stCourse_Obj[bNum].z;
 		ubType = g_stCourse_Obj[bNum].ubType;
-		uTime = g_stCourse_Obj[bNum].uTime;	/* 共通カウンタの前回値 */
 
-		
-		if(uTime == 0xFFFF)
+//		y += stMyCar.VehicleSpeed;	/* 変化量 */
+		if((speed == 0) || (uTimeDiff == 0) )
 		{
-			uTime = uCount;
+			/* 変化なし */
 		}
-
-		my = uCount - uTime;	/* 変化量 */
-		if(my > 0)
+		else
 		{
-			y += Mmax(my >> z, 1);
+			if(((x == 0) && (y == 0)))
+			{
+				y += 1;
+			}
+			else
+			{
+				y += (uTimeDiff * speed);
+			}
 		}
+		my = y;
 		
 		/* 車幅(片側)は、4mと定義する。 */
 		/* 4mで192dotであれば、1dotあたり0.021mと定義する。 */
 		/* 画面奥が1dotの道幅しかないので画面奥は192m先にとなる。 */
-		ras_num = Mmax(Mmin(y, stRasInfo.ed), 2);		/* ラスター情報の配列番号を算出 */
+		ras_num = Mmax(Mmin(my, stRasInfo.ed), 2);		/* ラスター情報の配列番号を算出 */
 		
 		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
 
 		/* センター */
-		mx = (int16_t)Mu10b_To_s8b(ras_x);	/* 0-1023 => (-256 < 0 < 255) */
-		x += Mmul2(y);
+		mx = (int16_t)ROAD_CT_POINT + (int16_t)Mu10b_To_s9b(ras_x);	/* 0-1023 => (-512 < 0 < 512) */
 		
 		/* 差分 */
 		if(bEven == TRUE)	/* 左 */
 		{
-			mx = (int16_t)ROAD_CT_POINT - mx - x;
+			dx = mx - Mmul2(my);
 		}
 		else				/* 右 */
 		{
-			mx = (int16_t)ROAD_CT_POINT + mx + x;
+			dx = mx + Mmul2(my);
 		}
 		/* 水平線 */
-		dx = mx;
-		dy = stRasInfo.st;
+		dy = stRasInfo.st + my;
 		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
 		//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
 		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して16で割った(=7pat) */
 		//dz = Mmin( Mmax( 7 - (Mdiv16(Mmul256(z) / (z + ROAD_ED_POINT))) , 0), 7);
 		dz = z;
-		if(x >= g_nObjViewRateTbl[z])
+		do
 		{
-			dz = Mdec(z, 1);
-			y = 0;
+			if(Mmul2(my) >= g_nObjViewRateTbl[z])
+			{
+				dz = Mdec(z, 1);
+	//			y = 0;
+			}
+			else
+			{
+				/* 前回値保持 */
+				break;
+			}
+			z = dz;
 		}
-		else
-		{
-			/* 前回値保持 */
-		}
-		z = dz;
+		while(1);
 		
 		/* 描画 */
 		Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
@@ -214,9 +237,6 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 										bMode_rev,
 										ubType,
 										bEven);
-#ifdef DEBUG	/* デバッグコーナー */
-		SetDebugPos(stCRT.hide_offset_x + dx, dx);
-#endif
 		
 		if(Out_Of_Disp != 0)
 		{
@@ -229,10 +249,12 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		g_stCourse_Obj[bNum].x = x;
 		g_stCourse_Obj[bNum].y = y;
 		g_stCourse_Obj[bNum].z = z;
-		g_stCourse_Obj[bNum].uTime = uCount;
 	}
 	else
 	{
+		int16_t	i, cnt = 0;
+		int16_t	MinVal = 32767;
+		
 		g_stCourse_Obj[bNum].ubType++;
 		if(g_stCourse_Obj[bNum].ubType >= COURSE_OBJ_TYP_MAX)
 		{
@@ -241,8 +263,31 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		g_stCourse_Obj[bNum].x = 0;
 		g_stCourse_Obj[bNum].y = 0;
 		g_stCourse_Obj[bNum].z = COURSE_OBJ_PAT_MAX - 1;
-		g_stCourse_Obj[bNum].uTime = uCount;
-		g_stCourse_Obj[bNum].ubAlive = TRUE;
+		
+		for(i=0; i<COURSE_OBJ_MAX; i++)
+		{
+			if(g_stCourse_Obj[i].ubAlive == TRUE)
+			{
+				MinVal = Mmin( MinVal, g_stCourse_Obj[i].y );
+			}
+			
+			if(g_stCourse_Obj[i].y == 0)
+			{
+				cnt++;
+			}
+		}
+		
+		if( (MinVal >= g_nObjViewRateTbl[8]) ||
+			(cnt >= COURSE_OBJ_MAX) )
+		{
+			g_stCourse_Obj[bNum].ubAlive = TRUE;
+		}
+#ifdef DEBUG	/* デバッグコーナー */
+//		if((bEven == TRUE) && (bNum == 0) && (bMode_rev == 2))
+		{
+			SetDebugHis(uTimeDiff);
+		}
+#endif
 	}
 	
 	return ret;
@@ -284,7 +329,7 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 	{
 		ubPos_H = POS_LEFT;
 	}
-	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_CENTER, PatNumber);
+	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_BOTTOM, PatNumber);
 	
 	return	ret;
 }
@@ -299,32 +344,20 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 int16_t	Sort_Course_Obj(void)
 {
 	int16_t	ret = 0;
-	int16_t	i, ofst;
+	int16_t	i;
 	int16_t	count = 0;
-	int16_t	num;
 	ST_COURSE_OBJ	stTmp;
 	
-	num = Mdiv2(COURSE_OBJ_MAX);
 	
 	while(1)
 	{
-		for(i=0; i<num; i++)
+		for(i=0; i<COURSE_OBJ_MAX; i++)
 		{
-			ofst = 0;	/* 左 */
-			if(g_stCourse_Obj[i+ofst].x > g_stCourse_Obj[i+ofst+2].x)
+			if(g_stCourse_Obj[i].y > g_stCourse_Obj[i+1].y)
 			{
-				stTmp = g_stCourse_Obj[i+ofst+2];
-				g_stCourse_Obj[i+ofst+2] = g_stCourse_Obj[i+ofst];
-				g_stCourse_Obj[i+ofst] = stTmp;
-				count++;
-			}
-			
-			ofst = 1;	/* 右 */
-			if(g_stCourse_Obj[i+ofst].x > g_stCourse_Obj[i+ofst+2].x)
-			{
-				stTmp = g_stCourse_Obj[i+ofst+2];
-				g_stCourse_Obj[i+ofst+2] = g_stCourse_Obj[i+ofst];
-				g_stCourse_Obj[i+ofst] = stTmp;
+				stTmp = g_stCourse_Obj[i+1];
+				g_stCourse_Obj[i+1] = g_stCourse_Obj[i];
+				g_stCourse_Obj[i] = stTmp;
 				count++;
 			}
 		}
@@ -589,8 +622,8 @@ int16_t	Set_Course_TmpObject(uint16_t uCount, uint8_t ubPictNum)
 	ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
 	
 	GetCRT(&stCRT, ubMode);	/* 現在の画面座標を取得 */
-	x = stCRT.hide_offset_x - Mu10b_To_s8b((int16_t)ras_x) + Mdiv2(uWidth);
-	y = stCRT.hide_offset_y + Mu10b_To_s8b((int16_t)ras_y);
+	x = stCRT.hide_offset_x - Mu10b_To_s9b((int16_t)ras_x) + Mdiv2(uWidth);
+	y = stCRT.hide_offset_y + Mu10b_To_s9b((int16_t)ras_y);
 	
 	bZoom = (int8_t)uCount - 9;
 

@@ -222,7 +222,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
 			
 			/* センター */
-			mx = (int16_t)ROAD_CT_POINT - (int16_t)Mu10b_To_s8b(ras_x);	/* 0-511 => (-256 < 0 < 255) */
+			mx = (int16_t)ROAD_CT_POINT + (int16_t)Mu10b_To_s9b(ras_x);	/* 0-511 => (-256 < 0 < 255) */
 			
 			if(x < 8)
 			{

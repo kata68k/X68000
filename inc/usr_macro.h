@@ -176,7 +176,8 @@
 #define Mmul_0p10(x)	((x>>3)-(x>>5)+(x>>6)-(x>>7))					/* x * 0.1015625 */
 
 #define Msinged_9b(x)	((x < 256)?x:(x-512))
-#define Mu10b_To_s8b(x)	((x < 512)?(x>>1):(-(x-512)>>1))
+#define Mu10b_To_s8b(x)	((x < 512)?(-(x>>1)):(-(x-1024)>>1))
+#define Mu10b_To_s9b(x)	((x < 512)?(-x):(1024-x))
 
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 #define GetR(color)	(( color >> 6) & 0x1Fu)

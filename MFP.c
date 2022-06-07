@@ -364,7 +364,7 @@ int16_t GetRasterIntPos(uint16_t *x, uint16_t *y, uint16_t *pat, uint16_t uNum, 
 	}
 	else				/* uNum をラスター割り込み位置で参照します */
 	{
-		uNum = Mmul2(uNum) + g_uRasterSide;
+		uNum = Mmul2(uNum) + g_uRasterSideNow;
 	}
 	
 	if(uNum >= RASTER_H_MAX)

@@ -68,6 +68,7 @@ uint8_t		g_bFPS_PH = 0u;
 uint16_t	g_uDebugNum = 0; 
 uint32_t	g_unTime_Pass[MAX_G] = {0u};
 int16_t		g_DebugPosX, g_DebugPosY;
+int16_t		g_DebugHis[10];
 #endif
 
 uint16_t	uRoad = 0;
@@ -120,6 +121,8 @@ int16_t	GetDebugMode(uint8_t *);
 int16_t	SetDebugMode(uint8_t);
 int16_t	GetDebugPos(int16_t *, int16_t *);
 int16_t	SetDebugPos(int16_t, int16_t);
+int16_t	GetDebugHis(int16_t *, int16_t);
+int16_t	SetDebugHis(int16_t);
 void Debug_View(uint16_t);
 #endif
 
@@ -355,13 +358,16 @@ int16_t main(int16_t argc, int8_t** argv)
 					Update |= MyCarInfo_Update16ms(Torque);
 				}
 				
-				/* ラスター処理 */
-				Update |= Road_Pat_Main(&uRoad);	/* コースデータの更新 */
+				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
+				{
+					/* ラスター処理 */
+					Update |= Road_Pat_Main(&uRoad);	/* コースデータの更新 */
 
-				g_uGameStatus = 1;	/* ゲーム中 */
+					g_uGameStatus = 1;	/* ゲーム中 */
 
-				Update |= Raster_Main();	/* コースの処理 */
-
+					Update |= Raster_Main();	/* コースの処理 */
+				}
+				
 				/* 余った時間で処理 */
 				BG_main(time_st);	/* バックグランド処理 */
 				
@@ -765,30 +771,33 @@ int16_t main(int16_t argc, int8_t** argv)
 					g_unTime_Pass[0] = time_now;	/* 一時保存 */
 				}
 #endif
-				/* ロードパターン */
-				Update |= Road_Pat_Main(&uRoad);	/* コースデータの更新 */
-				if(uRoad == 0xFFFF)
+				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
 				{
-					g_uGameStatus = 4;	/* ゴール */
-				}
-				else if(uRoad >= g_stRoadInfo.Courselength - 16)
-				{
-					g_uGameStatus = 3;	/* ゴール直前 */
-				}
-				else if(uRoad <= 8)
-				{
-					g_uGameStatus = 2;	/* スタート */
-				}
-				else
-				{
-					g_uGameStatus = 1;	/* ゲーム中 */
+					/* ロードパターン */
+					Update |= Road_Pat_Main(&uRoad);	/* コースデータの更新 */
+					if(uRoad == 0xFFFF)
+					{
+						g_uGameStatus = 4;	/* ゴール */
+					}
+					else if(uRoad >= g_stRoadInfo.Courselength - 16)
+					{
+						g_uGameStatus = 3;	/* ゴール直前 */
+					}
+					else if(uRoad <= 8)
+					{
+						g_uGameStatus = 2;	/* スタート */
+					}
+					else
+					{
+						g_uGameStatus = 1;	/* ゲーム中 */
+					}
+					if(Update != 0)
+					{
+						/* ラスター処理 */
+						Update |= Raster_Main();	/* コースのラスター処理 */
+					}
 				}
 				
-				if(Update != 0)
-				{
-					/* ラスター処理 */
-					Update |= Raster_Main();	/* コースのラスター処理 */
-				}
 #ifdef DEBUG	/* デバッグコーナー */
 				if(g_bDebugMode == TRUE)
 				{
@@ -1274,7 +1283,7 @@ int16_t BG_main(uint32_t ulTimes)
 	/* コースサイクルカウンタ */
 	GetRoadCycleCount(&uCount);
 	
-//	do
+	do
 	{
 		/* 背景の処理 */
 		switch(bFlipState)
@@ -1420,7 +1429,7 @@ int16_t BG_main(uint32_t ulTimes)
 		/* デバッグ時スキップタスク */
 		if(stTask.bScene == SCENE_DEBUG)
 		{
-			if(bFlipState == Object5_G)
+			if(bFlipState == bNumCourse_Obj_Max)
 			{
 				bFlipState = StartPoint_G;
 			}
@@ -1430,6 +1439,7 @@ int16_t BG_main(uint32_t ulTimes)
 		if(bFlipState > Flip_G)
 		{
 			bFlipState = 0;
+			ret = 1;	/* 画面をフリップする */
 		}
 		BGprocces_ct++;
 
@@ -1437,8 +1447,7 @@ int16_t BG_main(uint32_t ulTimes)
 		
 		if(ret != 0)	/* ループ脱出判定 */
 		{
-			ret = 1;	/* 画面をフリップする */
-//			break;
+			break;
 		}
 #if 1
 		else if((time_now - ulTimes) >= BG_SKIP_TIME)	/* BG_SKIP_TIME[ms]以上なら処理しない */
@@ -1457,7 +1466,7 @@ int16_t BG_main(uint32_t ulTimes)
 		}
 #endif
 	}
-//	while(1);
+	while(1);
 	
 	return	ret;
 }
@@ -1743,6 +1752,50 @@ int16_t	SetDebugPos(int16_t PosX, int16_t PosY)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
+int16_t	GetDebugHis(int16_t *p_His, int16_t Num)
+{
+	int16_t	ret = 0;
+	if(Num < 0)Num = 0;
+	if(Num >= 10)Num = 9;
+	*p_His = g_DebugHis[Num];
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t	SetDebugHis(int16_t His)
+{
+	int16_t	ret = 0;
+	int16_t	i;
+	static int16_t g_DebugHisCnt = 0;
+	
+	if(g_DebugHisCnt >= 10)
+	{
+		for(i=0; i<10-1; i++)
+		{
+			g_DebugHis[i] = g_DebugHis[i+1];
+		}
+		g_DebugHis[10-1] = His;
+	}
+	else
+	{
+		g_DebugHis[g_DebugHisCnt] = His;
+		g_DebugHisCnt++;
+	}
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 void Debug_View(uint16_t uFreeRunCount)
 {
 	uint8_t bMode, bMode_rev;
@@ -1799,9 +1852,8 @@ void Debug_View(uint16_t uFreeRunCount)
 					ST_COURSE_OBJ	stCourse_Obj = {0};
 					i = Mmin(Mmax(g_uDebugNum - 0x80, 0), COURSE_OBJ_MAX-1);
 					GetCourseObj(&stCourse_Obj, i);	/* 障害物の情報 */
-					sprintf(str, "C_Obj[%d](%4d,%3d,%d)(%6d,%d),Debug(%3d)",
-						i, stCourse_Obj.x, stCourse_Obj.y, stCourse_Obj.z,
-						stCourse_Obj.uTime, stCourse_Obj.ubAlive,
+					sprintf(str, "C_Obj[%d](%4d,%3d,%d)(%d),Debug(%3d)",
+						i, stCourse_Obj.x, stCourse_Obj.y, stCourse_Obj.z, stCourse_Obj.ubAlive,
 						g_uDebugNum);	/* 障害物の情報 */
 #endif
 				}
@@ -2095,6 +2147,8 @@ void Debug_View(uint16_t uFreeRunCount)
 				break;
 			case DEBUG_FREE:
 				{
+					int16_t	i;
+					int16_t	dim[10];
 					int16_t	x, y;
 #if 0	/* 何でもOK */
 					int16_t x, y, col;
@@ -2228,9 +2282,18 @@ void Debug_View(uint16_t uFreeRunCount)
 					if((g_Input & KEY_LOWER)!=0u)dy = Minc(dy, 1);
 #endif
 #ifdef DEBUG	/* デバッグコーナー */
-					GetDebugPos(&x, &y);
+//					GetDebugPos(&x, &y);
+//					sprintf(str, "(%4d, %4d)", x, y);
 #endif
-					sprintf(str, "(%4d, %4d)", x, y);
+#ifdef DEBUG	/* デバッグコーナー */
+					for(i=0; i<10; i++)
+					{
+						GetDebugHis(&dim[i], i);
+					}
+					sprintf(str, "(%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)",
+						dim[0], dim[1], dim[2], dim[3], dim[4],
+						dim[5], dim[6], dim[7], dim[8], dim[9]);
+#endif
 				}
 				break;
 			default:
