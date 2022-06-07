@@ -205,18 +205,18 @@ Out of memoryが出ると失敗です<BR>
 対策３：3_MakeMACS.bat内のhlk.rをハイメモリで実行する。※8MB以上のMACSデータを作る場合必須<BR>
 <BR>
  ＜ハイメモリを使い方＞<BR>
-  3_MakeMACS.batを機種にあわせて<span style="color: red; ">赤字</span>を追記編集ください<BR>
+  3_MakeMACS.batを機種にあわせて<font color="Red">赤字</font>を追記編集ください<BR>
  * Xellent30の場合 + 拡張メモリの場合<BR>
-<span style="color: red; ">**`検証中`**</span><BR>
+<font color="Red">**`検証中（できないかも）`**</font><BR>
  * X68030 + 拡張メモリの場合<BR>
-<span style="color: red; ">**`検証中`**</span><BR>
+<font color="Red">**`検証中（できないかも）`**</font><BR>
  * 040 turboの場合<BR>
-<span style="color: red; ">**`検証中`**</span><BR>
+<font color="Red">**`検証中（できないかも）`**</font><BR>
  * 060 turboの場合<BR>
 `has -u MACSsrc`<BR>
-<span style="color: red; ">**`060high.x 1`**</span><BR>
-<span style="color: red; ">**`060loadhigh.x`**</span> `hlk -r MACSsrc LIST0_Tx (中略) LIST_PCM`<BR>
-<span style="color: red; ">**`060high.x 0`**</span><BR>
+<font color="Red">**`060high.x 1`**</font><BR>
+<font color="Red">**`060loadhigh.x`**</font> `hlk -r MACSsrc LIST0_Tx (中略) LIST_PCM`<BR>
+<font color="Red">**`060high.x 0`**</font><BR>
 `MakeMCS MACSsrc`<BR>
 
 上記対策で、解決しない場合は、__Clean.batを実行してX68000で行う作業から、リトライしましょう！（これが辛い…）<BR>
