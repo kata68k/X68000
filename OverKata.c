@@ -35,7 +35,7 @@
 #include "Text.h"
 #include "Trap14.h"
 
-#define	_DEBUG_MODE	/* デバッグするならコメントアウトを外す */
+//#define	_DEBUG_MODE	/* デバッグするならコメントアウトを外す */
 
 #define	BG_SKIP_TIME	(8u)
 #define	BG_TIME_OUT		(56u)
@@ -324,10 +324,13 @@ int16_t main(int16_t argc, int8_t** argv)
 				
 				Music_Play(14);	/* ローディング中 */
 				
+				/* ライバル車の初期化 */
+				InitEnemyCAR();
+				
 				//G_Load_Mem( START_PT_CG, 0, 0, 0 );	/* スタートゲート */
 				//G_Load_Mem( GOAL_PT_CG, 0, 0, 0 );	/* スタートゲート */
 				/* コースのオブジェクトの初期化 */
-				InitCourseObj();
+				//InitCourseObj();
 				
 				/* コースの背景 */
 				Road_BG_Init(1);
@@ -1429,9 +1432,9 @@ int16_t BG_main(uint32_t ulTimes)
 		/* デバッグ時スキップタスク */
 		if(stTask.bScene == SCENE_DEBUG)
 		{
-			if(bFlipState == bNumCourse_Obj_Max)
+			if(bFlipState == Object0_G)
 			{
-				bFlipState = StartPoint_G;
+				bFlipState = Enemy1_G;
 			}
 		}
 #endif

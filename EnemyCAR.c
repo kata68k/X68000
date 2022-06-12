@@ -24,6 +24,7 @@
 /* グローバル変数 */
 uint8_t		*g_pCG_EnemyCARImageBuf[ENEMYCAR_TYP_MAX][ENEMYCAR_PAT_MAX];
 const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = {96, 77, 61, 49, 39, 31, 25, 20, 16, 13, 10};
+//const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = { 198, 158, 126, 101, 79, 65, 51, 41, 33 };
 
 /* 構造体定義 */
 ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
@@ -129,178 +130,191 @@ int16_t	SetEnemyCAR(ST_ENEMYCARDATA stDat, int16_t Num)
 int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 {
 	int16_t	ret = 0;
+	uint16_t	uCount;
+	static uint16_t	uTime = 0xFFFF;
+	static uint16_t	uTimeDiff = 0;
 	
-	if(bNum < ENEMYCAR_MAX)
+	GetRoadCycleCount(&uCount);
+	
+	if(bNum == 0)
 	{
-		if(g_pStEnemyCar[bNum]->ubAlive == TRUE)
+		if(uTime == 0xFFFF)
 		{
-			int16_t	x, y, z;
-			int16_t	cal, dis;
-			int16_t	dx, dy, dz;
-			int16_t	mx, my;
-			uint16_t	ras_x, ras_y, ras_pat, ras_num;
-			int16_t	Out_Of_Disp = 0;
-			uint8_t	ubType;
-			ST_CARDATA	stMyCar;
-			ST_CRT		stCRT;
-			ST_RAS_INFO	stRasInfo;
-			ST_ROAD_INFO	stRoadInfo;
+			uTime = uCount;
+		}
+		uTimeDiff = uCount - uTime;
+		uTime = uCount;
+	}
+	
+	if(bNum >= ENEMYCAR_MAX)
+	{
+		ret = -1;
+		return ret;
+	}
+	
+	if(g_pStEnemyCar[bNum]->ubAlive == TRUE)
+	{
+		int16_t	i, y_ofst;
+		int16_t	x, y, z;
+		int16_t	cal, dis;
+		int16_t	dx, dy, dz;
+		int16_t	mx, my;
+		uint16_t	ras_x, ras_y, ras_pat, ras_num;
+		int16_t	Out_Of_Disp = 0;
+		uint8_t	ubType;
+		ST_CARDATA	stMyCar;
+		ST_CRT		stCRT;
+		ST_RAS_INFO	stRasInfo;
+		ST_ROAD_INFO	stRoadInfo;
 
 #ifdef DEBUG	/* デバッグコーナー */
-			uint8_t	bDebugMode;
-			GetDebugMode(&bDebugMode);
+		uint8_t	bDebugMode;
+		GetDebugMode(&bDebugMode);
 #endif
-			ras_x = 0;
-			ras_y = 0;
-			
-			x = g_pStEnemyCar[bNum]->x;
-			y = g_pStEnemyCar[bNum]->y;
-			z = g_pStEnemyCar[bNum]->z;
-			ubType = g_pStEnemyCar[bNum]->ubCarType;
-			
-			GetCRT(&stCRT, bMode);
-			GetMyCar(&stMyCar);
-			GetRasterInfo(&stRasInfo);
-			GetRoadInfo(&stRoadInfo);
+		ras_x = 0;
+		ras_y = 0;
+		
+		x = g_pStEnemyCar[bNum]->x;
+		y = g_pStEnemyCar[bNum]->y;
+		z = g_pStEnemyCar[bNum]->z;
+		ubType = g_pStEnemyCar[bNum]->ubCarType;
+		
+		GetCRT(&stCRT, bMode);
+		GetMyCar(&stMyCar);
+		GetRasterInfo(&stRasInfo);
+		GetRoadInfo(&stRoadInfo);
 
-			/* ライバル車との距離 */
-			if(g_pStEnemyCar[bNum]->VehicleSpeed == 0)
-			{
-				dis = 1;
-			}
-			else
-			{
-				dis = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
-			}
-			y += dis;
-			
-			if(y < 0)
-			{
-				Out_Of_Disp = -1;	/* 先を越された */
-			}
-			
-#if 0
-			/* 位置 */
-			switch(z)
-			{
-			case 0:
-				my = Mmax(Mmul_1p00(y), 0);
-				break;
-			case 1:
-				my = Mmax(Mmul_0p80(y), 0);
-				break;
-			case 2:
-				my = Mmax(Mmul_0p62(y), 0);
-				break;
-			case 3:
-				my = Mmax(Mmul_0p50(y), 0);
-				break;
-			case 4:
-				my = Mmax(Mmul_0p40(y), 0);
-				break;
-			case 5:
-				my = Mmax(Mmul_0p30(y), 0);
-				break;
-			case 6:
-			case 7:
-			case 8:
-				my = Mmax(Mmul_0p20(y), 0);
-				break;
-			case 9:
-			case 10:
-			case 11:
-				my = Mmax(Mmul_0p10(y), 0);
-				break;
-			default:
-				my = Mmax(Mmul_1p00(y), 0);
-				break;
-			}
-#endif
-			my = y;
-			ras_num = Mmin( my, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
-
-			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
-			
-			/* センター */
-			mx = (int16_t)ROAD_CT_POINT + (int16_t)Mu10b_To_s9b(ras_x);	/* 0-511 => (-256 < 0 < 255) */
-			
-			if(x < 8)
-			{
-				cal = Mmul16(x) * my;
-				mx -= Mdiv128(cal);
-			}
-			else
-			{
-				cal = x-8;
-				cal = Mmul16(cal) * my;
-				mx += Mdiv128(cal);
-			}
-
-			if( (ret >= 0) && (my < Y_MAX_WINDOW) && (Out_Of_Disp == 0))
-			{
-				uint16_t i;
-				dx = mx;
-				dy = my + stRasInfo.st;
-				z = 0;
-				/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を256倍して16で割った pat 0-10 */
-				for(i=ENEMYCAR_PAT_MAX-1; i > 0; i--)
-				{
-					if(g_nViewRateTbl[i] > my)
-					{
-						z = i;
-						break;
-					}
-				}
-				dz = z;
-				
-				/* 当たり判定の設定 */
-				g_pStEnemyCar[bNum]->sx = dx - (Mdiv2(ENEMY_CAR_1_W >> dz));
-				g_pStEnemyCar[bNum]->ex = dx + (Mdiv2(ENEMY_CAR_1_W >> dz));
-				g_pStEnemyCar[bNum]->sy = dy - (Mdiv2(ENEMY_CAR_1_H >> dz));
-				g_pStEnemyCar[bNum]->ey = dy + (Mdiv2(ENEMY_CAR_1_H >> dz));
-				
-				/* 描画 */
-				Out_Of_Disp = Put_EnemyCAR(	stCRT.hide_offset_x + dx,
-											stCRT.hide_offset_y + dy,
-											dz,
-											bMode_rev, ubType);
-				if(Out_Of_Disp != 0)	/* 描画領域外 */
-				{
-					/* 出現ポイントで描画領域外となるので要検討 */
-//					g_pStEnemyCar[bNum]->ubAlive = FALSE;
-				}
-				else
-				{
-				}
-			}
-			else
-			{
-				if(my >= Y_MAX_WINDOW)	/* 追い抜かした */
-				{
-					ADPCM_Play(14);	/* SE：自動車通過 */
-					S_Add_Score();	/* 加点 */
-				}
-				if(Out_Of_Disp < 0)
-				{
-//					ADPCM_Play(16);	/* SE：WAKAME */
-				}
-				g_pStEnemyCar[bNum]->ubAlive = FALSE;
-			}
-
-			g_pStEnemyCar[bNum]->x = x;
-			g_pStEnemyCar[bNum]->y = y;
-			g_pStEnemyCar[bNum]->z = z;
+		/* ライバル車との距離 */
+		if(uTimeDiff == 0)
+		{
+			/* 変化なし */
 		}
 		else
 		{
-			/* nop */
+			dis = stMyCar.VehicleSpeed - g_pStEnemyCar[bNum]->VehicleSpeed;
+			
+			if(g_pStEnemyCar[bNum]->VehicleSpeed == 0)
+			{
+				y += 1;
+			}
+			else if(dis == 0)
+			{
+				/* 変化ナシ */
+			}
+			else if(dis > 0)
+			{
+				y += 1;
+			}
+			else
+			{
+				y -= 1;
+			}
 		}
+		
+		if(y < 0)
+		{
+			Out_Of_Disp = -1;	/* 先を越された */
+		}
+		
+		ras_num = Mmin( y, stRasInfo.ed );	/* ラスター情報の配列番号を算出 */
+
+		if(ras_num > 2)
+		{
+			y_ofst = 0;
+			for(i = ras_num; i < stRasInfo.ed; i++)
+			{
+				uint16_t	ras_x_o, ras_y_o, ras_pat_o;
+				ret = GetRasterIntPos(&ras_x_o, &ras_y_o, &ras_pat_o, i - 1, FALSE);	/* 配列番号のラスター情報取得 */
+				ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, i, FALSE);	/* 配列番号のラスター情報取得 */
+				if((ras_pat_o != 0) && (ras_pat == 0))	/* 最初の0の境界で設定する */
+				{
+					break;
+				}
+				y_ofst++;
+			}
+		}
+		else
+		{
+			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
+			y_ofst = 0;
+		}
+		y += y_ofst;
+		my = y;
+		
+		/* センター */
+		mx = (int16_t)ROAD_CT_POINT + (int16_t)Mu10b_To_s9b(ras_x);	/* 0-1023 => (-512 < 0 < 512) */
+		
+		if(x < 8)
+		{
+			cal = Mmul16(x) * my;
+			mx -= Mdiv128(cal);
+		}
+		else
+		{
+			cal = x-8;
+			cal = Mmul16(cal) * my;
+			mx += Mdiv128(cal);
+		}
+
+		dx = mx;
+		dy = my + stRasInfo.st;
+		dz = z;
+
+		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を256倍して16で割った pat 0-10 */
+		do
+		{
+			if(Mmul2(my) >= g_nViewRateTbl[z])
+			{
+				dz = Mdec(z, 1);
+	//			y = 0;
+			}
+			else
+			{
+				/* 前回値保持 */
+				break;
+			}
+			z = dz;
+		}
+		while(1);
+
+		if( Out_Of_Disp == 0 )	/* 水平線より下側 */
+		{
+			/* 当たり判定の設定 */
+			g_pStEnemyCar[bNum]->sx = dx - (Mdiv2(ENEMY_CAR_1_W >> dz));
+			g_pStEnemyCar[bNum]->ex = dx + (Mdiv2(ENEMY_CAR_1_W >> dz));
+			g_pStEnemyCar[bNum]->sy = dy - (Mdiv2(ENEMY_CAR_1_H >> dz));
+			g_pStEnemyCar[bNum]->ey = dy + (Mdiv2(ENEMY_CAR_1_H >> dz));
+			
+			/* 描画 */
+			Out_Of_Disp = Put_EnemyCAR(	stCRT.hide_offset_x + dx,
+										stCRT.hide_offset_y + dy,
+										dz,
+										bMode_rev, ubType);
+			
+			if(my >= Y_MAX_WINDOW)	/* 追い抜かした */
+			{
+				ADPCM_Play(14);	/* SE：自動車通過 */
+				S_Add_Score();	/* 加点 */
+				
+				g_pStEnemyCar[bNum]->ubAlive = FALSE;
+			}
+		}
+		else
+		{
+			ADPCM_Play(16);	/* SE：WAKAME */
+			
+			g_pStEnemyCar[bNum]->ubAlive = FALSE;
+		}
+
+		g_pStEnemyCar[bNum]->x = x;
+		g_pStEnemyCar[bNum]->y = y;
+		g_pStEnemyCar[bNum]->z = z;
 	}
 	else
 	{
-		ret = -1;
+		/* nop */
 	}
-	
+
 	return ret;
 }
 

@@ -15,10 +15,12 @@
 #include "MFP.h"
 #include "MyCar.h"
 #include "Output_Text.h"
+#include "PCG.h"
 #include "Raster.h"
 
-const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 198, 158, 126, 101, 79, 65, 51, 41, 33 };
-
+//const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 198, 158, 126, 101, 79, 65, 51, 41, 33 };	/* X軸基準の場合 */
+const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 99, 79, 63, 50, 39, 32, 25, 20, 16 };
+//														{96, 77, 61, 49, 39, 31, 25, 20, 16, 13, 10};
 /* 変数定義 */
 uint8_t		*g_pCG_Course_ObjImageBuf[COURSE_OBJ_TYP_MAX][COURSE_OBJ_PAT_MAX];
 
@@ -132,9 +134,15 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		uTimeDiff = uCount - uTime;
 		uTime = uCount;
 	}
+#ifdef DEBUG	/* デバッグコーナー */
+	{
+//		SetDebugHis(uTimeDiff);
+	}
+#endif
 	
 	if(g_stCourse_Obj[bNum].ubAlive == TRUE)
 	{
+		int16_t	i, y_ofst;
 		int16_t	x, y, z;
 		int16_t	dx, dy, dz;
 		int16_t	mx, my;
@@ -155,13 +163,13 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		GetMyCar(&stMyCar);
 		GetMyCarSpeed(&speed);		/* 車速を得る */
 
-		if(g_stCourse_Obj[bNum].ubPos == 0)
+		if(g_stCourse_Obj[bNum].ubPos == TRUE)	/* 左 */
 		{
-			bEven = TRUE;
+			bEven = TRUE;	/* 左 */
 		}
 		else
 		{
-			bEven = FALSE;
+			bEven = FALSE;	/* 右 */
 		}
 
 		/* 前回値 */
@@ -183,18 +191,38 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			}
 			else
 			{
-				y += (uTimeDiff * speed);
+				y += uTimeDiff;
 			}
 		}
-		my = y;
 		
 		/* 車幅(片側)は、4mと定義する。 */
 		/* 4mで192dotであれば、1dotあたり0.021mと定義する。 */
 		/* 画面奥が1dotの道幅しかないので画面奥は192m先にとなる。 */
-		ras_num = Mmax(Mmin(my, stRasInfo.ed), 2);		/* ラスター情報の配列番号を算出 */
+		ras_num = Mmax(Mmin(y, stRasInfo.ed), 2);		/* ラスター情報の配列番号を算出 */
 		
-		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
-
+		if(ras_num > 2)
+		{
+			y_ofst = 0;
+			for(i = ras_num; i < stRasInfo.ed; i++)
+			{
+				uint16_t	ras_x_o, ras_y_o, ras_pat_o;
+				ret = GetRasterIntPos(&ras_x_o, &ras_y_o, &ras_pat_o, i - 1, FALSE);	/* 配列番号のラスター情報取得 */
+				ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, i, FALSE);	/* 配列番号のラスター情報取得 */
+				if((ras_pat_o != 0) && (ras_pat == 0))	/* 最初の0の境界で設定する */
+				{
+					break;
+				}
+				y_ofst++;
+			}
+		}
+		else
+		{
+			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
+			y_ofst = 0;
+		}
+		y += y_ofst;
+		my = y;
+		
 		/* センター */
 		mx = (int16_t)ROAD_CT_POINT + (int16_t)Mu10b_To_s9b(ras_x);	/* 0-1023 => (-512 < 0 < 512) */
 		
@@ -209,6 +237,11 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		}
 		/* 水平線 */
 		dy = stRasInfo.st + my;
+#ifdef DEBUG	/* デバッグコーナー */
+		{
+			SetDebugHis(dy);
+		}
+#endif
 		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
 		//dz = Mmin( Mmax( 3 - (((z<<8) / (z + ROAD_ED_POINT))>>5) , 0), 3 );
 		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して16で割った(=7pat) */
@@ -238,7 +271,15 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 										ubType,
 										bEven);
 		
-		if(Out_Of_Disp != 0)
+#ifdef DEBUG	/* デバッグコーナー */
+		Draw_Line(	stCRT.hide_offset_x,
+					stCRT.hide_offset_y + dy,
+					stCRT.hide_offset_x + WIDTH, 
+					stCRT.hide_offset_y + dy,
+					10,
+					0xFFFF);
+#endif
+		if( (y < 0) || (y >= Y_MAX_WINDOW) )
 		{
 			x = 0;
 			y = 0;
@@ -255,11 +296,6 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		int16_t	i, cnt = 0;
 		int16_t	MinVal = 32767;
 		
-		g_stCourse_Obj[bNum].ubType++;
-		if(g_stCourse_Obj[bNum].ubType >= COURSE_OBJ_TYP_MAX)
-		{
-			g_stCourse_Obj[bNum].ubType = 0u;
-		}
 		g_stCourse_Obj[bNum].x = 0;
 		g_stCourse_Obj[bNum].y = 0;
 		g_stCourse_Obj[bNum].z = COURSE_OBJ_PAT_MAX - 1;
@@ -270,25 +306,41 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			{
 				MinVal = Mmin( MinVal, g_stCourse_Obj[i].y );
 			}
-			
-			if(g_stCourse_Obj[i].y == 0)
+			else
 			{
-				cnt++;
+				if(g_stCourse_Obj[i].ubPos == TRUE)
+				{
+					cnt++;
+				}
+				else
+				{
+					cnt++;
+				}
 			}
 		}
 		
-		if( (MinVal >= g_nObjViewRateTbl[8]) ||
-			(cnt >= COURSE_OBJ_MAX) )
+		if( (MinVal > g_nObjViewRateTbl[5]) || (cnt > 3) )
 		{
+			g_stCourse_Obj[bNum].ubType++;
+			if(g_stCourse_Obj[bNum].ubType >= COURSE_OBJ_TYP_MAX)
+			{
+				g_stCourse_Obj[bNum].ubType = 0u;
+			}
 			g_stCourse_Obj[bNum].ubAlive = TRUE;
 		}
+		
 #ifdef DEBUG	/* デバッグコーナー */
 //		if((bEven == TRUE) && (bNum == 0) && (bMode_rev == 2))
 		{
-			SetDebugHis(uTimeDiff);
+//			SetDebugHis(uTimeDiff);
 		}
 #endif
 	}
+#ifdef DEBUG	/* デバッグコーナー */
+	{
+//		SetDebugHis(g_stCourse_Obj[bNum].ubAlive);
+	}
+#endif
 	
 	return ret;
 }
@@ -330,7 +382,7 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 		ubPos_H = POS_LEFT;
 	}
 	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_BOTTOM, PatNumber);
-	
+
 	return	ret;
 }
 
@@ -351,7 +403,7 @@ int16_t	Sort_Course_Obj(void)
 	
 	while(1)
 	{
-		for(i=0; i<COURSE_OBJ_MAX; i++)
+		for(i=0; i<COURSE_OBJ_MAX-1; i++)
 		{
 			if(g_stCourse_Obj[i].y > g_stCourse_Obj[i+1].y)
 			{
@@ -596,8 +648,9 @@ int16_t	Set_Course_TmpObject(uint16_t uCount, uint8_t ubPictNum)
 {
 	int16_t	ret = 0;
 
-	uint8_t	ubMode;
+	uint8_t	ubMode, ubModeRev;
 	int8_t	bZoom;
+	int16_t	i, y_ofst;
 	int16_t	x, y;
 	uint16_t	ras_x, ras_y, ras_pat, ras_num;
 	uint16_t	*pSrcBuf = NULL;
@@ -612,26 +665,55 @@ int16_t	Set_Course_TmpObject(uint16_t uCount, uint8_t ubPictNum)
 	GetDebugNum(&uDebugNum);
 #endif
 	
-	GetGameMode(&ubMode);	/* 現在のモード取得 */
-
-	pSrcBuf = Get_PicImageInfo( ubPictNum, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
-
-	ras_num = uCount;
-	
 	GetRasterInfo(&stRasInfo);
+	GetGameMode(&ubMode);	/* 現在のモード取得 */
+	GetCRT(&stCRT, ubMode);	/* 現在の画面座標を取得 */
+
+	y = uCount;
+	
+	ras_num = Mmax(Mmin(uCount, stRasInfo.ed), 2);		/* ラスター情報の配列番号を算出 */
+	
+	if(ras_num > 2)
+	{
+		y_ofst = 0;
+		for(i = ras_num; i < stRasInfo.ed; i++)
+		{
+			uint16_t	ras_x_o, ras_y_o, ras_pat_o;
+			ret = GetRasterIntPos(&ras_x_o, &ras_y_o, &ras_pat_o, i - 1, FALSE);	/* 配列番号のラスター情報取得 */
+			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, i, FALSE);	/* 配列番号のラスター情報取得 */
+			if((ras_pat_o != 0) && (ras_pat == 0))	/* 最初の0の境界で設定する */
+			{
+				break;
+			}
+			y_ofst++;
+		}
+	}
+	else
+	{
+		ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
+		y_ofst = 0;
+	}
+	y += y_ofst;
+	
 	ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
 	
-	GetCRT(&stCRT, ubMode);	/* 現在の画面座標を取得 */
-	x = stCRT.hide_offset_x - Mu10b_To_s9b((int16_t)ras_x) + Mdiv2(uWidth);
-	y = stCRT.hide_offset_y + Mu10b_To_s9b((int16_t)ras_y);
+	x = stCRT.hide_offset_x + (int16_t)ROAD_CT_POINT + Mu10b_To_s9b((int16_t)ras_x);
+	y = stCRT.hide_offset_y + stRasInfo.st + y;
 	
 	bZoom = (int8_t)uCount - 9;
 
 	/* 描画対象をOFFスクリーンへ */
-	if(ubMode == 1)ubMode = 2;
-	else ubMode = 1;
-	
-	G_Stretch_Pict_toVRAM(x, y, 0, ubMode, POS_MID, POS_CENTER, pSrcBuf, uWidth, uHeight, bZoom, ubPictNum);
+	if(ubMode == 1)
+	{
+		ubModeRev = 2;
+	}
+	else
+	{
+		ubModeRev = 1;
+	}
+
+	pSrcBuf = Get_PicImageInfo( ubPictNum, &uWidth, &uHeight, &uFileSize);	/* イメージ情報の取得 */
+	G_Stretch_Pict_toVRAM(x, y, 0, ubModeRev, POS_MID, POS_CENTER, pSrcBuf, uWidth, uHeight, bZoom, ubPictNum);
 
 #ifdef DEBUG
 //	printf("H(%d)=(%d, %d, %d)(%d, %d)(%d, %d)\n", ubMode, uCount, ubPictNum, bZoom, x, y, uWidth, uHeight);

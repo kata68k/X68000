@@ -1431,6 +1431,11 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 #endif
 		}
 	}
+
+#ifdef DEBUG
+	Draw_Box( dst_x, dst_y, dst_ex, dst_ey, 8, 0xFFFF);
+#endif
+	
 	return	ret;
 }
 
