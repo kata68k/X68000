@@ -308,18 +308,17 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			}
 			else
 			{
-				if(g_stCourse_Obj[i].ubPos == TRUE)
+				if(g_stCourse_Obj[i].ubPos == g_stCourse_Obj[bNum].ubPos)
 				{
 					cnt++;
 				}
 				else
 				{
-					cnt++;
 				}
 			}
 		}
 		
-		if( (MinVal > g_nObjViewRateTbl[5]) || (cnt > 3) )
+		if( (MinVal > g_nObjViewRateTbl[6]) && (cnt > 1) )
 		{
 			g_stCourse_Obj[bNum].ubType++;
 			if(g_stCourse_Obj[bNum].ubType >= COURSE_OBJ_TYP_MAX)
