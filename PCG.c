@@ -334,6 +334,27 @@ void PCG_INIT(void)
 				ubOK = TRUE;
 				break;
 			}
+			case OBJ_SHADOW:	/* 影1*3 */
+			{
+				stPCG.Pat_w			= 3;
+				stPCG.Pat_h			= 1;
+				stPCG.Pat_AnimeMax	= 1;
+				stPCG.Pat_DataMax	= 3;	/* w x h x AnimeMax = DataMax */
+				
+				PCG_Load_Data("data/sp/BG.SP", 0x98, stPCG, uPCG_num, 0);
+				PCG_Load_PAL_Data("data/sp/BG.PAL", 0x0B, 0x0B);
+				
+				uBufSize = stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
+
+				/* スプライト定義設定 */
+				for(j=0; j < uBufSize; j++)
+				{
+					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, 0x0B, 0xFF);	/* パターンコードテーブル */
+				}
+				
+				ubOK = TRUE;
+				break;
+			}
 			case ETC_PCG_SONIC:				/* ソニック */
 			{
 				stPCG.Pat_w			= 3;

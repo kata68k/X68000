@@ -18,6 +18,7 @@
 #include "MFP.h"
 #include "Music.h"
 #include "MyCar.h"
+#include "PCG.h"
 #include "Raster.h"
 #include "Score.h"
 
@@ -163,7 +164,6 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		int16_t	Out_Of_Disp = 0;
 		uint8_t	ubType;
 		ST_CARDATA	stMyCar;
-		ST_CRT		stCRT;
 		ST_RAS_INFO	stRasInfo;
 		ST_ROAD_INFO	stRoadInfo;
 
@@ -179,7 +179,6 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		z = g_pStEnemyCar[bNum]->z;
 		ubType = g_pStEnemyCar[bNum]->ubCarType;
 		
-		GetCRT(&stCRT, bMode);
 		GetMyCar(&stMyCar);
 		GetRasterInfo(&stRasInfo);
 		GetRoadInfo(&stRoadInfo);
@@ -286,8 +285,8 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			g_pStEnemyCar[bNum]->ey = dy + (Mdiv2(ENEMY_CAR_1_H >> dz));
 			
 			/* •`‰æ */
-			Out_Of_Disp = Put_EnemyCAR(	stCRT.hide_offset_x + dx,
-										stCRT.hide_offset_y + dy,
+			Out_Of_Disp = Put_EnemyCAR(	dx,
+										dy,
 										dz,
 										bMode_rev, ubType);
 			
@@ -380,11 +379,14 @@ int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode, uint
 {
 	int16_t	ret = 0;
 
+	int16_t	sp_x, sp_y;
+	ST_PCG	*p_stPCG = NULL;
 #if 1
 	int16_t PatNumber;
 	uint16_t	*pSrcBuf = NULL;
 	uint32_t	uWidth=0, uHeight=0;
 	BITMAPINFOHEADER *pInfo;
+	ST_CRT		stCRT;
 	
 	if(ubType >= ENEMYCAR_TYP_MAX)return -1;
 	if(Size >= ENEMYCAR_PAT_MAX)return -1;
@@ -396,8 +398,11 @@ int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode, uint
 	uHeight	= pInfo->biHeight;
 	PatNumber = ENEMYCAR_CG + ubType;
 	
+	GetCRT(&stCRT, ubMode);
 	
-	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, POS_MID, POS_CENTER, PatNumber);
+	ret = G_BitBlt_From_Mem(stCRT.view_offset_x + x, stCRT.view_offset_y + y, 0,
+							pSrcBuf, uWidth, uHeight, ubMode, POS_MID, POS_CENTER, PatNumber);
+
 #else
 	int16_t	i;
 	uint16_t	w, h;
@@ -433,6 +438,23 @@ int16_t	Put_EnemyCAR(uint16_t x, uint16_t y, uint16_t Size, uint8_t ubMode, uint
 					0,	0+w,	height_sum,	h,	0,
 					ubMode, POS_MID, POS_CENTER);
 #endif
+	sp_x = x + SP_X_OFFSET - 24;
+	sp_y = y + Mdiv2(uHeight);
+	
+	p_stPCG = PCG_Get_Info(OBJ_SHADOW);	/* ‰e1*3 */
+	if(p_stPCG != NULL)
+	{
+		p_stPCG->x = sp_x;
+		p_stPCG->y = sp_y;
+		if(ret == 0)
+		{
+			p_stPCG->update	= TRUE;
+		}
+		else
+		{
+			p_stPCG->update	= FALSE;
+		}
+	}
 	
 	return	ret;
 }

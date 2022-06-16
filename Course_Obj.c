@@ -152,12 +152,10 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		int16_t	speed = 0;
 		uint8_t	ubType;
 
-		ST_CRT	stCRT;
 		ST_ROAD_INFO	stRoadInfo;
 		ST_RAS_INFO		stRasInfo;
 		ST_CARDATA		stMyCar;
 		
-		GetCRT(&stCRT, bMode);
 		GetRoadInfo(&stRoadInfo);
 		GetRasterInfo(&stRasInfo);
 		GetMyCar(&stMyCar);
@@ -264,21 +262,14 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		while(1);
 		
 		/* 描画 */
-		Out_Of_Disp = Put_CouseObject(	stCRT.hide_offset_x + dx,
-										stCRT.hide_offset_y + dy,
+		Out_Of_Disp = Put_CouseObject(	dx,
+										dy,
 										dz,
 										bMode_rev,
 										ubType,
 										bEven);
+
 		
-#ifdef DEBUG	/* デバッグコーナー */
-		Draw_Line(	stCRT.hide_offset_x,
-					stCRT.hide_offset_y + dy,
-					stCRT.hide_offset_x + WIDTH, 
-					stCRT.hide_offset_y + dy,
-					10,
-					0xFFFF);
-#endif
 		if( (y < 0) || (y >= Y_MAX_WINDOW) )
 		{
 			x = 0;
@@ -355,11 +346,16 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 {
 	int16_t	ret = 0;
 
+	int16_t	sp_x, sp_y;
 	int16_t PatNumber;
 	uint16_t	*pSrcBuf = NULL;
 	uint32_t	uWidth=0, uHeight=0;
 	uint8_t		ubPos_H;
 	BITMAPINFOHEADER *pInfo;
+	ST_PCG	*p_stPCG = NULL;
+	ST_CRT			stCRT;
+
+	GetCRT(&stCRT, ubMode);
 	
 	if(ubType >= COURSE_OBJ_TYP_MAX)return -1;
 	if(Size >= COURSE_OBJ_PAT_MAX)return -1;
@@ -375,13 +371,42 @@ int16_t	Put_CouseObject(int16_t x, int16_t y, uint16_t Size, uint8_t ubMode, uin
 	if(ubPos == TRUE)	/* 左 */
 	{
 		ubPos_H = POS_RIGHT;
+		sp_x = x + SP_X_OFFSET - Mdiv2(uWidth) - 24;
 	}
 	else				/* 右 */
 	{
 		ubPos_H = POS_LEFT;
+		sp_x = x + SP_X_OFFSET + Mdiv2(uWidth) - 24;
 	}
-	ret = G_BitBlt_From_Mem( x, y, 0, pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_BOTTOM, PatNumber);
+	sp_y = y;
+	
+	ret = G_BitBlt_From_Mem(stCRT.view_offset_x + x, stCRT.view_offset_y + y, 0,
+							pSrcBuf, uWidth, uHeight, ubMode, ubPos_H, POS_BOTTOM, PatNumber);
 
+#ifdef DEBUG	/* デバッグコーナー */
+	Draw_Line(	stCRT.view_offset_x,
+				stCRT.view_offset_y + y,
+				stCRT.view_offset_x + WIDTH, 
+				stCRT.view_offset_y + y,
+				10,
+				0xFFFF);
+#endif
+
+	p_stPCG = PCG_Get_Info(OBJ_SHADOW);	/* 影1*3 */
+	if(p_stPCG != NULL)
+	{
+		p_stPCG->x = sp_x;
+		p_stPCG->y = sp_y;
+		if(ret == 0)
+		{
+			p_stPCG->update	= TRUE;
+		}
+		else
+		{
+			p_stPCG->update	= FALSE;
+		}
+	}
+	
 	return	ret;
 }
 

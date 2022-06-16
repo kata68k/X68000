@@ -35,6 +35,7 @@ enum{
 	ROAD_PCG_SIGNAL_1,			/* シグナルランプ */
 	ROAD_PCG_SIGNAL_2,			/* シグナルランプ */
 	ROAD_PCG_SIGNAL_3,			/* シグナルランプ */
+	OBJ_SHADOW,					/* 影1*3 */
 	ETC_PCG_SONIC,				/* ソニック */
 	ETC_PCG_KISARA,				/* キサラ */
 	ETC_PCG_MAN,				/* ピクト君 */
