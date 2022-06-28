@@ -155,7 +155,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 	
 	if(g_pStEnemyCar[bNum]->ubAlive == TRUE)
 	{
-		int16_t	i, y_ofst;
+		int16_t	i, y_ofst, y_stat;
 		int16_t	x, y, z;
 		int16_t	cal, dis;
 		int16_t	dx, dy, dz;
@@ -184,9 +184,11 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		GetRoadInfo(&stRoadInfo);
 
 		/* ライバル車との距離 */
-		if(uTimeDiff == 0)
+		if(uTimeDiff == 0)	/* 前回との時間差 */
 		{
 			/* 変化なし */
+			y_stat = 0;
+			dis = 0;
 		}
 		else
 		{
@@ -195,18 +197,11 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 			if(g_pStEnemyCar[bNum]->VehicleSpeed == 0)
 			{
 				y += 1;
-			}
-			else if(dis == 0)
-			{
-				/* 変化ナシ */
-			}
-			else if(dis > 0)
-			{
-				y += 1;
+				y_stat = 0;
 			}
 			else
 			{
-				y -= 1;
+				y_stat = dis;
 			}
 		}
 		
@@ -231,12 +226,26 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 				}
 				y_ofst++;
 			}
+
+			if(y_stat == 0)
+			{
+				/* 何もしない */
+			}
+			else
+			{
+				y_ofst = Mmax(y_stat / Mmax((stRasInfo.size - y), 1), 1);
+			}
 		}
 		else
 		{
 			ret = GetRasterIntPos(&ras_x, &ras_y, &ras_pat, ras_num, FALSE);	/* 配列番号のラスター情報取得 */
-			y_ofst = 0;
+			y_ofst = 3;
 		}
+#ifdef DEBUG	/* デバッグコーナー */
+		{
+			SetDebugHis(y_ofst);
+		}
+#endif
 		y += y_ofst;
 		my = y;
 		

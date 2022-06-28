@@ -35,7 +35,7 @@
 #include "Text.h"
 #include "Trap14.h"
 
-//#define	_DEBUG_MODE	/* デバッグするならコメントアウトを外す */
+#define	_DEBUG_MODE	/* デバッグするならコメントアウトを外す */
 
 #define	BG_SKIP_TIME	(8u)
 #define	BG_TIME_OUT		(56u)

@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include "usr_style.h"
 #include "usr_macro.h"
 
-#define VSYNC_sec	(1.0f/55.45767f)
+#define VSYNC_sec	(0.01803177)/*(1.0f/55.45767f)*/
 
 int16_t CGcnv(int16_t, int16_t, int16_t);
 int16_t BLTcnv(int16_t, int16_t, int16_t, int16_t);
@@ -227,16 +229,20 @@ int16_t BLTcnv(int16_t start_cnt, int16_t inc_val, int16_t end_cnt, int16_t mode
 int16_t MACScnv(int16_t start_cnt, int16_t inc_val, int16_t end_cnt, int16_t mode, int16_t sec)
 {
 	FILE *fp;
-	int16_t ret = 0;
-	int16_t cnt, r_count;
-	float f_frame, f_fps, f_spf, f_time, f_r_diff, r_time, r_time_old;
-	int16_t frame;
 	int8_t fname[256];
+	int16_t ret = 0;
+	int16_t frame;
+	int16_t cnt, r_count, b_frame;
+	float f_frame, f_fps, f_spf, f_time, f_r_diff, f_r_diff_old;
+	float r_time, r_time_old;
 	float f1, f2;
 
-	f_time = 0;
-	r_time = 0;
-	r_time_old = 0;
+	f_time = (float)0;
+	f_r_diff = (float)0;
+	f_r_diff_old = (float)0;
+	r_time = (float)0;
+	r_time_old = (float)0;
+	
 	frame = end_cnt + 1;	/* 素材の総数 */
 	
 	switch(mode)
@@ -263,42 +269,47 @@ int16_t MACScnv(int16_t start_cnt, int16_t inc_val, int16_t end_cnt, int16_t mod
 			f_frame = (float)frame / inc_val;	/* 演算対象フレーム総数の算出[f] */
 			f_fps = f_frame / (float)sec;		/* 一秒あたり何フレームなのか？算出[fps] */
 			f_spf = (float)sec / f_frame;		/* 一フレームあたり何秒なのか？算出[spf] */
+			b_frame = (60 / (int16_t)f_fps);	/* ざっくりWAIT値 */
 			
-			printf("%f, %f, %f\n", f_fps, f_spf, VSYNC_sec);
-			
+#if 0
+			printf("%f[fps], %f[sec/f], %f[sec], %d\n", f_fps, f_spf, VSYNC_sec, b_frame);
+#endif
 			for(cnt = start_cnt; cnt <= end_cnt; cnt += inc_val)
 			{
 				f_time = ((float)cnt) * f_spf;	/* 現フレームの時間[sec] Alpha */
 				
 				if(cnt == 0)	/* 初回が０の場合 */
 				{
-					r_count = 0;
-					r_time = 0;
-					f_r_diff = 0;
+					r_count = (float)0;
+					r_time = (float)0;
+					f_r_diff = (float)0;
 				}
 				else
 				{
-					f1 = f_time - (r_time + f_r_diff + (((float)(inc_val-0)) * VSYNC_sec));
+					f1 = f_time - (r_time + f_r_diff + (((float)(b_frame-0)) * VSYNC_sec));
 					
-					f2 = f_time - (r_time + f_r_diff + (((float)(inc_val-1)) * VSYNC_sec));
+					f2 = f_time - (r_time + f_r_diff + (((float)(b_frame-1)) * VSYNC_sec));
 
-					printf("%4d, %f, %f\n", cnt, f1, f2);
-					
 					if(fabs(f1) < fabs(f2))
 					{
-						r_count = inc_val;
+						r_count = b_frame;
 					}
 					else
 					{
-						r_count = inc_val - 1;
+						r_count = b_frame - 1;
 					}
-					
-					r_time = r_time + (((float)r_count) * VSYNC_sec);	/* 68で表示した場合何フレーム目の時間 Beta */
-					
-					f_r_diff = r_time - f_time + f_r_diff;
+#if 0
+					printf("c=%4d, r_c=%d, f_t=%f, r_t=%f, fd=%f, f1=%f, f2=%f\n", cnt, r_count, f_time, r_time, f_r_diff, fabs(f1), fabs(f2) );
+#endif
+					r_time_old = r_time;
+					r_time = r_time_old + (((float)r_count) * VSYNC_sec);	/* 68で表示した場合何フレーム目の時間 Beta */
+					f_r_diff_old = f_r_diff;
+					f_r_diff = r_time - f_time + f_r_diff_old;
 				}
 				
+#if 0
 				printf("%4d, %f, %f, %f\n", cnt, f_time, r_time, f_r_diff);
+#endif
 				
 				if( (r_count > 0) || (cnt == start_cnt) )
 				{
@@ -399,7 +410,7 @@ int16_t main(int16_t argc, int8_t** argv)
 			}
 			else
 			{
-				printf("CG%05d ～ CG%05d まで %d ずつ処理するバッチファイルを作成します(合計：%d枚)\n", cnt[0], cnt[2], cnt[1],((cnt[2]+1)-(cnt[0]+1))/cnt[1]);
+				printf("CG%05d ～ CG%05d まで %d ずつ処理するバッチファイルを作成します(合計：%d枚)\n", cnt[0], cnt[2], cnt[1],((cnt[2]+1)-(cnt[0]))/cnt[1]);
 				printf("動画の長さは %d分%d秒 です\n", cnt[3] / 60, cnt[3] % 60);
 				printf("---------------------------\n");
 				/* 画像変換 */
@@ -435,7 +446,7 @@ int16_t main(int16_t argc, int8_t** argv)
 		printf("    リンカ　　　　　：hlk.x\n");
 		printf("    MACSデータ変換　：MakeMCS.x\n");
 		printf("------------------------------\n");
-		printf("ver1.0.1\n");
+		printf("ver1.0.2\n");
 	}
 	
 #if 0

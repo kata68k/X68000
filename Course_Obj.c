@@ -237,7 +237,7 @@ int16_t Course_Obj_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		dy = stRasInfo.st + my;
 #ifdef DEBUG	/* デバッグコーナー */
 		{
-			SetDebugHis(dy);
+//			SetDebugHis(dy);
 		}
 #endif
 		/* 透視投影率＝焦点距離／（焦点距離＋Z位置）を２５６倍して６４で割った(/4pat) */
