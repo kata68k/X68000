@@ -184,6 +184,16 @@ int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize, int8_t bMode)
 	
 	if(pBuff != NULL)
 	{
+		if(pBuff >= (int8_t*)0x1000000)	/* TS-6BE16相当のアドレス値以上で確保されているか？ */
+		{
+			printf("ハイメモリで再生します");
+		}
+		else
+		{
+			printf("メインメモリで再生します");
+		}
+		printf("(addr=0x%p)\n", pBuff);	/* メモリの先頭アドレスを表示 */
+		
 		File_Load(sFileName, pBuff, sizeof(uint8_t), nFileSize );	/* ファイル読み込みからメモリへ保存 */
 		
 		nLoop = g_nRepeat;
@@ -224,6 +234,7 @@ int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize, int8_t bMode)
 	}
 	else
 	{
+		printf("メモリ確保できませんでした。(%d)\n", bMode);
 		ret = -1;
 	}
 	
@@ -356,7 +367,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 	int32_t	nFileSize = 0;
 	int32_t	nFilePos = 0;
 	
-	puts("MACS data Player「MACSplay.x」v1.02 (c)2022 カタ.");
+	puts("MACS data Player「MACSplay.x」v1.03 (c)2022 カタ.");
 	
 	if(argc > 1)	/* オプションチェック */
 	{
@@ -526,24 +537,17 @@ int16_t main(int16_t argc, int8_t *argv[])
 		
 			nHiMemChk = HIMEM_CHK();	/* ハイメモリ実装チェック */
 
-			if(nFileSize <= nMemSize)	/* メインメモリ */
-			{
-				printf("メインメモリで再生します(%d[kb] <= %d[kb])\n", nFileSize>>10, nMemSize>>10);
-				nOut = MACS_Load(argv[nFilePos], nFileSize, 0);		/* メイン再生 */
-			}
-			else if((nHiMemChk != 0) && ((nSysStat == 4) || (nSysStat == 6)) )		/* ハイメモリ未実装 & 040/060EXCEL */
-			{
-				puts("拡張されたメモリで再生を試みます(040/060EXCEL)");
-				nOut = MACS_Load(argv[nFilePos], nFileSize, 1);		/* 拡張されたメモリで再生 */
-			}
-			else if(nHiMemChk == 0)		/* ハイメモリ実装 */
+			if(nHiMemChk == 0)		/* ハイメモリ実装 */
 			{
 				int32_t	nChk = PCM8A_CHK();
 				
 				if( (nChk >= 0) || (g_nPCM8Achk > 0))	/* PCM8A常駐チェック or -ADで無効化 */
 				{
-					puts("ハイメモリで再生します");
 					nOut = MACS_Load(argv[nFilePos], nFileSize, 2);	/* ハイメモリ再生 */
+				}
+				else if(nFileSize <= nMemSize)	/* メインメモリ */
+				{
+					nOut = MACS_Load(argv[nFilePos], nFileSize, 0);		/* メイン再生 */
 				}
 				else
 				{
@@ -554,11 +558,23 @@ int16_t main(int16_t argc, int8_t *argv[])
 					}
 				}
 			}
-			else						/* ハイメモリ or NG */
+			else
 			{
-				puts("error：メインメモリの空きが不足です。");
-				puts("error：HIMEMが見つかりませんでした。");
-				ret = -1;
+				if((nHiMemChk != 0) && ((nSysStat == 4) || (nSysStat == 6)) )		/* ハイメモリ未実装 & 040/060EXCEL */
+				{
+					printf("(040/060EXCEL)");
+					nOut = MACS_Load(argv[nFilePos], nFileSize, 1);		/* 拡張されたメモリで再生 */
+				}
+				else if(nFileSize <= nMemSize)	/* メインメモリ */
+				{
+					nOut = MACS_Load(argv[nFilePos], nFileSize, 0);		/* メイン再生 */
+				}
+				else						/* ハイメモリ or NG */
+				{
+					puts("error：メインメモリの空きが不足です。");
+					puts("error：HIMEMが見つかりませんでした。");
+					ret = -1;
+				}
 			}
 		}
 	}

@@ -57,6 +57,10 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 	}
 	else
 	{
+		int i, j;
+		
+		size_t ld, ld_mod, ld_t;
+		
 		/* データ個数を指定しない場合 */
 		if(n == 0)
 		{
@@ -64,9 +68,36 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 			n = filelength(fileno(fp));
 		}
 		
-		/* ファイル読み込み */
-		ret = fread (ptr, size, n, fp);
+		fprintf(stderr, "0%%       50%%       100%%\n");
+		fprintf(stderr, "+---------+---------+\n");
+		ld = n / 100;
+		ld_mod = n % 100;
+		ld_t = 0;
+		
+		for (i = 0; i <= 100; i++) {
+			/* ファイル読み込み */
+			if(i < 100)
+			{
+				ret = fread (ptr, size, ld, fp);
+				ptr += ld;
+				ld_t += ld;
+			}
+			else
+			{
+				ret = fread (ptr, size, ld_mod, fp);
+				ld_t += ld_mod;
+			}
+			
+			for (j = 0; j < i / 5 + 1; j++) {
+				fprintf(stderr, "#");
+			}
+			fprintf(stderr, "\n");
+			fprintf(stderr, "%3d%%(%d/%d)\n", i, ld_t, n);
+			fprintf(stderr, "\033[2A");
 
+		}
+		fprintf(stderr, "\n\nfinish!\n");
+		
 		/* ファイルを閉じる */
 		fclose (fp);
 	}
