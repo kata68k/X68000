@@ -6,6 +6,8 @@
 #include "inc/usr_define.h"
 
 extern int16_t File_Load(int8_t *, void *, size_t, size_t);
+extern int16_t FileHeader_Load(int8_t *, void *, size_t, size_t);
+extern int16_t File_strSearch(FILE *, char *, int, long);
 extern int16_t GetFileLength(int8_t *, int32_t *);
 extern void *MyMalloc(int32_t);
 extern void *MyMallocJ(int32_t);

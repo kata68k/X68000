@@ -19,6 +19,8 @@ asm("	.include	doscall.mac");
 		
 /* 関数のプロトタイプ宣言 */
 int16_t File_Load(int8_t *, void *, size_t, size_t);
+int16_t FileHeader_Load(int8_t *, void *, size_t, size_t);
+int16_t File_strSearch(FILE *, char *, int, long);
 int16_t File_Save(int8_t *, void *, size_t, size_t);
 int16_t GetFileLength(int8_t *, int32_t *);
 void *MyMalloc(int32_t);
@@ -58,7 +60,6 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 	else
 	{
 		int i, j;
-		
 		size_t ld, ld_mod, ld_t;
 		
 		/* データ個数を指定しない場合 */
@@ -69,7 +70,7 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 		}
 		
 		fprintf(stderr, "0%%       50%%       100%%\n");
-		fprintf(stderr, "+---------+---------+\n");
+		fprintf(stderr, "+---------+---------+   <cancel:ESC>\n");
 		ld = n / 100;
 		ld_mod = n % 100;
 		ld_t = 0;
@@ -78,13 +79,13 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 			/* ファイル読み込み */
 			if(i < 100)
 			{
-				ret = fread (ptr, size, ld, fp);
+				fread (ptr, size, ld, fp);
 				ptr += ld;
 				ld_t += ld;
 			}
 			else
 			{
-				ret = fread (ptr, size, ld_mod, fp);
+				fread (ptr, size, ld_mod, fp);
 				ld_t += ld_mod;
 			}
 			
@@ -94,12 +95,172 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 			fprintf(stderr, "\n");
 			fprintf(stderr, "%3d%%(%d/%d)\n", i, ld_t, n);
 			fprintf(stderr, "\033[2A");
-
+			
+			if((BITSNS( 0 ) & Bit_1) != 0u)
+			{
+				break;
+			}
 		}
-		fprintf(stderr, "\n\nfinish!\n");
+		if(i >= 100)
+		{
+			fprintf(stderr, "\n\nfinish!\n");
+		}
+		else
+		{
+			fprintf(stderr, "\n\ncancel\n");
+			ret = -1;
+		}
 		
 		/* ファイルを閉じる */
 		fclose (fp);
+	}
+
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* ファイル読み込み */
+/* *fname	ファイル名 */
+/* *ptr		格納先の先頭アドレス */
+/* size		データのサイズ */
+/* n		データの個数 */
+int16_t FileHeader_Load(int8_t *fname, void *ptr, size_t size, size_t n)
+{
+	FILE *fp;
+	int16_t ret = 0;
+
+	/* ファイルを開ける */
+	fp = fopen(fname, "rb");
+	
+	if(fp == NULL)
+	{
+		/* ファイルが読み込めません */
+		printf("error:%sファイルが見つかりません！\n", fname);
+		ret = -1;
+	}
+	else
+	{
+		char sBuf[256];
+		
+		memset(sBuf, 0, sizeof(sBuf));
+		fread (sBuf, sizeof(char), 8, fp);
+		
+		if(strcmp(sBuf, "MACSDATA") == 0)	/* MACSDATA判定 */
+		{
+			char toolver[2];
+			long ld;
+			
+			fseek(fp, 8L, SEEK_SET);
+			memset(sBuf, 0, sizeof(sBuf));
+			fread (&toolver[0], sizeof(char), 1, fp);	/* バージョン H */
+			fseek(fp, 9L, SEEK_SET);
+			memset(sBuf, 0, sizeof(sBuf));
+			fread (&toolver[1], sizeof(char), 1, fp);	/* バージョン L */
+			
+			fseek(fp, 10L, SEEK_SET);
+			memset(sBuf, 0, sizeof(sBuf));
+			fread (&ld, sizeof(long), 1, fp);	/* ファイルサイズ */
+			
+			if( (toolver[0] == 1) && (toolver[1] > 20))
+			{
+				printf("   ");
+				if(File_strSearch( fp, "TITLE:", 6, 14L ) == 0)		/* TITLE: */
+				{
+					printf("\n");
+				}
+				printf(" ");
+				if(File_strSearch( fp, "COMMENT:", 8, 14L ) == 0)		/* COMMENT: */
+				{
+					printf("\n");
+				}
+			}
+			
+			printf("FILEINFO:");
+			printf("DataVer=%d.%d ", toolver[0], toolver[1]);
+			printf("FileSize=%ld[MB] ", ld>>20);
+
+			if( (toolver[0] == 1) && (toolver[1] > 20))
+			{
+				printf("PCM=");
+				if(File_strSearch( fp, "DUALPCM/", 8, 14L ) == 0)		/* DUALPCM/ */
+				{
+					printf("\n");
+				}
+				else if(File_strSearch( fp, "PCM8PP", 6, 14L ) == 0)	/* PCM8PP */
+				{
+					printf("\n");
+				}
+				else if(File_strSearch( fp, "ADPCM", 5, 14L ) == 0)	/* ADPCM */
+				{
+					printf("\n");
+				}
+				else
+				{
+					/* 何もしない */
+				}
+			}
+			printf("\n");
+		}
+		
+		/* ファイルを閉じる */
+		fclose (fp);
+	}
+	return ret;
+}
+	
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* ファイル保存 */
+/* *fname	ファイル名 */
+/* *ptr		格納先の先頭アドレス */
+/* size		データのサイズ */
+/* n		データの個数 */
+int16_t File_strSearch(FILE *fp, char *str, int len, long file_ofst)
+{
+	int16_t ret = 0;
+	
+	int i;
+	int cnt, sMeslen;
+	char sBuf[256];
+	
+	sMeslen = 0;
+	
+	/* 探したキーワードからNULLまで表示する */
+	for(i=0; i < 256; i++)
+	{
+		fseek(fp, file_ofst + i, SEEK_SET);
+		
+		memset(sBuf, 0, sizeof(sBuf));
+		fread (sBuf, sizeof(char), len, fp);	/* ファイル読み込み */
+		
+		if(strncmp(sBuf, str, len) == 0)	/* 読み込んだデータとキーワードの一致確認 */
+		{
+			fseek(fp, file_ofst + i + len, SEEK_SET);
+			memset(sBuf, 0, sizeof(sBuf));
+			fgets(sBuf, 256, fp);
+			sMeslen = strlen(sBuf);
+			cnt = i;
+			ret = 0;
+			break;
+		}
+		memset(sBuf, 0, sizeof(sBuf));
+		ret = -1;
+	}
+	
+	if(sMeslen != 0)
+	{
+		printf("%s%s", str, sBuf);
 	}
 
 	return ret;

@@ -112,6 +112,13 @@ int32_t g_nRepeat = 1;
 *	
 *	d1.w = 13	スリープ状態を設定します
 *				d2.wが0なら再生可能状態，0以外ならスリープします。
+*
+*	d1.w = 14	自動フレームスキップの有効/無効を設定します。
+*				d2.wが0なら無効、1なら有効。2で厳格な基準で有効になります。
+*				0 = 描画が遅れてもガン無視放置する
+*				1 = 1フレーム弱遅れた程度ならティアリング上等で描画を続ける
+*				2 = ほんのちょっとでも遅れたら描画をスキップする
+*				初期値は 2 です。互換性維持のため追加された画面モードのみ対応です。
 *	
 *	d1.w = -1	ワークエリアアドレス獲得
 *				d0.lにMACS内部ワークエリアのアドレスを返します。
@@ -166,6 +173,8 @@ int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize, int8_t bMode)
 	int8_t	*pBuff = NULL;
 	int32_t nLoop;
 	
+	FileHeader_Load(sFileName, NULL, sizeof(uint8_t), nFileSize );	/* ヘッダ情報読み込み */
+	
 	switch(bMode)
 	{
 	case 0:
@@ -184,37 +193,39 @@ int32_t	MACS_Load(int8_t *sFileName, int32_t nFileSize, int8_t bMode)
 	
 	if(pBuff != NULL)
 	{
-		if(pBuff >= (int8_t*)0x1000000)	/* TS-6BE16相当のアドレス値以上で確保されているか？ */
+		if( File_Load(sFileName, pBuff, sizeof(uint8_t), nFileSize ) == 0 )	/* ファイル読み込みからメモリへ保存 */
 		{
-			printf("ハイメモリで再生します");
-		}
-		else
-		{
-			printf("メインメモリで再生します");
-		}
-		printf("(addr=0x%p)\n", pBuff);	/* メモリの先頭アドレスを表示 */
-		
-		File_Load(sFileName, pBuff, sizeof(uint8_t), nFileSize );	/* ファイル読み込みからメモリへ保存 */
-		
-		nLoop = g_nRepeat;
-		do
-		{
-			if(g_nRepeat == 0)
+			if(pBuff >= (int8_t*)0x1000000)	/* TS-6BE16相当のアドレス値以上で確保されているか？ */
 			{
-				nLoop = 1;
+				printf("ハイメモリで再生します");
 			}
 			else
 			{
-				nLoop--;
+				printf("メインメモリで再生します");
 			}
+			printf("(addr=0x%p)\n", pBuff);	/* メモリの先頭アドレスを表示 */
 			
-			ret = MACS_Play(pBuff, g_nCommand, g_nBuffSize, g_nAbort, g_nEffect);	/* 再生 */
-			if(ret < 0)
+			nLoop = g_nRepeat;
+			do
 			{
-				break;
+				if(g_nRepeat == 0)
+				{
+					nLoop = 1;
+				}
+				else
+				{
+					nLoop--;
+				}
+				_dos_kflushio(0xFF);	/* キーバッファをクリア */
+				
+				ret = MACS_Play(pBuff, g_nCommand, g_nBuffSize, g_nAbort, g_nEffect);	/* 再生 */
+				if(ret < 0)
+				{
+					break;
+				}
 			}
+			while(nLoop);
 		}
-		while(nLoop);
 		
 		switch(bMode)
 		{
@@ -367,7 +378,7 @@ int16_t main(int16_t argc, int8_t *argv[])
 	int32_t	nFileSize = 0;
 	int32_t	nFilePos = 0;
 	
-	puts("MACS data Player「MACSplay.x」v1.03 (c)2022 カタ.");
+	puts("MACS data Player「MACSplay.x」v1.04 (c)2022 カタ.");
 	
 	if(argc > 1)	/* オプションチェック */
 	{
@@ -596,6 +607,8 @@ int16_t main(int16_t argc, int8_t *argv[])
 		}
 	} 
 	ADPCM_Stop();	/* 音を止める */
+
+	_dos_kflushio(0xFF);	/* キーバッファをクリア */
 	
 	return ret;
 }
