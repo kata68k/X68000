@@ -2,8 +2,8 @@
 #define	DRAW_C
 
 #include <iocslib.h>
-#include "inc/usr_define.h"
-#include "inc/usr_macro.h"
+#include <usr_define.h>
+#include <usr_macro.h>
 
 #include "Draw.h"
 

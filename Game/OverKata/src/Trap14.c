@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <interrupt.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Trap14.h"
 
 #ifdef DEV_GCC

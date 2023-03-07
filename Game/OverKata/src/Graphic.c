@@ -7,8 +7,8 @@
 #include <iocslib.h>
 #include <doslib.h>
 
-#include "inc/usr_macro.h"
-#include "inc/apicglib.h"
+#include <usr_macro.h>
+#include <apicglib.h>
 #include "Graphic.h"
 
 #include "OverKata.h"
@@ -460,7 +460,7 @@ int16_t CG_File_Load_to_Mem(uint16_t uListNum)
 int16_t CG_Mem_Convert_Type(uint16_t uListNum)
 {
 	int16_t	ret = 0;
-	uint16_t	i;
+	uint32_t	i;
 	
 	i = uListNum;
 	

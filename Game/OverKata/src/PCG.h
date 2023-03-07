@@ -1,7 +1,7 @@
 #ifndef	PCG_H
 #define	PCG_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 /* スプライトＰＣＧパターン最大数 */
 #define	PCG_MAX		(128)

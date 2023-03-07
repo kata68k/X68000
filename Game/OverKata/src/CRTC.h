@@ -1,7 +1,7 @@
 #ifndef	CRTC_H
 #define	CRTC_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 /* define’è‹` */
 #define	CRT_MAX		(3)

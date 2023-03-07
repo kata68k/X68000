@@ -56,6 +56,7 @@
 #define RASTER_H_MAX	(512)		//表示終了位置(480)
 
 #define ROAD_ST_POINT	(128)	/* BGの道の開始位置 */
+#define ROAD_MD_POINT	(176)	/* BGの道の中間位置 */
 #define ROAD_ED_POINT	(224)	/* BGの道の終了位置 */
 #define ROAD_CT_POINT	(124)	/* BGの道の中心位置 */
 #define ROAD_SIZE		(ROAD_ED_POINT-ROAD_ST_POINT)	/* BGの道のサイズ(96) */

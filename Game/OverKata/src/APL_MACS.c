@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "APL_MACS.h"
 
 #include "OverKata.h"

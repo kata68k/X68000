@@ -1,7 +1,7 @@
 #ifndef	TASK_C
 #define	TASK_C
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Task.h"
 #include "MFP.h"
 

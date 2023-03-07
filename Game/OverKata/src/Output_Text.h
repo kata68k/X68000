@@ -1,7 +1,7 @@
 #ifndef	OUTPUT_TEXT_H
 #define	OUTPUT_TEXT_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 enum{
 	MONI_Type_UL=0,

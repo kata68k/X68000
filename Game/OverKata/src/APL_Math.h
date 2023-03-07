@@ -1,7 +1,7 @@
 #ifndef	APL_MATH_H
 #define	APL_MATH_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 #define PI	(3.14159265f)
 

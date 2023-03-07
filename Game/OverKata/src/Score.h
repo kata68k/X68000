@@ -1,7 +1,7 @@
 #ifndef	SCORE_H
 #define	SCORE_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 /* \‘¢‘Ì’è‹` */
 typedef struct{

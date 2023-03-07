@@ -1,7 +1,7 @@
 #ifndef	MOON_H
 #define	MOON_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 #define	MACS_MOON	/* MACSDRV‚ÆMOON‚ðŽg‚¤‚Æ‚«‚Í’è‹`‚·‚é */
 

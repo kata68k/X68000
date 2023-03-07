@@ -1,7 +1,7 @@
 #ifndef	OVERKATA_H
 #define	OVERKATA_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 extern int16_t	g_CpuTime;
 extern volatile uint16_t	g_uGameStatus;

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <iocslib.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "EnemyCAR.h"
 #include "OverKata.h"
 
@@ -24,8 +24,10 @@
 
 /* グローバル変数 */
 uint8_t		*g_pCG_EnemyCARImageBuf[ENEMYCAR_TYP_MAX][ENEMYCAR_PAT_MAX];
-const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = {96, 77, 61, 49, 39, 31, 25, 20, 16, 13, 10};
+//const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = {96, 77, 61, 49, 39, 31, 25, 20, 16, 13, 10};
 //const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = { 198, 158, 126, 101, 79, 65, 51, 41, 33 };
+const int16_t	g_nViewRateTbl[ENEMYCAR_PAT_MAX] = {96, 93, 90, 87, 84, 82, 79, 76, 73, 71, 68, 65, 62, 59, 57, 54, 51, 48, 46, 43, 40, 37, 34, 32, 29, 26, 23, 21, 18, 15, 12, 10};
+
 
 /* 構造体定義 */
 ST_ENEMYCARDATA	stEnemyCar[ENEMYCAR_MAX] = {0};
@@ -207,6 +209,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		
 		if(y < 0)
 		{
+			y = 0;
 			Out_Of_Disp = -1;	/* 先を越された */
 		}
 		
@@ -243,7 +246,7 @@ int16_t	EnemyCAR_main(uint8_t bNum, uint8_t bMode, uint8_t bMode_rev)
 		}
 #ifdef DEBUG	/* デバッグコーナー */
 		{
-			SetDebugHis(y_ofst);
+//			SetDebugHis(y_ofst);
 		}
 #endif
 		y += y_ofst;

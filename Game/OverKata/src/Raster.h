@@ -1,7 +1,7 @@
 #ifndef	RASTER_H
 #define	RASTER_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 #define	ROADDATA_MAX	(2048u)
 
@@ -56,6 +56,7 @@ typedef struct
 /* externêÈåæ */
 extern	ST_RASTER_INT	g_stRasterInt[RASTER_H_MAX];
 extern	ST_ROAD_INFO	g_stRoadInfo;
+extern	ST_ROADDATA		g_stRoadData[ROADDATA_MAX];
 
 extern void	Raster_Init(void);
 extern int16_t Raster_Main(void);
@@ -67,7 +68,7 @@ extern int16_t	GetRoadInfo(ST_ROAD_INFO *);
 extern int16_t	SetRoadInfo(ST_ROAD_INFO);
 extern void Road_Init(uint16_t);
 extern void Road_BG_Init(uint16_t);
-extern uint64_t GetRoadDataAddr(void);
+extern uint64_t GetRoadDataAddr(uint16_t);
 extern int16_t	Road_Pat_Main(uint16_t *);
 extern int16_t GetRoadCycleCount(uint16_t *);
 extern int16_t Road_Map_Draw(uint8_t);

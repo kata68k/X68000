@@ -36,7 +36,7 @@
  * @retval 最小最大値
  * @attention 引数は複数回評価される.
  */
-#define Mminmax(a, b, c) ((a > c) ? c : ((a > b) ? a : b))
+#define Mminmax(a, b, c) ((b < c)?((a < b)?b:(a > c)?c:a):((a < c)?c:(a > b)?b:a))
 
 /*
         Mabs - 絶対値取得 -
@@ -95,19 +95,39 @@
  * @retval 減算された値
  * @attention 引数は複数回評価される.
  */
-#define Mdec(x,y) ((x > (x - y)) ? (x - y) : 0)
+/* @fujitanozomuさん, @kunichikoさん のご協力でできました */
+#define Mdec(x, y) \
+( \
+	((typeof(x))((unsigned)(x) - (y)) <= (x)) ? ( \
+		(typeof(x))((unsigned)(x) - (y)) \
+	) : (typeof(x))-1 > 0 ? ( \
+		0 \
+	) : ( \
+		(typeof(x))((1U << (8 * sizeof(x) - 1))) \
+	) \
+)
 
 /*
         Minc - デクリメント（最大値クリップ） -
 */
 /**
- * カウンタ値を減算したい値で最大値までインクリメント
+ * カウンタ値を加算したい値で最大値までインクリメント
  * @param [in] x        カウンタ
  * @param [in] y        加算したい値
- * @retval 減算された値
+ * @retval 加算された値
  * @attention 引数は複数回評価される.
  */
-#define Minc(x,y) ((0 < (x + y)) ? (x + y) : -1)
+/* @fujitanozomuさん, @kunichikoさん のご協力でできました */
+#define Minc(x, y) \
+( \
+	((typeof(x))((unsigned)(x) + (y)) >= (x)) ? ( \
+		(typeof(x))((unsigned)(x) + (y)) \
+	) : (typeof(x))-1 > 0 ? ( \
+		(typeof(x))-1 \
+	) : ( \
+		(typeof(x))((1U << (8 * sizeof(x) - 1)) - 1) \
+	) \
+)
 
 /* シフト割り算 */
 #define Mdiv2(x)		(x>>1)
@@ -126,6 +146,7 @@
 #define Mdiv8192(x)		(x>>13)
 #define Mdiv16384(x)	(x>>14)
 #define Mdiv32768(x)	(x>>15)
+#define Mdiv65536(x)	(x>>16)
 /* シフト掛け算 */
 #define Mmul2(x)		(x<<1)
 #define Mmul4(x)		(x<<2)
@@ -142,6 +163,7 @@
 #define Mmul8192(x)		(x<<13)
 #define Mmul16384(x)	(x<<14)
 #define Mmul32768(x)	(x<<15)
+#define Mmul65536(x)	(x<<16)
 
 #define Mmul_1p25(x)	(x+(x>>2))										/* x * 1.25 */
 #define Mmul_1p90(x)	(x+(x>>1)+(x>>2)+(x>>3)+(x>>4)-(x>>5)-(x>>7))	/* x * 0.8984375 */
@@ -175,6 +197,11 @@
 #define Mmul_0p20(x)	((x>>3)+(x>>4)+(x>>6)-(x>>8))					/* x * 0.1992188 */
 #define Mmul_0p10(x)	((x>>3)-(x>>5)+(x>>6)-(x>>7))					/* x * 0.1015625 */
 
+#define MrasRoll(x)		((x < 0)?(224 + x):((x>224)?(x-224):x))
+#define M1024Roll(x)	((x < 0)?(0x400 + x):((x>0x400)?(x-0x400):x))
+#define M512Roll(x)		((x < 0)?(0x200 + x):((x>0x200)?(x-0x200):x))
+#define M256Roll(x)		((x < 0)?(0x100 + x):((x>0x100)?(x-0x100):x))
+
 #define Msinged_9b(x)	((x < 256)?x:(x-512))
 #define Mu10b_To_s8b(x)	((x < 512)?(-(x>>1)):(-(x-1024)>>1))
 #define Mu10b_To_s9b(x)	((x < 512)?(-x):(1024-x))
@@ -186,5 +213,7 @@
 
 #define SetBGcode(V,H,PAL,PCG)	(0xCFFFU & (((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((PAL & 0xFU)<<8U) | (PCG & 0xFFU)))
 #define SetBGcode2(V,H,PAL)		(0xCF00U & (((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((PAL & 0xFU)<<8U) ))
+
+#define ARRAY_LENGTH(array)	(sizeof(array)/sizeof(array[0]))
 
 #endif	/* USR_MACRO_H */

@@ -5,8 +5,7 @@
 #include <limits.h>
 #include <iocslib.h>
 
-#include "inc/usr_macro.h"
-#include "inc/ZMUSIC.H"
+#include <usr_macro.h>
 
 #include "MyCar.h"
 #include "OverKata.h"
@@ -714,7 +713,7 @@ static int16_t	MyCar_EngineSpeed(int16_t Input_Torque)
 		/* 座標設定 */
 		x = stCRT.hide_offset_x;
 		y = stCRT.hide_offset_y + 128;
-		sprintf(str, "Base(%3d), Input(%3d), Cal(%d)", uTRQ[bAxis], Input_Torque, uTorque_Cal);
+		sprintf(str, "Base(%3hd), Input(%3hd), Cal(%hd)", uTRQ[bAxis], Input_Torque, uTorque_Cal);
 		PutGraphic_To_Symbol(str, x, y, 0x03);	/* メッセージエリア 描画 */
 #endif
 	}

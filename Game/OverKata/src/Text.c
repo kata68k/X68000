@@ -4,7 +4,7 @@
 #include <iocslib.h>
 #include <doslib.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Text.h"
 
 #include "APL_Math.h"

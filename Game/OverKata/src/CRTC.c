@@ -6,7 +6,7 @@
 #include <doslib.h>
 #include <iocslib.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "CRTC.h"
 #include "OverKata.h"
 #include "Input.h"

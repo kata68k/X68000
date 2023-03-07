@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 #include "Graphic.h"
 #include "Raster.h"
 

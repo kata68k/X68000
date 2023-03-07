@@ -1,7 +1,7 @@
 #ifndef	MUSIC_H
 #define	MUSIC_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 #define ZM_V2	1
 #define ZM_V3	0

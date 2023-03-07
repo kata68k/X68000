@@ -9,8 +9,8 @@
 #include <math.h>
 #include <interrupt.h>
 
-#include "inc/usr_macro.h"
-#include "inc/apicglib.h"
+#include <usr_macro.h>
+#include <apicglib.h>
 
 #include "OverKata.h"
 
@@ -35,7 +35,7 @@
 #include "Text.h"
 #include "Trap14.h"
 
-#define	_DEBUG_MODE	/* デバッグするならコメントアウトを外す */
+//#define	_DEBUG_MODE	/* デバッグするならコメントアウトを外す */
 
 #define	BG_SKIP_TIME	(8u)
 #define	BG_TIME_OUT		(56u)
@@ -90,7 +90,8 @@ enum{
 	DEBUG_COURSE_OBJ,
 	DEBUG_ENEMYCAR,
 	DEBUG_MYCAR,
-	DEBUG_ROAD,
+	DEBUG_ROAD_INFO,
+	DEBUG_ROAD_DATA,
 	DEBUG_RASTER,
 	DEBUG_INPUT,
 	DEBUG_CPUTIME,
@@ -152,8 +153,8 @@ int16_t main(int16_t argc, int8_t** argv)
 #ifdef DEBUG	/* デバッグコーナー */
 	uint8_t	bDebugMode = TRUE;
 	uint8_t	bDebugMode_flag;
-	uint32_t	unDebugCounter1 = 0u;
-	uint32_t	unDebugCounter2 = 0u;
+//	uint32_t	unDebugCounter1 = 0u;
+//	uint32_t	unDebugCounter2 = 0u;
 #endif
 	
 	uint8_t	bCRTMode = TRUE;
@@ -304,7 +305,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				Raster_Init();
 				
 				/* コースデータの初期化 */
-				Road_Init(g_Stage);
+				Road_Init(0);	/* 0はデバッグモード */
 				
 				/* ゲーム内容の初期化 */
 				S_Init_Score();	/* スコアの初期化 */
@@ -314,7 +315,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				PCG_VIEW(0x07u);	/* スプライト＆ＢＧ表示 */
 
 				/* 自車 */
-				//MyCar_G_Load();		/* 自車の画像読み込み */
+				MyCar_G_Load();		/* 自車の画像読み込み */
 				MyCarInfo_Init();	/* 自車の情報初期化 */
 				
 				/* グラフィック表示 */
@@ -325,7 +326,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				Music_Play(14);	/* ローディング中 */
 				
 				/* ライバル車の初期化 */
-				InitEnemyCAR();
+				//InitEnemyCAR();
 				
 				//G_Load_Mem( START_PT_CG, 0, 0, 0 );	/* スタートゲート */
 				//G_Load_Mem( GOAL_PT_CG, 0, 0, 0 );	/* スタートゲート */
@@ -333,7 +334,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				//InitCourseObj();
 				
 				/* コースの背景 */
-				Road_BG_Init(1);
+				Road_BG_Init(0);	/* 0はデバッグモード */
 
 				Debug_View(uFreeRunCount);	/* デバッグ情報表示 */
 				
@@ -353,7 +354,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
 				{
 					/* 自車の処理 */
-					Update |= MyCarInfo_Update(g_Input, &Torque);
+					//Update |= MyCarInfo_Update(g_Input, &Torque);
 				}
 				
 				if(stTask.b16ms == TRUE)
@@ -361,14 +362,13 @@ int16_t main(int16_t argc, int8_t** argv)
 					Update |= MyCarInfo_Update16ms(Torque);
 				}
 				
-				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
+//				if( (g_bFlip_old == TRUE) && (g_bFlip == FALSE) )	/* 切り替え直後判定 */
 				{
+					uRoad = 0xFFFF;
 					/* ラスター処理 */
 					Update |= Road_Pat_Main(&uRoad);	/* コースデータの更新 */
 
 					g_uGameStatus = 1;	/* ゲーム中 */
-
-					Update |= Raster_Main();	/* コースの処理 */
 				}
 				
 				/* 余った時間で処理 */
@@ -660,7 +660,6 @@ int16_t main(int16_t argc, int8_t** argv)
 					
 					/* ラスター処理 */
 					Road_Pat_Main(&uRoad);	/* コースデータの更新 */
-					Raster_Main();			/* コースの処理 */
 					
 					/* ゲームスタートに関する変数の初期化 */
 					s_uStartCount = 0;
@@ -793,11 +792,6 @@ int16_t main(int16_t argc, int8_t** argv)
 					else
 					{
 						g_uGameStatus = 1;	/* ゲーム中 */
-					}
-					if(Update != 0)
-					{
-						/* ラスター処理 */
-						Update |= Raster_Main();	/* コースのラスター処理 */
 					}
 				}
 				
@@ -1125,12 +1119,18 @@ static void App_Init(void)
 /*===========================================================================================*/
 static void App_exit(void)
 {
+	/* テキストクリア */
+	T_Clear();	/* テキストクリア */
+	
 #ifdef DEBUG	/* デバッグコーナー */
 	puts("App_exit 開始");
 #endif
 	
-	/* テキストクリア */
-	T_Clear();	/* テキストクリア */
+	if(g_bExit == TRUE)
+	{
+		puts("エラーをキャッチ！ ESC to skip");
+		KeyHitESC();	/* デバッグ用 */
+	}
 	
 	/* スプライト＆ＢＧ */
 	PCG_VIEW(0x00u);		/* スプライト＆ＢＧ非表示 */
@@ -1149,12 +1149,6 @@ static void App_exit(void)
 #ifdef DEBUG	/* デバッグコーナー */
 	puts("App_exit 音楽");
 #endif
-	
-	if(g_bExit == TRUE)
-	{
-		puts("エラーをキャッチ！ ESC to skip");
-		KeyHitESC();	/* デバッグ用 */
-	}
 	
 	/* MFP */
 	TimerD_EXIT();			/* Timer-Dの解除 */
@@ -1201,31 +1195,25 @@ static void App_exit(void)
 		printf("stRasInfo st,mid,ed,size=(%4d,%4d,%4d,%4d)\n", stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size);
 		printf("GetRasterIntPos[i]=(x,y,pat)=(H_pos)\n");
 		printf("====================\n");
-		for(i=0; i < stRasInfo.size; i++)	/* 2枚分表示 */
+		for(i=0; i < stRasInfo.size; i++, j++)	/* 2枚分表示 */
 		{
-			SetRasterIntData(0);	/* 1枚目 */
-			GetRasterIntPos( &x, &y, &pat, i, FALSE);
-			printf("[%3d,%3d]=(%4d,%4d,%4d), ", j++, i, x, y, pat);
-			SetRasterIntData(1);	/* 2枚目 */
-			GetRasterIntPos( &x, &y, &pat, i, FALSE );
-			printf("[%3d,%3d]=(%4d,%4d,%4d), ", j++, i, x, y, pat);
+			j = GetRasterIntPos( &x, &y, &pat, Mmul2(i)+0, TRUE);
+			printf("[%3d->%3d]=(%4d,%4d,%4d), ", j, i, x, y, pat);
+			j = GetRasterIntPos( &x, &y, &pat, Mmul2(i)+1, TRUE );
+			printf("[%3d->%3d]=(%4d,%4d,%4d), ", j, i, x, y, pat);
 			printf("\n");
 		}
 		printf("==========割り込み位置の設定==========\n");
-		SetRasterIntData(0);	/* 1枚目 */
-		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 2), TRUE);
-		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 2), x, y, pat);
-		SetRasterIntData(1);	/* 2枚目 */
-		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 2), TRUE );
-		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 2), x, y, pat);
+		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 2)+0, TRUE);
+		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 2)+0, x, y, pat);
+		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 2)+1, TRUE );
+		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 2)+1, x, y, pat);
 		printf("\n");
 		printf("==========割り込みがかかるまでの表示位置==========\n");
-		SetRasterIntData(0);	/* 1枚目 */
-		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 4), TRUE);
-		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 4), x, y, pat);
-		SetRasterIntData(1);	/* 2枚目 */
-		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 4), TRUE );
-		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 4), x, y, pat);
+		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 4)+0, TRUE);
+		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 4)+0, x, y, pat);
+		GetRasterIntPos( &x, &y, &pat, (RASTER_H_MAX - 4)+1, TRUE );
+		printf("[%3d]=(%4d,%4d,%4d), ", (RASTER_H_MAX - 4)+1, x, y, pat);
 		printf("\n");
 		printf("====================\n");
 	}
@@ -1434,7 +1422,7 @@ int16_t BG_main(uint32_t ulTimes)
 		{
 			if(bFlipState == Object0_G)
 			{
-				bFlipState = Enemy1_G;
+				bFlipState = MyCar_G;
 			}
 		}
 #endif
@@ -1568,7 +1556,7 @@ void Set_DI(void)
 		}
 #endif
 		g_nIntLevel = intlevel(6);	/* 割禁設定 */
-		g_nIntCount = Minc(g_nIntCount, 1);
+		g_nIntCount = Minc(g_nIntCount, 1u);
 		
 #if 0
 		/* スーパーバイザーモード開始 */
@@ -1577,7 +1565,7 @@ void Set_DI(void)
 	}
 	else
 	{
-		g_nIntCount = Minc(g_nIntCount, 1);
+		g_nIntCount = Minc(g_nIntCount, 1u);
 	}
 }
 
@@ -1816,9 +1804,10 @@ void Debug_View(uint16_t uFreeRunCount)
 		int16_t	hide_offset_x, hide_offset_y;
 		int16_t	BG_offset_x, BG_offset_y;
 		
-		static uint8_t ubDispNum = DEBUG_FREE;
+		static uint8_t ubDispNum = DEBUG_RASTER;
 		static uint8_t ubDispNum_flag = 0;
 
+		ST_TASK	stTask = {0}; 
 		ST_CRT	stCRT = {0};
 		
 		/* モード切替による設定値の変更 */
@@ -1829,6 +1818,8 @@ void Debug_View(uint16_t uFreeRunCount)
 		hide_offset_y	= stCRT.hide_offset_y;
 		BG_offset_x		= stCRT.BG_offset_x;
 		BG_offset_y		= stCRT.BG_offset_y;
+
+		GetTaskInfo(&stTask);	/* タスクの情報を得る */
 		
 
 		if(ChatCancelSW((g_Input & KEY_b_RLUP)!=0u, &ubDispNum_flag) == TRUE)	/* ロールアップで表示切替 */
@@ -1841,6 +1832,58 @@ void Debug_View(uint16_t uFreeRunCount)
 		}
 
 		{
+#if 1
+			/* デバッグ時スキップタスク */
+			if(stTask.bScene == SCENE_DEBUG)
+			{
+				static uint8_t count_h = 0x80;
+				static uint8_t count_a = 0x80;
+				static uint8_t count_w = 0x80;
+
+				ST_ROADDATA *p_stRoadData;
+				
+				if((g_Input & KEY_UPPER) != 0u)	/* 上 */
+				{
+					count_h = Minc(count_h, 1u);
+				}
+				if((g_Input & KEY_LOWER) != 0u)	/* 下 */
+				{
+					count_h = Mdec(count_h, 1u);
+				}
+			
+				if((g_Input & KEY_LEFT) != 0u)	/* 左 */
+				{
+					count_a = Minc(count_a, 1u);
+				}
+				if((g_Input & KEY_RIGHT) != 0u)	/* 右 */
+				{
+					count_a = Mdec(count_a, 1u);
+				}
+				
+				if((g_Input & KEY_A) != 0u)	/* Aボタン */
+				{
+					count_w = Minc(count_w, 1u);
+				}
+				if((g_Input & KEY_B) != 0u)	/* Bボタン */
+				{
+					count_w = Mdec(count_w, 1u);
+				}
+				
+				/* コースデータ読み込み */
+				p_stRoadData = (ST_ROADDATA *)GetRoadDataAddr(0);
+				p_stRoadData->bHeight = count_h;		/* 道の標高	(0x80センター) */
+				p_stRoadData->bWidth = count_w;		/* 道の幅	(0x80センター) */
+				p_stRoadData->bAngle = count_a;		/* 道の角度	(0x80センター) */
+				//p_stRoadData->bfriction = 0x80 + Count;	/* 道の摩擦	(0x80センター) */
+				//p_stRoadData->bPat;			/* 道の種類	 */
+				//p_stRoadData->bObject;		/* 出現ポイントのオブジェクトの種類 */
+				//p_stRoadData->bRepeatCount;	/* 繰り返し回数 */
+				
+	//			uint16_t cyc_count;
+	//			GetRoadCycleCount(&cyc_count);
+	//			sprintf(str, "Road[%d]h=%d w=%d a=%d", cyc_count, p_stRoadData->bHeight, p_stRoadData->bWidth, p_stRoadData->bAngle );
+			}
+#endif
 			switch(ubDispNum)
 			{
 			case DEBUG_NONE:
@@ -1855,7 +1898,7 @@ void Debug_View(uint16_t uFreeRunCount)
 					ST_COURSE_OBJ	stCourse_Obj = {0};
 					i = Mmin(Mmax(g_uDebugNum - 0x80, 0), COURSE_OBJ_MAX-1);
 					GetCourseObj(&stCourse_Obj, i);	/* 障害物の情報 */
-					sprintf(str, "C_Obj[%d](%4d,%3d,%d)(%d),Debug(%3d)",
+					sprintf(str, "C_Obj[%d](%4hd,%3hd,%hd)(%d),Debug(%3hd)",
 						i, stCourse_Obj.x, stCourse_Obj.y, stCourse_Obj.z, stCourse_Obj.ubAlive,
 						g_uDebugNum);	/* 障害物の情報 */
 #endif
@@ -1868,7 +1911,7 @@ void Debug_View(uint16_t uFreeRunCount)
 					ST_ENEMYCARDATA	stEnemyCar = {0};
 					i = Mmin(Mmax(uFreeRunCount % ENEMYCAR_MAX, 0), ENEMYCAR_MAX-1);
 					GetEnemyCAR(&stEnemyCar, i);	/* ライバル車の情報 */
-					sprintf(str, "E[%d] (%d)(%4d,%4d,%4d),spd(%3d)", i,
+					sprintf(str, "Enemy[%d] (%d)(%4hd,%4hd,%4hd),spd(%3hd)", i,
 						stEnemyCar.ubAlive,
 						stEnemyCar.x,
 						stEnemyCar.y,
@@ -1953,7 +1996,7 @@ void Debug_View(uint16_t uFreeRunCount)
 						stCRT.hide_offset_x + myCarEx,
 						stCRT.hide_offset_y + myCarEy, col, 0xFFFF);
 						
-					sprintf(str, "C[%d](%4d,%d,%5d,%3d,%3d,%d,%d,%4d,%4d,%d,%d)",
+					sprintf(str, "My[%d](%4hd,%d,%3hd,%3hd,%3hd,%d,%d,%d,%d,%d,%2d)",
 							stMyCar.ubCarType,			/* 車の種類 */
 							stMyCar.uEngineRPM,			/* エンジン回転数 */
 							stMyCar.ubShiftPos,			/* ギア段 */
@@ -1970,7 +2013,7 @@ void Debug_View(uint16_t uFreeRunCount)
 #endif
 				}
 				break;
-			case DEBUG_ROAD:
+			case DEBUG_ROAD_INFO:
 				{
 #if 1	/* 道路情報 */
 					/* 道の向き */
@@ -1982,7 +2025,7 @@ void Debug_View(uint16_t uFreeRunCount)
 								col,
 								0xFFFF);
 					
-					sprintf(str, "R=h%3d,s%3d,a%3d,d%3d,o%3d,C%3d,H%3d,Hb%3d,ox%3d,oy%3d,ov%3d",
+					sprintf(str, "RI h%3d,s%3d,a%3d,d%3d,o%3d,C%3d,H%3d,Hb%3d,ox%3d,oy%3d,ov%3d",
 						g_stRoadInfo.height,		/* コースの高さ */
 						g_stRoadInfo.slope,			/* コースの曲がり具合 */
 						g_stRoadInfo.angle,			/* コースの方向（角度） */
@@ -1998,10 +2041,31 @@ void Debug_View(uint16_t uFreeRunCount)
 #endif
 				}
 				break;
+			case DEBUG_ROAD_DATA:
+				{
+#if 1	/* 道路情報 */
+					/* 道の向き */
+					uint16_t i;
+					i = g_uDebugNum;
+					
+					sprintf(str, "RD[%d],h%d,w%d,a%d,f%d,p%d,o%d,r%d",
+								i,
+								g_stRoadData[i].bHeight,		/* 道の標高	(0x80センター) */
+								g_stRoadData[i].bWidth,			/* 道の幅	(0x80センター) */
+								g_stRoadData[i].bAngle,			/* 道の角度	(0x80センター) */
+								g_stRoadData[i].bfriction,		/* 道の摩擦	(0x80センター) */
+								g_stRoadData[i].bPat,			/* 道の種類	 */
+								g_stRoadData[i].bObject,		/* 出現ポイントのオブジェクトの種類 */
+								g_stRoadData[i].bRepeatCount	/* 繰り返し回数 */
+					);
+#endif
+				}
+				break;
 			case DEBUG_RASTER:
 				{
 
 #if 1	/* ラスター情報 */
+					uint16_t i;
 					uint16_t x, y;
 					int16_t pat;
 					int16_t pos;
@@ -2010,28 +2074,39 @@ void Debug_View(uint16_t uFreeRunCount)
 					GetRasterInfo(&stRasInfo);
 
 					{
-						/* ラスター開始位置 */
-						col = 0x3;
-						Draw_Line(	hide_offset_x + 0,
-									hide_offset_y + stRasInfo.st,
-									hide_offset_x + WIDTH, 
-									hide_offset_y + stRasInfo.st,
-									col,
-									0xFFFF);
 						/* ラスター中間位置 */
-						col = 0xF;
+						col = 0xD;
 						Draw_Line(	hide_offset_x + 0,
 									hide_offset_y + stRasInfo.mid,
 									hide_offset_x + WIDTH, 
 									hide_offset_y + stRasInfo.mid,
 									col,
 									0xFFFF);
+
 						/* ラスター終了位置 */
 						col = 0xB;
 						Draw_Line(	hide_offset_x + 0,
 									hide_offset_y + stRasInfo.ed,
 									hide_offset_x + WIDTH, 
 									hide_offset_y + stRasInfo.ed,
+									col,
+									0xFFFF);
+
+						/* ラスター開始位置 */
+						col = 0xA;
+						Draw_Line(	hide_offset_x + 0,
+									hide_offset_y + stRasInfo.st,
+									hide_offset_x + WIDTH, 
+									hide_offset_y + stRasInfo.st,
+									col,
+									0xFFFF);
+
+						/* ラスター中間位置 */
+						col = 0xC;
+						Draw_Line(	hide_offset_x + 0,
+									hide_offset_y + ROAD_MD_POINT,
+									hide_offset_x + WIDTH, 
+									hide_offset_y + ROAD_MD_POINT,
 									col,
 									0xFFFF);
 
@@ -2045,6 +2120,7 @@ void Debug_View(uint16_t uFreeRunCount)
 									col,
 									0xFFFF);
 #endif
+#if 0						
 						/* 曲がり具合 */
 						col = 0x3;
 						Draw_Circle(hide_offset_x + Mdiv2(WIDTH) + 1, 
@@ -2052,6 +2128,7 @@ void Debug_View(uint16_t uFreeRunCount)
 									Mmax(Mdiv4(g_stRoadInfo.slope) + 1, 8),
 									col,
 									0, 360, 256);
+#endif
 #if 0						
 						/* x */
 						col = 0xE;
@@ -2074,13 +2151,25 @@ void Debug_View(uint16_t uFreeRunCount)
 									hide_offset_y + Y_MAX_WINDOW - ras_cal_y,
 									col);
 #endif
+#if 1
+						if(bMode==1)col = 0x8;
+						else 		col = 0xB;
+
+						for(i=0; i < stRasInfo.size; i+=4)	/* 2枚分表示 */
+						{
+							GetRasterIntPos( &x, &y, &pat, Mmul2(i)+(bMode-1), TRUE);
+							Draw_Pset(	hide_offset_x + x + i,
+										hide_offset_y + y,
+										col);
+						}
+#endif
 					}
 					
 					pos = Mmax(Mmin( g_uDebugNum, stRasInfo.size ), 0);
 					GetRasterIntPos( &x, &y, &pat, pos, FALSE );
 					count = GetRasterCount(&linCount);
 					
-					sprintf(str, "Ras(%d)s(%d,%d,%d,%d)i(%3d,%3d)[%d]",
+					sprintf(str, "Ras(%hd)s(%hd,%hd,%hd,%hd)i(%3hd,%3hd)[%d]",
 						pos,
 						stRasInfo.st, stRasInfo.mid, stRasInfo.ed, stRasInfo.size,
 						count, linCount,
@@ -2100,7 +2189,7 @@ void Debug_View(uint16_t uFreeRunCount)
 					
 					if(AnalogMode == 0)	/* アナログモード */
 					{
-						sprintf(str,"R(0x%02x 0x%02x)L(0x%02x 0x%02x)B(%04b|%04b|%04b)",
+						sprintf(str,"AJOY(0x%02x 0x%02x)L(0x%02x 0x%02x)B(%04b|%04b|%04b)",
 							stAnalog_Info.r_stk_ud,
 							stAnalog_Info.r_stk_lr,
 							stAnalog_Info.l_stk_ud,
@@ -2112,7 +2201,7 @@ void Debug_View(uint16_t uFreeRunCount)
 					}
 					else
 					{
-						sprintf(str,"U(%d)D(%d)L(%d)R(%d)B(%d)A(%d)",
+						sprintf(str,"JOY(%hd)D(%hd)L(%hd)R(%hd)B(%hd)A(%hd)",
 							g_Input & KEY_UPPER,
 							g_Input & KEY_LOWER,
 							g_Input & KEY_LEFT,
@@ -2128,7 +2217,7 @@ void Debug_View(uint16_t uFreeRunCount)
 				{
 #if 1	/* CPU情報 */
 //							sprintf(str, "CPU Time%2d[ms](MAX%2d[ms]),Debug(%3d)", g_unTime_cal, g_unTime_cal_PH, g_uDebugNum);	/* 処理負荷 */
-					sprintf(str, "%d T%2d(Max%2d),%2d,%2d,%2d,%2d,%2d F(%2d)", g_CpuTime, g_unTime_cal, g_unTime_cal_PH, 
+					sprintf(str, "MPU %hd %2d(Max%2d),%2d,%2d,%2d,%2d,%2d F(%2d)", g_CpuTime, g_unTime_cal, g_unTime_cal_PH, 
 							g_unTime_Pass[BackGround_G],
 							g_unTime_Pass[Object0_G],
 							g_unTime_Pass[Enemy1_G],
@@ -2144,15 +2233,12 @@ void Debug_View(uint16_t uFreeRunCount)
 #if 1	/* メモリ情報 */
 					int d;
 					d = (int)_dos_malloc(-1);
-					sprintf(str, "Use %d/%d[KB] Free %d[KB]", g_nMaxMemSize - Mdiv1024(d-0x81000000), g_nMaxMemSize, Mdiv1024(d-0x81000000));
+					sprintf(str, "MEM Use %d/%d[KB] Free %d[KB]", g_nMaxMemSize - Mdiv1024(d-0x81000000), g_nMaxMemSize, Mdiv1024(d-0x81000000));
 #endif
 				}
 				break;
 			case DEBUG_FREE:
 				{
-					int16_t	i;
-					int16_t	dim[10];
-					int16_t	x, y;
 #if 0	/* 何でもOK */
 					int16_t x, y, col;
 					x = X_MIN_DRAW + X_OFFSET + (uFreeRunCount & 0xFF);
@@ -2278,22 +2364,40 @@ void Debug_View(uint16_t uFreeRunCount)
 				
 					Draw_Box(dst_x, dst_y, dst_x + src_w, dst_y + src_h, 0x03u, 0xFFFF);	/* 四角全体 */
 					
-					sprintf(str, "(%3d,%3d)(%3d,%3d)(%3d,%3d,%3d,%3d)(%d,%d)", vx, vy, dst_x, dst_y, x_min, y_min, x_max, y_max, ret_a, ret_b);
+					sprintf(str, "(%3hd,%3hd)(%3hd,%3hd)(%3hd,%3hd,%3hd,%3hd)(%hd,%hd)", vx, vy, dst_x, dst_y, x_min, y_min, x_max, y_max, ret_a, ret_b);
 #endif
 #if 0	/* デバッグ表示 */
 					if((g_Input & KEY_UPPER)!=0u)dy = Mdec(dy, 1);
-					if((g_Input & KEY_LOWER)!=0u)dy = Minc(dy, 1);
+					if((g_Input & KEY_LOWER)!=0u)dy =Minc(dy, 1);
 #endif
-#ifdef DEBUG	/* デバッグコーナー */
-//					GetDebugPos(&x, &y);
-//					sprintf(str, "(%4d, %4d)", x, y);
+#if 1	/* デバッグ表示 */
+					int16_t	x, y;
+					
+					/*-----------------------------------------------------------------*/
+					ST_PCG	*p_stPCG = NULL;
+					p_stPCG = PCG_Get_Info(ROAD_PCG_SIGNAL_1);	/* 矢印 */
+					/*-----------------------------------------------------------------*/
+					GetDebugPos(&x, &y);
+					/*-----------------------------------------------------------------*/
+					if(p_stPCG != NULL)
+					{
+						p_stPCG->x = x;
+						p_stPCG->y = y;
+						p_stPCG->dx = 0;
+						p_stPCG->dy = 0;
+						p_stPCG->update	= TRUE;
+					}
+					/*-----------------------------------------------------------------*/
+					sprintf(str, "FREE(%4hd, %4hd)[%3hd][%d]", x, y, g_uDebugNum, bMode);
 #endif
-#ifdef DEBUG	/* デバッグコーナー */
+#if 0	/* デバッグ表示 */
+					int16_t	i;
+					int16_t	dim[10];
 					for(i=0; i<10; i++)
 					{
 						GetDebugHis(&dim[i], i);
 					}
-					sprintf(str, "(%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)",
+					sprintf(str, "(%3d,%3d,%3d,%3d,%3d,%3d,%3d,%3d,%3d,%3d)",
 						dim[0], dim[1], dim[2], dim[3], dim[4],
 						dim[5], dim[6], dim[7], dim[8], dim[9]);
 #endif

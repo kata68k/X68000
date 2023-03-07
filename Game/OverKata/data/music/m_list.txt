@@ -12,7 +12,7 @@
 11=MRIDER_2_story.zmd
 12=MRIDER_3_start.zmd
 13=MRIDER_4_bgm.zmd
-14=HATR02.zmd
+14=ROM01_.zmd
 15=DCR.zmd
 16=F1_gameover.zmd
 

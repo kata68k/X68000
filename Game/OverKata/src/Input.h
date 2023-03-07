@@ -1,7 +1,7 @@
 #ifndef	INPUT_H
 #define	INPUT_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 /* ジョイスティック１のその１ */
 #define UP		(0x01)

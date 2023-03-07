@@ -5,7 +5,7 @@
 #include <doslib.h>
 #include <iocslib.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Input.h"
 #include "Music.h"
 

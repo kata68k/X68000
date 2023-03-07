@@ -1,7 +1,7 @@
 #ifndef	TEXT_H
 #define	TEXT_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 /* \‘¢‘Ì */
 

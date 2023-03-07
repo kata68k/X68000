@@ -4,7 +4,7 @@
 #include <math.h>
 #include <limits.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "APL_Math.h"
 
 /* ƒOƒ[ƒoƒ‹•Ï” */
@@ -411,7 +411,6 @@ int32_t APL_sDiv(int32_t Denominator, int32_t Numerator)
 int16_t APL_AngleDiff(int16_t BaseAngle, int16_t Angle)
 {
 	int16_t ret = 0;
-	int16_t Diff = 0;
 	
 	if(BaseAngle == Angle)
 	{
@@ -419,37 +418,25 @@ int16_t APL_AngleDiff(int16_t BaseAngle, int16_t Angle)
 	}
 	else
 	{
-		Diff = Angle - BaseAngle;
-		/*  90 -  10 =  80			*/
-		/* 180 -  10 = 170			*/
-		/* 270 -  10 = 260 -> -100	*/
-		/* 350 -  10 = 340 ->  -20	*/
-		/*  10 -  90 =  -80			*/
-		/*  10 - 180 = -170			*/
-		/*  10 - 270 = -260 -> 100	*/
-		/*  10 - 350 = -340 ->  20	*/
-		/*  90 -  80 =  10			*/
-		/* 180 -  80 = 100			*/
-		/* 270 -  80 = 190 -> -170	*/
-		/* 350 -  80 = 270 ->  -90	*/
-		/*  80 -  90 =  -10			*/
-		/*  80 - 180 = -100			*/
-		/*  80 - 270 = -190 -> 170	*/
-		/*  80 - 350 = -270 ->  90	*/
+		int16_t Diff;
 		
-		if(Mabs(Diff) > 180)
+		Diff = Angle - BaseAngle;
+		
+		if(Diff > 180)
 		{
-			if(Diff > 0)
-			{
-				Diff -= 360;
-			}
-			else
-			{
-				Diff += 360;
-			}
+			Diff -= 360;
 		}
+		else if(Diff < -180)
+		{
+			Diff += 360;
+		}
+		else
+		{
+			/* ‰½‚à‚µ‚È‚¢ */
+		}
+		
+		ret = Diff;
 	}
-	ret = Diff;
 	
 	return ret;
 }

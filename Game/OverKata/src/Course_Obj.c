@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Course_Obj.h"
 #include "OverKata.h"
 
@@ -19,8 +19,10 @@
 #include "Raster.h"
 
 //const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 198, 158, 126, 101, 79, 65, 51, 41, 33 };	/* X軸基準の場合 */
-const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 99, 79, 63, 50, 39, 32, 25, 20, 16 };
+//const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 99, 79, 63, 50, 39, 32, 25, 20, 16 };
 //														{96, 77, 61, 49, 39, 31, 25, 20, 16, 13, 10};
+const int16_t	g_nObjViewRateTbl[COURSE_OBJ_PAT_MAX] = { 99, 96, 93, 90, 88, 85, 82, 80, 77, 74, 72, 69, 66, 64, 61, 58, 56, 53, 50, 48, 45, 42, 40, 37, 34, 32, 29, 26, 24, 21, 18, 16 };
+
 /* 変数定義 */
 uint8_t		*g_pCG_Course_ObjImageBuf[COURSE_OBJ_TYP_MAX][COURSE_OBJ_PAT_MAX];
 
@@ -601,12 +603,17 @@ int16_t	Load_Course_Data(uint8_t bCourseNum)
 	uint16_t	x, y;
 	ST_ROADDATA *p_stRoadData;
 	
-	if(bCourseNum == 0u)bCourseNum = 1u;
-	
-	/* コースデータ読み込み */
-	p_stRoadData = (ST_ROADDATA *)GetRoadDataAddr();
-	sprintf(str, "data/map/course%02d.csv", bCourseNum);
-	File_Load_Course_CSV(str, p_stRoadData, &x, &y);
+	if(bCourseNum == 0u)
+	{
+		/* デバッグモード */
+	}
+	else
+	{
+		/* コースデータ読み込み */
+		p_stRoadData = (ST_ROADDATA *)GetRoadDataAddr(0);
+		sprintf(str, "data/map/course%02d.csv", bCourseNum);
+		File_Load_Course_CSV(str, p_stRoadData, &x, &y);
+	}
 
 	ret = y;
 	

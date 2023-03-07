@@ -6,7 +6,7 @@
 #include <string.h>
 #include <iocslib.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Draw.h"
 #include "CRTC.h"
 #include "FileManager.h"

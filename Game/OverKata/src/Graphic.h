@@ -1,7 +1,7 @@
 #ifndef	GRAPHIC_H
 #define	GRAPHIC_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 enum
 {

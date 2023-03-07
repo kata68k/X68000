@@ -7,7 +7,7 @@
 #include <iocslib.h>
 #include <doslib.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "PCG.h"
 #include "APL_Math.h"
 #include "FileManager.h"

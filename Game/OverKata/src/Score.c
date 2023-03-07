@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "Score.h"
 
 #include "Music.h"

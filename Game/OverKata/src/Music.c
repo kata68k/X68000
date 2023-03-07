@@ -7,7 +7,7 @@
 #include <sys/iocs.h>
 #include <interrupt.h>
 
-#include "inc/usr_macro.h"
+#include <usr_macro.h>
 #include "OverKata.h"
 #include "MUSIC.h"
 #include "FileManager.h"
@@ -26,11 +26,11 @@
 #endif
 
 #if		ZM_V2 == 1
-	#include "inc/ZMUSIC.H"
+	#include <ZMUSIC.H>
 #elif	ZM_V3 == 1
-	#include "inc/ZMSC3LIB.H"
+	#include <ZMSC3LIB.H>
 #elif	MC_DRV == 1
-	#include "inc/mcclib.h"
+	#include <mcclib.h>
 #else
 	#error "No Music Lib"
 #endif
@@ -46,7 +46,7 @@ uint32_t	m_list_max	=	0u;
 #if		ZM_V2 == 1
 #elif	ZM_V3 == 1
 	int8_t	*music_dat[MUSIC_MAX];
-	static int16_t	music_dat_size[MUSIC_MAX]	=	{0};
+	static int32_t	music_dat_size[MUSIC_MAX]	=	{0};
 #elif	MC_DRV == 1
 #else
 	#error "No Music Lib"
@@ -57,7 +57,7 @@ uint32_t	m_list_max	=	0u;
 	int8_t		se_list[SOUND_MAX][256]	=	{0};
 	uint32_t	s_list_max	=	0u;
 	int8_t		*se_dat[SOUND_MAX];
-	static int16_t	se_dat_size[SOUND_MAX]	=	{0};
+	static int32_t	se_dat_size[SOUND_MAX]	=	{0};
 	static int32_t	se_dat_addr[SOUND_MAX]	=	{0};
 #elif	MC_DRV == 1
 #else
@@ -141,7 +141,7 @@ void Init_Music(void)
 	}
 	unZmusicVerNum = ZM_NUM_V2;	/* Ver2.0x判定 */
 #elif	ZM_V3 == 1
-	int16_t	ret;
+	int32_t	ret;
 //	int8_t	sTONE[33] = {0};
 	
 	unZmusicVer = zm_check_zmsc();
@@ -199,7 +199,7 @@ void Init_Music(void)
 		err = m_alloc( uTrk, MML_BUF_N );	/* trk(1-80) */
 		if(err != 0)
 		{
-			printf("m_alloc error %d-(%d,%d)\n", err, uTrk, MML_BUF_N);
+			printf("m_alloc error %d-(%hd,%d)\n", err, uTrk, MML_BUF_N);
 		}
 		/* チャンネルとトラックの割り付け */
 		err = m_assign( uCh, uTrk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
@@ -724,17 +724,17 @@ int32_t	M_Play(int16_t Key)
 	{
 		if(Key < 0x80)
 		{
-			sprintf(uMML, "@%dv15o2l4q1@k%d d+&", uDebugNum, Mdiv8(Key) );	/* OK */
+			sprintf(uMML, "@%hdv15o2l4q1@k%hd d+&", uDebugNum, Mdiv8(Key) );	/* OK */
 		}
 		else
 		{
-			sprintf(uMML, "@137v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
+			sprintf(uMML, "@137v15o2l4q1@k%hd d+&", Mdiv8(Key) );	/* OK */
 		}
 	}
 	else
 #endif
 	{
-		sprintf(uMML, "@137v15o2l4q1@k%d d+&", Mdiv8(Key) );	/* OK */
+		sprintf(uMML, "@137v15o2l4q1@k%hd d+&", Mdiv8(Key) );	/* OK */
 	}
 	err = m_trk( uTrk, uMML );	
 	if(err != 0)

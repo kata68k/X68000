@@ -1,7 +1,7 @@
 #ifndef	APL_MACS_H
 #define	APL_MACS_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 #include "Moon.h"
 
 #ifdef 	MACS_MOON

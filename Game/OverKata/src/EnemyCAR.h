@@ -1,14 +1,15 @@
 #ifndef	ENEMYCAR_H
 #define	ENEMYCAR_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 #define	ENEMYCAR_MAX	(2)
 #define ENEMY_CAR_0_W	(67)
 #define ENEMY_CAR_0_H	(45)
 #define ENEMY_CAR_1_W	(140)
 #define ENEMY_CAR_1_H	(105)
-#define	ENEMYCAR_PAT_MAX	(11)
+//#define	ENEMYCAR_PAT_MAX	(11)
+#define	ENEMYCAR_PAT_MAX	(32)
 #define	ENEMYCAR_TYP_MAX	(8)
 
 /* ç\ë¢ëÃíËã` */

@@ -1,7 +1,7 @@
 #ifndef	OBJECT_H
 #define	OBJECT_H
 
-#include "inc/usr_define.h"
+#include <usr_define.h>
 
 #define	COURSE_OBJ_MAX		(8)
 #define	COURSE_OBJ_H_MAX	(4)	/* COURSE_OBJ_MAXの半分を定義する */
@@ -9,7 +9,8 @@
 #define PINETREE_0_H	(56)
 #define PINETREE_1_W	(62)
 #define PINETREE_1_H	(112)
-#define	COURSE_OBJ_PAT_MAX	(9)
+//#define	COURSE_OBJ_PAT_MAX	(9)
+#define	COURSE_OBJ_PAT_MAX	(32)
 #define	COURSE_OBJ_TYP_MAX	(4)
 
 /* ライバル車の構造体 */

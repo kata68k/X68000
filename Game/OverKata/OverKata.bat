@@ -5,9 +5,9 @@ cp -u OverKata.x D:\超電動開発室\OverKata\
 D:
 cd D:\超電動開発室\OverKata
 rem JOYDRV3.X data\SAMPLE.CNF
+PCM8A.X
 MACSDRV.x
 MOON.x -f10 -m512
-PCM8A.X
 ZMUSIC.X -M -N -P512 -W0 -Sdata\music\init.ZMD -Bdata\se\OverKata.ZPD
 rem ZMSC.X -M -N  -P512 -W0 -B data\se\OverKata.ZPD
 rem MPCM.X 有効にすると動画再生時にフリーズする
@@ -20,9 +20,9 @@ rem ZMSC3.X -J -R
 rem MPCM.X /r
 rem ZMSC.X -R
 ZMUSIC.X -R
-PCM8A.X -R
 MOON.x -r
 MACSDRV.x -r
+PCM8A.X -R
 rem JOYDRV3.X -R
 W:
 
