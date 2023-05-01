@@ -1,0 +1,11 @@
+ECHO OFF
+JOYDRV3.X data\SAMPLE.CNF
+MACSDRV.X
+MOON.x -f10 -m640
+ZMUSIC.X -M -N -T512 -W0 -Sdata\music\68SND.ZMS -Bdata\se\BK.ZPD
+BattleKata.x
+ZMUSIC.X -R
+MOON.x -r
+MACSDRV.X -r
+JOYDRV3.X -R
+

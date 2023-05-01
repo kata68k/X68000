@@ -1,0 +1,12 @@
+#ifndef	BIOS_MPU_H
+#define	BIOS_MPU_H
+
+#include <usr_define.h>
+
+#define IOCS_SYS_STAT	(0xAC)
+
+extern void init_trap14 (void);
+extern uint32_t mpu_cache_clr(void);
+extern int32_t	mpu_stat_chk(void);
+
+#endif	/* BIOS_MPU_H */
