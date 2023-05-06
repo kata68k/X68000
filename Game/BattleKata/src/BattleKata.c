@@ -10,7 +10,6 @@
 #include <io.h>
 #include <math.h>
 #include <time.h>
-#include <XSP2lib.H>
 #include <PCG90.H>
 
 #include "usr_style.h"
@@ -26,6 +25,7 @@
 #include "IF_Graphic.h"
 #include "IF_Draw.h"
 #include "IF_Input.h"
+#include "IF_PCG.h"
 #include "IF_Text.h"
 #include "IF_Task.h"
 #include "APL_MACS.h"
@@ -43,74 +43,15 @@ int32_t g_nCrtmod;
 uint8_t	g_bExit = TRUE;
 uint32_t g_unFly_time;
 
-/* ＰＣＧデータ */
-/*
-	XSP 用 PCG 配置管理テーブル
-	スプライト PCG パターン最大使用数 + 1 バイトのサイズが必要。
-*/
-char pcg_alt[PCG_MAX + 1];		/* XSP 用 PCG 配置管理テーブル	スプライト PCG パターン最大使用数 + 1 バイトのサイズが必要。*/
-char pcg_dat[PCG_MAX * 128];	/* ＰＣＧデータファイル読み込みバッファ */
-unsigned short pal_dat[ 256 ];	/* パレットデータファイル読み込みバッファ */
 
 short *seq_tbl;
 
 /* プロトタイプ宣言 */
 void (*usr_abort)(void);	/* ユーザのアボート処理関数 */
-void sp_dataload(void);
 void App_init( void );
 static void App_exit(void);
 void App_TimerProc( void );
 
-void sp_dataload(void)
-{
-	FILE *fp;
-	unsigned int i,j;
-
-	/*スプライトレジスタ初期化*/
-	for(j = 0x80000000; j < 0x80000000 + 128; j++ ){
-		SP_REGST(j,-1,0,0,0,0);
-	}
-	
-	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
-
-	fp = fopen( "data/sp/BK.SP" , "rb" ) ;
-//	fp = fopen( "SP_DATA/SAKANA.SP" , "rb" ) ;
-	j = fread( pcg_dat
-			,  128		/* 1PCG = 128byte */
-			,  PCG_MAX	/* 256PCG */
-			,  fp
-	) ;
-	fclose( fp ) ;
-
-//	for( i = 0 ; i < PCG_MAX ; i++ ){
-//		SP_DEFCG( i, 1, &pcg_dat[i * 128] );
-//	}
-	
-#if 0
-	/*-----------[ PCG データを縦画面用に 90 度回転 ]-----------*/
-
-	for (i = 0; i < 256; i++) {
-		pcg_roll90(&pcg_dat[i * 128], 1);
-	}
-#endif
-	
-	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
-
-	fp = fopen( "data/sp/BK.PAL" , "rb" ) ;
-//	fp = fopen( "SP_DATA/SAKANA.PAL" , "rb" ) ;
-	fread( pal_dat
-		,  2		/* 1palet = 2byte */
-		,  256		/* 16palet * 16block */
-		,  fp
-		) ;
-	fclose( fp ) ;
-
-	/* スプライトパレットに転送 */
-	for( i = 0 ; i < 256 ; i++ )
-	{
-		SPALET( (i&15) | (1<<0x1F) , i/16 + 1, pal_dat[i] ) ;
-	}
-}
 
 void area_init( int32_t x, int32_t y )
 {
@@ -159,17 +100,30 @@ void ship_init( void )
 void ship_move( void )
 {
 	AREA *area;
-	JOY_ANALOG_BUF	analog_data;
+//	JOY_ANALOG_BUF	analog_data;
+	int16_t	analog_data[5];
 
 	area = area_data;
 
 	if(g_bAnalogStickMode == TRUE)
 	{
-		GetAnalog_Info(&analog_data);	/* アナログデータ読み込み */
-
-		if( analog_data.r_stk_lr < 0x70 )	/* 左 */
+		GetAnalog_Info(&analog_data[0]);	/* アナログデータ読み込み */
+#if 0
 		{
-			ship_data->angle += (0x80 - analog_data.r_stk_lr) >> 4;
+			int8_t	sBuf[128];
+			memset(sBuf, 0, sizeof(sBuf));
+			sprintf(sBuf, "(%x,%x,%x,%x)(%x)",
+						analog_data[0], analog_data[1],
+						analog_data[2], analog_data[3],
+						analog_data[4] );
+			Draw_Message_To_Graphic(sBuf, 0, 240, F_MOJI, F_MOJI_BAK);
+//			KeyHitESC();	/* デバッグ用 */
+		}
+#endif
+
+		if( analog_data[r_stk_lr_1] < 0x70 )	/* 左 */
+		{
+			ship_data->angle += (0x80 - analog_data[r_stk_lr_1]) >> 4;
 			
 			if(ship_data->angle >= 360)
 			{
@@ -177,9 +131,9 @@ void ship_move( void )
 			}
 	//		printf("A=%3d\n", ship_data->angle);
 		}
-		else if( analog_data.r_stk_lr > 0x90 )	/* 右 */
+		else if( analog_data[r_stk_lr_1] > 0x90 )	/* 右 */
 		{
-			ship_data->angle -= (analog_data.r_stk_lr - 0x80) >> 4;
+			ship_data->angle -= (analog_data[r_stk_lr_1] - 0x80) >> 4;
 			
 			if(ship_data->angle < 0)
 			{
@@ -192,14 +146,14 @@ void ship_move( void )
 			/* 何もしない */
 		}
 
-		if( analog_data.l_stk_ud > 0x90 )	/* 上 */
+		if( analog_data[l_stk_ud_2] > 0x90 )	/* 上 */
 		{
-			ship_data->acc += (analog_data.l_stk_ud - 0x80) >> 6;
+			ship_data->acc += (analog_data[l_stk_ud_2] - 0x80) >> 6;
 			if(ship_data->acc >= 3)ship_data->acc = 3;
 		}
-		else if( analog_data.l_stk_ud < 0x70 )	/* 下 */
+		else if( analog_data[l_stk_ud_2] < 0x70 )	/* 下 */
 		{
-			ship_data->acc += (0x80 - analog_data.l_stk_ud) >> 6;
+			ship_data->acc += (0x80 - analog_data[l_stk_ud_2]) >> 6;
 			if(ship_data->acc >= 3)ship_data->acc = 3;
 		}
 		else /* なし */
@@ -374,7 +328,7 @@ void ship_sp( void )
 	}
 
 	/*自機を動かす*/
-	xsp_set( X_OFFSET + x - 8, Y_OFFSET + y - 8, pat, SetXSPinfo(v, h, 0x0A, 0x20));
+	PCG_PUT_1x1( X_OFFSET + x - 8, Y_OFFSET + y - 8, pat, SetXSPinfo(v, h, 0x0A, 0x20));
 #if 0
 	{
 		int8_t	sBuf[128];
@@ -671,7 +625,8 @@ void atari( void )
 	for( i = 0, enemy = enemy_data; i < ENEMY_NUM; i++, enemy++ ) {
 		SHOT *shot;
 		int32_t j;
-		int64_t dx, dy;
+		int32_t dx, dy;
+		int64_t distX, distY;
 		
 		if( enemy->flag == ENEMY_DEAD ) continue;
 
@@ -717,12 +672,13 @@ void atari( void )
 			if( (shot->x != shot->ex) || (shot->y != shot->ey) )continue;
 //			if(shot->pat > 0)continue;
 
-			dx = (shot->x - enemy->x);
-			dx *= dx;
-			dy = (shot->y - enemy->y);
-			dy *= dy;
+			dx = shot->x - enemy->x;
+			distX = Mdiv65536((uint64_t)(dx * dx));
 			
-			if( ((dx + dy) >= 0) && ((dx + dy) < ATARI_XY) ) {
+			dy = shot->y - enemy->y;
+			distY = Mdiv65536((uint64_t)(dy * dy));
+			
+			if( ((distX + distY) >= 0) && ((distX + distY) < Mdiv65536(ATARI_XY) )) {
 				enemy->flag = ENEMY_BOM;
 
 //				area_init(enemy->x, enemy->y);	/* 制限を更新 */
@@ -741,15 +697,12 @@ void atari( void )
 					/* スコア */
 					point = (i+1) * 1000;
 #if 0
+					PCG_OFF();			/* SP OFF */
 					/* 動画 */
-					xsp_off();			/* XSP OFF */
 					MOV_Play(0);		/* カットイン */
 					/* 画面モード再設定 */
 					CRTC_INIT(0x10A);	/* 画面モード初期化 */
-					PCG_VIEW(0x01);		/* スプライト初期化 */
-					xsp_on();			/* XSP ON */
-					/* PCG データと PCG 配置管理をテーブルを指定 */
-					xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));
+					PCG_ON();			/* SP ON */
 #endif
 					/* 効果音 */
 					ADPCM_Play(7);
@@ -763,7 +716,15 @@ void atari( void )
 				}
 				S_GetPos(Mdiv256(enemy->x) - 16, Mdiv256(enemy->y) - 48);	/* スコア表示座標更新 */
 				S_Add_Score(point);	/* スコア更新 */
-//				S_Add_Score((dx + dy));	/* スコア更新 */
+#if 0
+				{
+					int8_t	sBuf[128];
+					memset(sBuf, 0, sizeof(sBuf));
+					sprintf(sBuf, "s(%d, %d)e(%d, %d)d(%x, %x)", shot->x, shot->y, enemy->x, enemy->y, distX, distY);
+					Draw_Message_To_Graphic(sBuf, 0, 240, F_MOJI, F_MOJI_BAK);
+					KeyHitESC();	/* デバッグ用 */
+				}
+#endif
 
 				shot->flag = SHOT_ST_OUT;
 #ifdef DEBUG
@@ -809,11 +770,11 @@ void trans_sp( void )
 		switch( shot->flag )
 		{
 			case SHOT_ST_OUT:
-				xsp_set( 0, 0, 0x25 + (shot->pat), SetXSPinfo(0, 0, 0x0B, 0x20) );
+				PCG_PUT_1x1( 0, 0, 0x25 + (shot->pat), SetXSPinfo(0, 0, 0x0B, 0x20) );
 				break;
 			default:
-				xsp_set( X_OFFSET + Mdiv256(shot->x) - 8, 		Y_OFFSET + Mdiv256(shot->y) - 8, 		0x25 , 				SetXSPinfo(0, 0, 0x0B, 0x20) );	/* 影 */
-				xsp_set( X_OFFSET + Mdiv256(shot->ex) + 2 - 8, 	Y_OFFSET + Mdiv256(shot->ey) - 2 - 8,	0x26 + (shot->pat), SetXSPinfo(0, 0, 0x0B, 0x30) );	/* ボール */
+				PCG_PUT_1x1( X_OFFSET + Mdiv256(shot->x) - 8, 		Y_OFFSET + Mdiv256(shot->y) - 8, 		0x25 , 				SetXSPinfo(0, 0, 0x0B, 0x20) );	/* 影 */
+				PCG_PUT_1x1( X_OFFSET + Mdiv256(shot->ex) + 2 - 8, 	Y_OFFSET + Mdiv256(shot->ey) - 2 - 8,	0x26 + (shot->pat), SetXSPinfo(0, 0, 0x0B, 0x30) );	/* ボール */
 				break;
 		}
 //		Draw_Pset(Mdiv256(shot->x), Mdiv256(shot->y), 1);
@@ -824,7 +785,7 @@ void trans_sp( void )
 		switch( enemy->flag )
 		{
 			case ENEMY_DEAD:
-				xsp_set( 0, 0, 0x30 + (i % 18), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20) );	/* 画面外 */
+				PCG_PUT_1x1( 0, 0, 0x30 + (i % 18), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20) );	/* 画面外 */
 				break;
 			case ENEMY_BOM:
 				j = enemy->delay;
@@ -837,15 +798,15 @@ void trans_sp( void )
 					if(ret < 0)printf("error(%d):Draw_Circle\n", ret);
 
 					/* 爆風 */
-					xsp_set( X_OFFSET + Mdiv256(enemy->x) - 16, Y_OFFSET + Mdiv256(enemy->y) - 24, 0x50 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
-					xsp_set( X_OFFSET + Mdiv256(enemy->x) + 0, Y_OFFSET + Mdiv256(enemy->y) - 24, 0x51 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
-					xsp_set( X_OFFSET + Mdiv256(enemy->x) - 16, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x52 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
-					xsp_set( X_OFFSET + Mdiv256(enemy->x) + 0, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x53 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
+					PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) - 16, Y_OFFSET + Mdiv256(enemy->y) - 24, 0x50 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
+					PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) + 0, Y_OFFSET + Mdiv256(enemy->y) - 24, 0x51 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
+					PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) - 16, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x52 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
+					PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) + 0, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x53 + Mmul4(j/16), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));
 					enemy->delay++;
 				}
 				else
 				{
-					xsp_set( X_OFFSET + Mdiv256(enemy->x) - 8, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x49, SetXSPinfo(0, (enemy->vx < 0), 0x01, 0x20));	/* エネルギー缶 */
+					PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) - 8, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x49, SetXSPinfo(0, (enemy->vx < 0), 0x01, 0x20));	/* エネルギー缶 */
 				}
 //				ret = _iocs_apage(0);		/* グラフィックの書き込み(0) */
 //				if(ret < 0)printf("error(%d):_iocs_apage\n", ret);
@@ -858,8 +819,8 @@ void trans_sp( void )
 //				if(ret < 0)printf("error(%d):Draw_Box\n", ret);
 				break;
 			default:
-				xsp_set( X_OFFSET + Mdiv256(enemy->x) - 8, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x42, SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));	/* 旗 */
-				xsp_set( X_OFFSET + Mdiv256(enemy->x) - 8, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x30 + (i % 18), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x30));	/* 番号 */
+				PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) - 8, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x42, SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x20));	/* 旗 */
+				PCG_PUT_1x1( X_OFFSET + Mdiv256(enemy->x) - 8, Y_OFFSET + Mdiv256(enemy->y) - 8, 0x30 + (i % 18), SetXSPinfo(0, (enemy->vx < 0), 0x06, 0x30));	/* 番号 */
 				break;
 		}	
 //		Draw_Circle(	Mdiv256(enemy->x),
@@ -880,13 +841,13 @@ void trans_sp( void )
 			Draw_Message_To_Graphic(sBuf, 240, 0, F_MOJI, F_MOJI_BAK);
 		}
 
-		xsp_set( X_OFFSET + 224, Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
+		PCG_PUT_1x1( X_OFFSET + 224, Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
 	}
 	else
 	{
 		for(i = 0; i < ship_data->life; i++)
 		{
-			xsp_set( X_OFFSET + 240 - (i * 16), Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
+			PCG_PUT_1x1( X_OFFSET + 240 - (i * 16), Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
 		}
 	}
 }
@@ -977,22 +938,30 @@ void App_init( void )
 	T_INIT();		/* テキスト初期化 */
 	
 	puts("PCG ...");
-	sp_dataload();	/* スプライトデータの読み込み */
-	PCG_VIEW(0x01);	/* スプライト初期化 */
-//	PCG_INIT();		/* スプライト初期化 */
+	PCG_INIT();		/* スプライト初期化 */
 
-	puts("XSP ...");
-	/*---------------------[ XSP を初期化 ]---------------------*/
-	/* XSP の初期化 */
-	xsp_on();
+	puts("Controller ...");	
+#if CNF_JOYDRV360
+	/* アナログスティックモード判定 */
+	SetJoyDevMode(0, 0, 0);	/* JoyNo:0 DevID:0 PortNo:0 */
+#if 0	
+	switch(GetJoyDevice(1, 1, 0))
+	{
+		case 0:
+		default:
+			puts("App_init Digital");	
+			SetJoyDevMode(0, 0, 0);	/* JoyNo:0 DevID:0 PortNo:0 */
+			break;
+		case 1:
+			puts("App_init Analog");
+			SetJoyDevMode(1, 1, 0);	/* JoyNo:1 DevID:1 PortNo:0 */
+			break;
+	}
+#endif
 
-	/* PCG データと PCG 配置管理をテーブルを指定 */
-	xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));
-
-	/* 縦画面モード */
-//	xsp_vertical(1);
-	/*---------------------[ XSP を初期化 ]---------------------*/
-
+#else
+	g_bAnalogStickMode = FALSE;	/* デジタル */
+#endif
 	/* タスク初期 */
 	TaskManage_Init();
 
@@ -1001,9 +970,6 @@ void App_init( void )
 
 	/* ゲーム全般の初期化 */
 	game_init();
-
-	/* アナログスティックモード */
-	g_bAnalogStickMode = FALSE;
 
 	Set_CRT_Contrast(0);	/* コントラスト暗 */
 //	puts("App_init end");
@@ -1030,12 +996,7 @@ static void App_exit(void)
 	TaskManage_Init();		/* TimerTask 初期化 */
 	TimerD_EXIT();			/* Timer-D 終了 */
 
-	PCG_VIEW(0x00u);		/* スプライト＆ＢＧ非表示 */
-	puts("App_exit PCG_VIEW");
-
-	/* XSP の終了処理 */
-	xsp_off();
-	puts("App_exit xsp_off");
+	PCG_OFF();				/* スプライトOFF */
 
 	/* 画面 */
 	g_nCrtmod = CRTC_INIT(g_nCrtmod);	/* モードをもとに戻す */
@@ -1084,8 +1045,7 @@ int32_t main(void)
 		uint32_t time_st;
 		ST_TASK stTask;
 
-		/* 垂直同期 */
-		xsp_vsync2(1);
+		PCG_START_SYNC();	/* スプライト開始処理 */
 
 		/* 時刻設定 */
 		GetNowTime(&time_st);	/* メイン処理の開始時刻を取得 */
@@ -1098,24 +1058,51 @@ int32_t main(void)
 		/* 入力処理 */
 		{
 			int16_t	input = 0;
-#if 1
 			/* アナログスティック／デジタルスティック切替 */
 			if(ChatCancelSW((g_Input & KEY_b_TAB)!=0u, &g_bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
 			{
-				if(g_bAnalogStickMode == FALSE)	g_bAnalogStickMode = TRUE;
-				else							g_bAnalogStickMode = FALSE;
+#if CNF_JOYDRV360				
+				if(g_bAnalogStickMode == TRUE)	/* 現在：アナログスティックモードの場合 */
+				{
+					g_bAnalogStickMode = FALSE;
+//					puts("A to D");
+					SetJoyDevMode(0, 0, 0);	/* JoyNo:0 DevID:0 PortNo:0 */
+					if(GetJoyDevMode(0) == 0)
+					{
+//						puts("A to D OK");
+					}
+				}
+				else
+				{
+					g_bAnalogStickMode = TRUE;
+//					puts("D to A");
+					SetJoyDevMode(1, 1, 0);	/* JoyNo:1 DevID:1 PortNo:0 */
+					if(GetJoyDevMode(1) == 0)
+					{
+//						puts("D to A OK");
+					}
+				}
+#else
+				if(g_bAnalogStickMode == TRUE)
+				{
+					g_bAnalogStickMode = FALSE;
+				}
+				else
+				{
+					g_bAnalogStickMode = TRUE;
+				}
+#endif
 			}
 			get_keyboard(&input, 0, 0);		/* キーボード入力 */
-#else
-			g_bAnalogStickMode = FALSE;
-#endif
+
 			if(g_bAnalogStickMode == TRUE)
 			{
-				get_ajoy(&input, 0, 0, 1);	/* アナログジョイスティック入力 0:X680x0 1:etc */
+				get_ajoy(&input, 1, 0, 0);	/* アナログジョイスティック入力, JoyNo, mode=0:edge on 1:edge off, Config 0:X680x0 1:rev */
+				
 			}
 			else
 			{
-				get_djoy(&input, 0, 0);		/* ジョイスティック入力 */
+				get_djoy(&input, 0, 0);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
 			}
 			g_Input = input;
 		}
@@ -1148,7 +1135,7 @@ int32_t main(void)
 				S_Init_Score();		/* スコア初期化 */
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 9, 1, 0x12);
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 8, 0, 0x86);
-				PutGraphic_To_Symbol12("Ver 0.91", 176, 24, 0x86);
+				PutGraphic_To_Symbol12("Ver 0.92", 176, 24, 0x86);
 //				PutGraphic_To_Symbol12("Ver X68KBBS", 150, 24, 0x86);
 				Draw_Message_To_Graphic("START", 160, 116, F_MOJI, 0x30);
 				Draw_Message_To_Graphic("PUSH A BUTTON", 160, 128, F_MOJI, 0x30);
@@ -1338,7 +1325,7 @@ int32_t main(void)
 			}
 			case SCENE_NEXT_STAGE:		/* NEXTステージ（処理） */
 			{
-				xsp_set( X_OFFSET + 192, X_OFFSET + 96, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );	/* スコアボール */
+				PCG_PUT_1x1( X_OFFSET + 192, X_OFFSET + 96, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );	/* スコアボール */
 
 				if(g_Input == KEY_A)	/* Aボタン */
 				{
@@ -1458,9 +1445,7 @@ int32_t main(void)
 		{
 //			printf("%d, %d, %d, %d, %d\n", stTask.b8ms, stTask.b16ms, stTask.b32ms, stTask.b96ms, stTask.b496ms);
 		}
-
-		/* スプライトを一括表示する */
-		xsp_out();
+		PCG_END_SYNC();
 	}
 	while( loop );
 

@@ -19,7 +19,6 @@
 static ST_PCG	g_stPCG_DATA[PCG_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
-void PCG_INIT(void);
 void PCG_VIEW(uint8_t);
 void PCG_Rotation(uint16_t *, uint16_t *, uint8_t, uint8_t, int16_t, int16_t, uint8_t *, uint8_t, uint16_t, uint16_t);
 void BG_TEXT_SET(int8_t *);
@@ -30,44 +29,6 @@ int16_t PCG_Load_Data(int8_t *, uint16_t , ST_PCG , uint16_t , uint8_t );
 int16_t PCG_Load_PAL_Data(int8_t *, uint16_t, uint16_t);
 int16_t PCG_PAL_Change(uint16_t , uint16_t , uint16_t);
 /* 関数 */
-/*===========================================================================================*/
-/* 関数名	：	*/
-/* 引数		：	*/
-/* 戻り値	：	*/
-/*-------------------------------------------------------------------------------------------*/
-/* 機能		：	*/
-/*===========================================================================================*/
-void PCG_INIT(void)
-{
-#if 0
-	uint32_t	j;
-	
-	/* スプライトの初期化 */
-	_iocs_sp_init();			/* スプライトの初期化 */
-	
-	/*スプライトレジスタ初期化*/
-	for( j = 0x80000000; j < 0x80000000 + 128; j++ )
-	{
-		_iocs_sp_regst(j,-1,0,0,0,0);
-	}
-	for(uint32_t i = 0; i < 256; i++ )
-	{
-		_iocs_sp_cgclr(i);			/* スプライトクリア */
-		_iocs_sp_defcg( i, 1,  );
-	}
-	
-	//	_iocs_bgctrlgt(1);				/* BGコントロールレジスタ読み込み */
-	_iocs_bgscrlst(0,0,0);				/* BGスクロールレジスタ設定 */
-	_iocs_bgscrlst(1,0,0);				/* BGスクロールレジスタ設定 */
-	_iocs_bgtextcl(0,SetBGcode(0,0,0,0));	/* BGテキストクリア */
-	_iocs_bgtextcl(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
-	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
-#endif
-
-	PCG_SP_dataload("data/sp/BK.SP");	/* スプライトのデータ読み込み */
-	PCG_PAL_dataload("data/sp/BK.PAL");	/* スプライトのパレットデータ読み込み */
-}
-
 /*===========================================================================================*/
 /* 関数名	：	*/
 /* 引数		：	*/

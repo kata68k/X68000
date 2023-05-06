@@ -217,9 +217,11 @@ int16_t S_GetPos(int16_t x, int16_t y)
 {
 	int16_t	ret = 0;
 
-	/* ƒŠƒZƒbƒg */
 	g_stScorePos.x_old = g_stScorePos.x;
 	g_stScorePos.y_old = g_stScorePos.y;
+
+	if(x > 200)x = 200;
+	if(y < 80)y = 80;
 
 	g_stScorePos.x = x;
 	g_stScorePos.y = y;
@@ -287,10 +289,12 @@ int16_t S_Main_Score(void)
 			memset(sBuf, 0, sizeof(sBuf));
 			if(g_stScore.uCombo > 1)
 			{
+//				sprintf(sBuf, "0x%x+%d", g_stScore.ulScoreAdd, g_stScore.uCombo);
 				sprintf(sBuf, "+%dx%d", g_stScore.ulScoreAdd, g_stScore.uCombo);
 			}
 			else
 			{
+//				sprintf(sBuf, "0x%x", g_stScore.ulScoreAdd );
 				sprintf(sBuf, "+%d", g_stScore.ulScoreAdd );
 			}
 			Draw_Message_To_Graphic(sBuf, g_stScorePos.x, g_stScorePos.y, F_MOJI, F_MOJI_BAK);

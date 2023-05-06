@@ -8,5 +8,7 @@
 extern void init_trap14 (void);
 extern uint32_t mpu_cache_clr(void);
 extern int32_t	mpu_stat_chk(void);
+extern void Set_DI(void);
+extern void Set_EI(void);
 
 #endif	/* BIOS_MPU_H */

@@ -3,13 +3,15 @@
 
 #include <usr_define.h>
 
+#define	CNF_JOYDRV360	(1)
+
 /* ジョイスティック１のその１ */
 #define UP		(0x01)
 #define DOWN	(0x02)
 #define LEFT	(0x04)
 #define RIGHT	(0x08)
-#define JOYA	(0x20)
-#define JOYB	(0x40)
+#define JOYA	(0x40)
+#define JOYB	(0x20)
 #define ESC_S	(27)
 
 /* ジョイスティック１のその１ */
@@ -47,12 +49,20 @@
 #define AJOY_B			(0x0400)
 #define AJOY_A			(0x0800)
 
+enum
+{
+	r_stk_ud_0,	/* 右スティックUP/DOWN */
+	r_stk_lr_1,	/* 右スティックLEFT/RIGHT */
+	l_stk_ud_2,	/* 左スティックUP/DOWN */
+	l_stk_lr_3,	/* 左スティックLEFT/RIGHT */
+	btn_data_4	/* ボタンデータ */
+};
 typedef struct tagANALOG {
-	uint16_t	l_stk_ud;	/* 左スティックUP/DOWN */
-	uint16_t	l_stk_lr;	/* 左スティックLEFT/RIGHT */
-	uint16_t	r_stk_ud;	/* 右スティックUP/DOWN */
-	uint16_t	r_stk_lr;	/* 右スティックLEFT/RIGHT */
-	uint16_t	btn_data;	/* ボタンデータ */
+	int16_t	l_stk_ud;	/* 左スティックUP/DOWN */
+	int16_t	l_stk_lr;	/* 左スティックLEFT/RIGHT */
+	int16_t	r_stk_ud;	/* 右スティックUP/DOWN */
+	int16_t	r_stk_lr;	/* 右スティックLEFT/RIGHT */
+	int16_t	btn_data;	/* ボタンデータ */
 } JOY_ANALOG_BUF;
 
 extern	int16_t	g_Input;
@@ -60,10 +70,13 @@ extern	uint8_t	g_bAnalogStickMode;
 extern	uint8_t	g_bAnalogStickMode_flag;
 
 extern uint16_t	get_keyboard( uint16_t *, uint8_t , uint8_t );
-extern uint16_t	get_djoy(uint16_t *, uint8_t, uint8_t );
-extern uint16_t	get_ajoy(uint16_t *, uint8_t, uint8_t, uint8_t );
-extern int16_t	GetAnalog_Info(JOY_ANALOG_BUF *);
-extern int16_t	SetAnalog_Info(JOY_ANALOG_BUF);
+extern uint16_t	get_djoy(uint16_t *, int32_t, uint8_t );
+extern uint16_t	get_ajoy(uint16_t *, int32_t, uint8_t, uint8_t );
+extern int16_t	GetAnalog_Info(int16_t *);
+extern int16_t	SetAnalog_Info(int16_t *);
+extern int16_t	GetJoyDevice(int32_t, int32_t, int32_t);
+extern int16_t	GetJoyDevMode(int32_t);
+extern int16_t	SetJoyDevMode(int32_t , int32_t , int32_t);
 extern uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
 extern uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 extern int16_t	KeyHitESC(void);
