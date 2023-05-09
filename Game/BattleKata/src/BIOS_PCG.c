@@ -10,7 +10,7 @@
 #include <usr_macro.h>
 #include "BIOS_PCG.h"
 #include "IF_FileManager.h"
-#include "APL_Math.h"
+#include "IF_Math.h"
 
 /* define’è‹` */
 #define	PCG_16x16_AREA	(0x40)

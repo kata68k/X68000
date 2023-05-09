@@ -10,7 +10,7 @@
 #include "usr_macro.h"
 #include "BIOS_PCG.h"
 #include "IF_Text.h"
-#include "APL_Math.h"
+#include "IF_Math.h"
 
 /* define’è‹` */
 #define	TAB_SIZE	(4)

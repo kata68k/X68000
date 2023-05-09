@@ -1,5 +1,5 @@
-#ifndef	APL_MACS_C
-#define	APL_MACS_C
+#ifndef	IF_MACS_C
+#define	IF_MACS_C
 
 #include <iocslib.h>
 #include <stdio.h>
@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <usr_macro.h>
-#include "APL_MACS.h"
+#include "IF_MACS.h"
 #include "BIOS_CRTC.h"
 #include "BIOS_Moon.h"
 #include "BIOS_PCG.h"
@@ -135,5 +135,5 @@ static uint32_t moon_check(void)
 	return ret;
 }
 
-#endif	/* APL_MACS_C */
+#endif	/* IF_MACS_C */
 

@@ -1,5 +1,5 @@
-#ifndef	APL_MATH_H
-#define	APL_MATH_H
+#ifndef	IF_MATH_H
+#define	IF_MATH_H
 
 #include <usr_define.h>
 
@@ -37,4 +37,4 @@ extern	int16_t APL_mul_0p54(int16_t);
 extern	int16_t APL_mul_0p52(int16_t);
 extern	int16_t APL_mul_0p50(int16_t);
 
-#endif	/* APL_MATH_H */
+#endif	/* IF_MATH_H */

@@ -28,8 +28,8 @@
 #include "IF_PCG.h"
 #include "IF_Text.h"
 #include "IF_Task.h"
-#include "APL_MACS.h"
-#include "APL_Math.h"
+#include "IF_MACS.h"
+#include "IF_Math.h"
 #include "APL_Score.h"
 
 /* ƒOƒ[ƒoƒ‹•Ï” */

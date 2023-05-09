@@ -14,7 +14,7 @@
 
 #include "IF_FileManager.h"
 
-#include "APL_MACS.h"
+#include "IF_MACS.h"
 #include "IF_Graphic.h"
 #include "IF_MUSIC.h"
 #include "BIOS_PCG.h"

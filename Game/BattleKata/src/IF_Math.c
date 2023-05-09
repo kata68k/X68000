@@ -1,11 +1,11 @@
-#ifndef	APL_MATH_C
-#define	APL_MATH_C
+#ifndef	IF_MATH_C
+#define	IF_MATH_C
 
 #include <math.h>
 #include <limits.h>
 
 #include <usr_macro.h>
-#include "APL_Math.h"
+#include "IF_Math.h"
 
 /* ƒOƒ[ƒoƒ‹•Ï” */
 
@@ -538,4 +538,4 @@ int16_t APL_mul_0p50(int16_t x)
 	return Mmul_0p50(x);
 }
 
-#endif	/* APL_MATH_C */
+#endif	/* IF_MATH_C */

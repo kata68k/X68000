@@ -13,7 +13,7 @@
 #include "IF_FileManager.h"
 #include "IF_Graphic.h"
 #include "IF_Draw.h"
-#include "APL_Math.h"
+#include "IF_Math.h"
 
 /* define’è‹` */
 #define	PIC_FILE_BUF_SIZE	(524288ul)	/* 512*512*2 */
