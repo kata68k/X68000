@@ -21,7 +21,7 @@
 
 static uint8_t		*pcg_dat;		/* ＰＣＧデータファイル読み込みバッファ */
 static 	uint16_t	pal_dat[ 128 ];	/* パレットデータファイル読み込みバッファ */
-
+static int32_t		nMaxFreeMem;
 
 /* 関数のプロトタイプ宣言 */
 int16_t Init_FileList_Load(void);

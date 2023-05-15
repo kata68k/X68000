@@ -28,6 +28,7 @@
 #include "IF_PCG.h"
 #include "IF_Text.h"
 #include "IF_Task.h"
+#include "IF_Memory.h"
 #include "IF_MACS.h"
 #include "IF_Math.h"
 #include "APL_Score.h"
@@ -894,6 +895,8 @@ void App_init( void )
 {
 	puts("App_init start");
 
+	GetFreeMem();		/* 起動前のメモリ状態 */
+
 	srand(time(NULL));	/* 乱数初期化 */
 
 	/* 例外ハンドリング処理 */
@@ -922,9 +925,11 @@ void App_init( void )
 		puts("入った。");
 	}
 	
+#if CNF_MACS
 	puts("Movie ...");
 	/* 動画 */
 	MOV_INIT();		/* 初期化処理 */
+#endif
 
 	puts("CRT ...");
 	/* 画面 */
@@ -1022,6 +1027,8 @@ static void App_exit(void)
 
 	_dos_super(g_nSuperchk);		/*スーパーバイザーモード終了*/
 	puts("App_exit _dos_super");
+
+	printf("メモリ最大空き容量(%dkB)\n", GetMaxFreeMem());
 
 	puts("App_exit End");
 }
@@ -1130,12 +1137,12 @@ int32_t main(void)
 				T_Clear();			/* テキストクリア */
 	
 				G_CLR_AREA(0,0,256,256,1);	/* グラフィック領域クリア */
-				G_Load_Mem(2, 0, 0, 1);	/* グラフィックの読み込み */	/* 画像を表示させると終了時におかしな命令エラーになる */
+				G_Load(2, 0, 0, 1);	/* グラフィックの読み込み */	/* 画像を表示させると終了時におかしな命令エラーになる */
 				
 				S_Init_Score();		/* スコア初期化 */
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 9, 1, 0x12);
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 8, 0, 0x86);
-				PutGraphic_To_Symbol12("Ver 0.92", 176, 24, 0x86);
+				PutGraphic_To_Symbol12("Ver 0.93", 176, 24, 0x86);
 //				PutGraphic_To_Symbol12("Ver X68KBBS", 150, 24, 0x86);
 				Draw_Message_To_Graphic("START", 160, 116, F_MOJI, 0x30);
 				Draw_Message_To_Graphic("PUSH A BUTTON", 160, 128, F_MOJI, 0x30);
@@ -1240,7 +1247,7 @@ int32_t main(void)
 				area_init(-1, -1);
 
 				G_CLR_AREA(0,0,256,256,1);	/* グラフィック領域クリア */
-				G_Load_Mem(1, 0, 0, 1);	/* グラフィックの読み込み */	/* 画像を表示させると終了時におかしな命令エラーになる */
+				G_Load(1, 0, 0, 1);	/* グラフィックの読み込み */	/* 画像を表示させると終了時におかしな命令エラーになる */
 				
 				enemy_set(18);			/* 敵のステータス（生きる） */
 				enemy_green_set();		/* グリーンを生成 */
@@ -1441,6 +1448,8 @@ int32_t main(void)
 			}
 		}
 		
+		GetFreeMem();	/* メモリ使用量測定 */
+
 		if(UpdateTaskInfo() != 0)
 		{
 //			printf("%d, %d, %d, %d, %d\n", stTask.b8ms, stTask.b16ms, stTask.b32ms, stTask.b96ms, stTask.b496ms);

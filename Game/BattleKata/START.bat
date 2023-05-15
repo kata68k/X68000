@@ -1,11 +1,13 @@
 ECHO OFF
 JOYDRV3.X data\JOYDRV3.CNF
-MACSDRV.X
-MOON.x -f10 -m640
+rem PCM8A.X
+rem MACSDRV.X
+rem MOON.x -f10 -m640
 ZMUSIC.X -M -N -T512 -W0 -Sdata\music\68SND.ZMS -Bdata\se\BK.ZPD
 BattleKata.x
 ZMUSIC.X -R
-MOON.x -r
-MACSDRV.X -r
+rem MOON.x -r
+rem MACSDRV.X -r
+rem PCM8A.X -r
 JOYDRV3.X -R
 

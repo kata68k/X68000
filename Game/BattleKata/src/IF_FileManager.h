@@ -19,8 +19,5 @@ extern int16_t Load_MACS_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 extern int16_t GetFileLength(int8_t *, int32_t *);
 extern int16_t GetFilePICinfo(int8_t *, BITMAPINFOHEADER *);
 extern int16_t GetRectangleSise(uint16_t *, uint16_t, uint16_t, uint16_t);
-extern void *MyMalloc(int32_t);
-extern int16_t MyMfree(void *);
-extern int32_t MaxMemSize(int8_t);
 
 #endif	/* IF_FILEMANAGER_H */

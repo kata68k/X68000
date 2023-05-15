@@ -4,6 +4,8 @@
 #include <usr_define.h>
 #include "BIOS_Moon.h"
 
+#define	CNF_MACS	(0)
+
 #ifdef 	MACS_MOON
 /* define’è‹` */
 #define	MACS_MAX	(16)
