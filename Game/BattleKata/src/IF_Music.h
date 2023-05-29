@@ -31,4 +31,6 @@ extern	int32_t ADPCM_Play(uint8_t);
 extern	int32_t ADPCM_Stop(void);
 extern	int32_t M_SetMusic(uint32_t);
 extern	int32_t M_Play(int16_t, int16_t);
+extern	int32_t	M_TEMPO(int16_t);
+
 #endif	/* IF_MUSIC_H */

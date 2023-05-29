@@ -9,6 +9,7 @@
 
 #include <usr_macro.h>
 #include "BIOS_MPU.h"
+#include "IF_Memory.h"
 #include "IF_MUSIC.h"
 #include "IF_FileManager.h"
 
@@ -65,8 +66,11 @@ uint32_t	m_list_max	=	0u;
 
 int8_t		adpcm_list[ADPCM_MAX][256]	=	{0};
 uint32_t	p_list_max	=	0u;
+#if		(ZM_V2 == 1) || (ZM_V3 == 1)
+#else
 int8_t		*adpcm_dat[ADPCM_MAX];
 static int32_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
+#endif
 
 uint8_t	SE_Data[] = {	/* 構造体にした方がよい？ */
 //		0x01,										/* (+1)ZMDの構造 */
@@ -113,6 +117,7 @@ int32_t ADPCM_Stop(void);
 int32_t Get_ZMD_Trak_Head(uint8_t *, int16_t);
 int32_t M_SetMusic(uint32_t);
 int32_t M_Play(int16_t, int16_t);
+int32_t	M_TEMPO(int16_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -240,7 +245,7 @@ void Init_Music(void)
 #endif
 
 	Music_Stop();	/* 音楽停止 */
-
+	
 	/* BGM */
 #if		ZM_V2 == 1
 	/* 何もしない */
@@ -367,7 +372,7 @@ void Exit_Music(void)
 int32_t Music_Play(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
-	if(bPlayNum > m_list_max)return ret;
+	if(bPlayNum > m_list_max)return -1;
 
 	Music_Stop();	/* 音楽停止 */
 	
@@ -380,6 +385,8 @@ int32_t Music_Play(uint8_t bPlayNum)
 #else
 	#error "No Music Lib"
 #endif
+//	printf("Music File %2d = %s = size(%d[byte])\n", bPlayNum, music_list[bPlayNum], music_dat_size[bPlayNum]);
+
 	_iocs_b_curoff();			/* カーソルを消します */
 
 	return	ret;
@@ -461,7 +468,7 @@ int32_t FM_SE_Play_Fast(uint8_t bPlayNum)
 	uint8_t	bCh, bTrk;
 	int32_t	level;
 
-	if(bPlayNum > m_list_max)return ret;
+	if(bPlayNum > m_list_max)return -1;
 
 	bCh		= 6;
 	bTrk	= 6;
@@ -724,7 +731,7 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 	static uint8_t ubCount = 0u;
 
 	uCh = (FM_CH_MAX - FM_USE_CH + 1u) + bChanel;
-	uTrk = 60 + uCh;
+	uTrk = uCh;
 	if(bChanel < FM_USE_CH - 1u)
 	{
 		bChanel++;
@@ -745,7 +752,7 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 			case 0:
 			{
 //				strcpy(uMML, "t100@200v15o0k0d+1");	/* OK */
-				strcpy(uMML, "t100 @200 v15 o4(g2<g)");	/* OK */
+				strcpy(uMML, "o4(g2<g)");	/* OK */
 				break;
 			}
 			case 1:
@@ -793,4 +800,21 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 #endif	
 	return ret;
 }
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int32_t	M_TEMPO(int16_t Num)
+{
+	int32_t	ret = 0;
+
+#if		ZM_V2 == 1
+	ret = m_tempo(Num);
+#endif	
+	return ret;
+}
+
 #endif	/* IF_MUSIC_C */

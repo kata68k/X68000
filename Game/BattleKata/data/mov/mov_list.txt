@@ -1,2 +1,2 @@
-0=HATA.MCS
+0=GAL.MCS
 

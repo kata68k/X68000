@@ -14,6 +14,7 @@
 #include "IF_Graphic.h"
 #include "IF_Draw.h"
 #include "IF_Math.h"
+#include "IF_Memory.h"
 
 /* define定義 */
 #define	PIC_FILE_BUF_SIZE	(524288ul)	/* 512*512*2 */
@@ -2751,7 +2752,7 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 
 	/* YUVテーブル作成 */
 	dwSizeDimension = width * height;					/* YUVテーブルのサイズ */
-	pYUV = MyMalloc( sizeof(YUV) * dwSizeDimension );	/* YUVテーブル領域確保 */
+	pYUV = (YUV*)MyMalloc( sizeof(YUV) * dwSizeDimension );	/* YUVテーブル領域確保 */
 	if(pYUV == NULL)
 	{
 		return -1;

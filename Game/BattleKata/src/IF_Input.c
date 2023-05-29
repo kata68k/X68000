@@ -173,9 +173,9 @@ uint16_t get_ajoy( uint16_t *key, int32_t nJoyNo, uint8_t mode, uint8_t ubConfig
 
 	int16_t	analog_buf[5];
 #if CNF_JOYDRV360
-	Set_DI();	/* Š„‚è‚İ‹Ö~ */
+//	Set_DI();	/* Š„‚è‚İ‹Ö~ */
 	AnalogJoyStick	= joydrv_ajoyget(nJoyNo, &analog_buf[0]);
-	Set_EI();	/* Š„‚è‚İ‹Ö~‰ğœ */
+//	Set_EI();	/* Š„‚è‚İ‹Ö~‰ğœ */
 #else
 	JOY_ANALOG_BUF	analog_buf_st;
 	AnalogJoyStick	= get_analog_data(nJoyNo, &analog_buf_st);

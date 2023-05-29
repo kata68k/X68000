@@ -45,6 +45,9 @@ uint8_t	g_bExit = TRUE;
 uint32_t g_unFly_time;
 
 
+int32_t g_nBaseTempo;
+int32_t g_nDebugNum;
+
 short *seq_tbl;
 
 /* プロトタイプ宣言 */
@@ -354,6 +357,7 @@ void shot_init( void )
 void shot_move( void )
 {
 	int i;
+	static int32_t s_shot_angle;
 	SHOT *shot;
 	
 	/* 弾を作ります */
@@ -370,6 +374,7 @@ void shot_move( void )
 				shot->vx =  ( SHOT_VX * APL_Cos(ship_data->angle) );
 				shot->vy =  ( SHOT_VY * APL_Sin(ship_data->angle) );
 				shot->acc = - 1024;
+				s_shot_angle = ship_data->angle;
 			}
 			else if(shot->flag == SHOT_ST_MOVE)
 			{
@@ -416,6 +421,7 @@ void shot_move( void )
 			shot->pat = Mmin(Mmax(((shot->y - shot->ey) >> 8) / 64, 0), 3);
 			if(((shot->y - shot->ey) >> 8) <= 0)
 			{
+				int32_t clp_x, clp_y;
 #if 0
 				if(shot->flag == SHOT_ST_DOWN){
 					int8_t	sBuf[128];
@@ -435,18 +441,46 @@ void shot_move( void )
 					shot->flag = SHOT_ST_RUN;
 				}
 
-				if(shot->vx < 0)		shot->vx+=4;
-				else if(shot->vx > 0)	shot->vx-=4;
-				else ;
+				clp_x =  Mdiv64( SHOT_VX * APL_Cos(s_shot_angle) );
 
-				if(shot->vy < 0)		shot->vy+=4;
-				else if(shot->vy > 0)	shot->vy-=4;
-				else ;
+				if(Mabs(shot->vx) > Mabs(clp_x)){
+					if(shot->vx > 0){
+						shot->vx -= Mmax(Mabs(clp_x), 1);
+					}
+					else if(shot->vx < 0){
+						shot->vx += Mmax(Mabs(clp_x), 1);
+					}
+					else{
+					}
+				}
+				else
+				{
+					shot->vx = 0;
+				}
 
-				if( (Mabs(shot->vx) <= 4) && (Mabs(shot->vy) <= 4) )	/* 転がり停止 */
+				clp_y =  Mdiv64( SHOT_VY * APL_Sin(s_shot_angle) );
+
+				if(Mabs(shot->vy) > Mabs(clp_y)){
+					if(shot->vy > 0){
+						shot->vy -= Mmax(Mabs(clp_y), 1);
+					}
+					else if(shot->vy < 0){
+						shot->vy += Mmax(Mabs(clp_y), 1);
+					}
+					else{
+					}
+				}
+				else{
+					shot->vy = 0;
+				}
+
+				if( (Mabs(shot->vx) <= Mabs(clp_x)) && (Mabs(shot->vy) <= Mabs(clp_y)) )	/* 転がり停止 */
 				{
 					shot->flag = SHOT_ST_OUT;
-					ship_data->life--;	
+					ship_data->life--;
+					if(ship_data->life == 1){
+						M_TEMPO(180);	/* 高速テンポ */
+					}
 					ADPCM_Play(3);
 					S_Set_Combo(0);	/* コンボカウンタ リセット */
 				}
@@ -469,6 +503,9 @@ void shot_move( void )
 		{
 			shot->flag = SHOT_ST_OUT;
 			ship_data->life--;	
+			if(ship_data->life == 1){
+				M_TEMPO(180);	/* 高速テンポ */
+			}
 			ADPCM_Play(3);
 			S_Set_Combo(0);	/* コンボカウンタ リセット */
 		}
@@ -492,13 +529,13 @@ void shot_se( void )
 			{
 				key_f_A = 1;
 
+				i = 0;
+
+				g_unFly_time = 0xFFFF;
+
 				if(area_data->flag == TP_ALIVE)
 				{
-					i = 0;
-
 					ADPCM_Play(1);
-
-					g_unFly_time = 0xFFFF;
 
 					if(shot->acc <= 0 )
 					{
@@ -527,11 +564,38 @@ void shot_se( void )
 
 			key_f_B = 1;
 			
-			ADPCM_Play(2);
+			if(area_data->flag == TP_ALIVE)
+			{
+				ADPCM_Play(2);
+			}
 		}
 		else
 		{
 			key_f_B = 0;
+		}
+
+		switch(shot->flag)
+		{
+			case SHOT_ST_MOVE:
+			{
+				break;
+			}
+			case SHOT_ST_DOWN:
+			{
+				break;
+			}
+			case SHOT_ST_TOUCH:
+			{
+//				M_Play(1, (i++) % 128);
+				break;
+			}
+			case SHOT_ST_RUN:
+			{
+//				M_Play(1, (i++) % 128);
+				break;
+			}
+			default:
+				break;
 		}
 	}
 }
@@ -648,6 +712,10 @@ void atari( void )
 					S_Add_Score_Point(point);	/* スコア更新 */
 
 					ship_data->life++;	/* ショット補充 */
+					if(ship_data->life > 1)	/* 残り１機よりおおきい */
+					{
+						M_TEMPO(g_nBaseTempo);	/* 通常のテンポ */
+					}
 
 					ADPCM_Play(4);
 				}
@@ -697,13 +765,14 @@ void atari( void )
 				{
 					/* スコア */
 					point = (i+1) * 1000;
-#if 0
+#if CNF_MACS
 					PCG_OFF();			/* SP OFF */
 					/* 動画 */
 					MOV_Play(0);		/* カットイン */
 					/* 画面モード再設定 */
 					CRTC_INIT(0x10A);	/* 画面モード初期化 */
 					PCG_ON();			/* SP ON */
+#else
 #endif
 					/* 効果音 */
 					ADPCM_Play(7);
@@ -948,7 +1017,10 @@ void App_init( void )
 	puts("Controller ...");	
 #if CNF_JOYDRV360
 	/* アナログスティックモード判定 */
-	SetJoyDevMode(0, 0, 0);	/* JoyNo:0 DevID:0 PortNo:0 */
+	if(SetJoyDevMode(0, 0, 0) < 0)	/* JoyNo:0 DevID:0 PortNo:0 */
+	{
+		puts("JOYDRV3.Xが常駐してません。");
+	}
 #if 0	
 	switch(GetJoyDevice(1, 1, 0))
 	{
@@ -1142,12 +1214,12 @@ int32_t main(void)
 				S_Init_Score();		/* スコア初期化 */
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 9, 1, 0x12);
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 8, 0, 0x86);
-				PutGraphic_To_Symbol12("Ver 0.93", 176, 24, 0x86);
+				PutGraphic_To_Symbol12("2023 Ver 0.94", 144, 24, 0x86);
+				PutGraphic_To_Symbol12("For X680x0", 144, 36, 0x86);
 //				PutGraphic_To_Symbol12("Ver X68KBBS", 150, 24, 0x86);
 				Draw_Message_To_Graphic("START", 160, 116, F_MOJI, 0x30);
 				Draw_Message_To_Graphic("PUSH A BUTTON", 160, 128, F_MOJI, 0x30);
 
-				Music_Stop();	/* 音楽再生 停止 */
 				Music_Play(7);	/* デモ画面 */
 //				Music_Play(4);	/* タイトル画面 */
 
@@ -1252,12 +1324,15 @@ int32_t main(void)
 				enemy_set(18);			/* 敵のステータス（生きる） */
 				enemy_green_set();		/* グリーンを生成 */
 				
-				Music_Stop();	/* 音楽再生 停止 */
-
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 
 				ADPCM_Play(6);
 
+//				Music_Play(4);	/* ゲーム中 */
+				Music_Play(8);	/* ゲーム中 */
+				g_nBaseTempo = M_TEMPO(-1);	/* 現在のテンポを取得 */
+//				printf("tempo=%d\n",  g_nBaseTempo);
+//				KeyHitESC();	/* デバッグ用 */
 				Music_Play(8);	/* ゲーム中 */
 
 				SetTaskInfo(SCENE_GAME);	/* ゲームシーンへ設定 */
@@ -1277,7 +1352,7 @@ int32_t main(void)
 				
 				trans_sp();
 				
-				bg_move();
+//				bg_move();
 
 				if(stTask.b496ms == TRUE)
 				{
@@ -1374,8 +1449,8 @@ int32_t main(void)
 				strcpy(sBuf, "             B button --> END");
 				Draw_Message_To_Graphic(sBuf, 32, 176, F_MOJI, F_MOJI_BAK);
 
-				Music_Play(10);	/* GAME OVER */
-
+				g_nDebugNum = Music_Play(10);	/* GAME OVER */
+				
 				SetTaskInfo(SCENE_GAME_OVER);	/* ゲームオーバーシーンタスクへ設定 */
 				break;
 			}

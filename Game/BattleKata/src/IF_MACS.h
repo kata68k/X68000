@@ -4,11 +4,11 @@
 #include <usr_define.h>
 #include "BIOS_Moon.h"
 
-#define	CNF_MACS	(0)
+#define	CNF_MACS	(1)
 
 #ifdef 	MACS_MOON
 /* define’è‹` */
-#define	MACS_MAX	(16)
+#define	MACS_MAX	(1)
 
 /* externéŒ¾ */
 extern int8_t	g_mov_list[MACS_MAX][256];
