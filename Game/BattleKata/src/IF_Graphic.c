@@ -1706,12 +1706,18 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 	pSrcGR = g_stPicImage[bCGNum].pImageData;	/* Src PIC */
 	if(pSrcGR == NULL)
 	{
+#if 0		
 		/* ファイルから読み込み */
 		ret = CG_File_Load(bCGNum);
 		if(ret < 0)
 		{
 			return	ret;
 		}
+#else
+		CG_File_Load_to_Mem(bCGNum);		/* ファイルリストからメモリにPICを展開する */
+		ret = APICG_DataLoad2M(bCGNum, posX, posY, uArea, NULL);	/* PICデータをメモリに展開 */
+		return	ret;
+#endif
 	}
 	
 	pSrcGR = Get_PicImageInfo( bCGNum, &uWidth, &uHeight, &uFileSize );	/* 画像の情報を取得 */
@@ -1737,8 +1743,11 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 		Addr_Max	= 0xD00000;
 	}
 
+#if 0		
 	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
-	
+#else
+	Pal_offset = 0;
+#endif	
 	if((posX + uWidth) < X_MAX_DRAW)
 	{
 		ex = posX + uWidth;

@@ -15,7 +15,7 @@
 
 #define FM_CH_MAX	(8)
 #define FM_USE_CH	(1)
-#define MML_BUF		(32)
+#define MML_BUF		(128)
 #define MML_BUF_N	(2048)
 
 #if		ZM_V2 == 1
@@ -374,8 +374,6 @@ int32_t Music_Play(uint8_t bPlayNum)
 	int32_t	ret=0;
 	if(bPlayNum > m_list_max)return -1;
 
-	Music_Stop();	/* 音楽停止 */
-	
 #if		ZM_V2 == 1
 	ret = zmd_play(&music_list[bPlayNum][0]);	
 #elif	ZM_V3 == 1
@@ -385,7 +383,6 @@ int32_t Music_Play(uint8_t bPlayNum)
 #else
 	#error "No Music Lib"
 #endif
-//	printf("Music File %2d = %s = size(%d[byte])\n", bPlayNum, music_list[bPlayNum], music_dat_size[bPlayNum]);
 
 	_iocs_b_curoff();			/* カーソルを消します */
 
@@ -723,23 +720,11 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 	
 #if		ZM_V2 == 1
 	
-	uint8_t	uMML[MML_BUF];
+	uint8_t	uMML[MML_BUF] = {0};
 	int32_t	err = 0;
-	int32_t	uCh = 0;
-	int32_t	uTrk = 0;
-	static int8_t bChanel = 0u;
+	int32_t	uCh = 8;
+	int32_t	uTrk = 8;
 	static uint8_t ubCount = 0u;
-
-	uCh = (FM_CH_MAX - FM_USE_CH + 1u) + bChanel;
-	uTrk = uCh;
-	if(bChanel < FM_USE_CH - 1u)
-	{
-		bChanel++;
-	}
-	else
-	{
-		bChanel = 0;
-	}
 
 	err = m_alloc( uTrk, MML_BUF );	/* trk(1-80) */
 	if(err != 0)
@@ -752,27 +737,27 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 			case 0:
 			{
 //				strcpy(uMML, "t100@200v15o0k0d+1");	/* OK */
-				strcpy(uMML, "o4(g2<g)");	/* OK */
+				strcpy(uMML, "@34@V127o4(g2<g)");	/* OK */
 				break;
 			}
 			case 1:
 			{
-				strcpy(uMML, "o5(g>g2)");	/* OK */
+				strcpy(uMML, "@34@V127o5(g>g2)");	/* OK */
 				break;
 			}
 			case 2:
 			{
-				strcpy(uMML, "o4(g2<g)");	/* OK */
+				strcpy(uMML, "v15o4(g2<g)");	/* OK */
 				break;
 			}
 			case 3:
 			{
-				sprintf(uMML, "o1k %d d+1", Key % 80);	/* OK */
+				sprintf(uMML, "v15o1k %d d+1", Key % 80);	/* OK */
 				break;
 			}
 			case 4:
 			{
-				sprintf(uMML, "(o3d*96,e),48", Key % 80);	/* OK */
+				sprintf(uMML, "v15(o3d*96,e),48", Key % 80);	/* OK */
 				break;
 			}
 			default:
@@ -781,6 +766,11 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 				break;
 			}
 		}
+	}
+	err = m_assign( uCh, uTrk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
+	if(err != 0)
+	{
+		printf("m_assign error %d\n", err);
 	}
 	err = m_trk( uTrk, uMML );	
 	if(err != 0)

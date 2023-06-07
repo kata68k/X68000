@@ -1076,7 +1076,7 @@ static void App_exit(void)
 	PCG_OFF();				/* スプライトOFF */
 
 	/* 画面 */
-	g_nCrtmod = CRTC_INIT(g_nCrtmod);	/* モードをもとに戻す */
+	CRTC_INIT(16);			/* モードをもとに戻す */
 	puts("App_exit CRTC_INIT");
 
 	/* 音楽 */
@@ -1373,7 +1373,8 @@ int32_t main(void)
 			}
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
 			{
-				Music_Stop();
+				M_TEMPO(g_nBaseTempo);	/* 通常のテンポ */
+				Music_Play(7);		/* デモ画面(おまじない) */
 				T_Clear();			/* テキストクリア */
 
 				if(ship_data->life <= 0)	/* ゲームオーバー */
@@ -1448,8 +1449,8 @@ int32_t main(void)
 				memset(sBuf, 0, sizeof(sBuf));
 				strcpy(sBuf, "             B button --> END");
 				Draw_Message_To_Graphic(sBuf, 32, 176, F_MOJI, F_MOJI_BAK);
-
-				g_nDebugNum = Music_Play(10);	/* GAME OVER */
+				
+				Music_Play(10);	/* GAME OVER */
 				
 				SetTaskInfo(SCENE_GAME_OVER);	/* ゲームオーバーシーンタスクへ設定 */
 				break;
