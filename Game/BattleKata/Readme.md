@@ -1,5 +1,5 @@
 # 戦車でゴルフ「Ball und Panzer Golf」 
- <img width="824" alt="title" src="https://github.com/kata68k/X68000/edit/master/Material/202306072325350729.png">
+ <img width="640" alt="title" src="https://github.com/kata68k/X68000/edit/master/Material/202306072325350729.png">
 
 やることリスト  
 ## ゲーム
