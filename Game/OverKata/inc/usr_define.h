@@ -25,29 +25,34 @@
 #define Bit_14		(0x4000)
 #define Bit_15		(0x8000)
 
+#define Bit_Mask_8	(0x000000FF)
+#define Bit_Mask_9	(0x000001FF)
+#define Bit_Mask_10	(0x000003FF)
+
 /* Ｘ，Ｙ座標（表示座標） */
 #define V_SYNC_MAX		(240)
 #define WIDTH			(256)
 #define HEIGHT			(256)
-#define X_MIN_DRAW		(0)
-#define X_MAX_DRAW		(512)
-#define X_MAX_DRAW_OF	(32)
-#define Y_MIN_DRAW		(0)
-#define Y_MAX_DRAW		(512)
 #define Y_HORIZON_0		(128)
 #define Y_HORIZON_1		(64)
 #define Y_MAX_WINDOW	(160)	/* Y_HORIZON_1+ROAD_SIZE */
 
 /* Ｘ，Ｙ座標（仮想座標） */
 #define X_OFFSET	(224)
+#define VX_OFFSET	(4096)
 #define X_MIN		X_OFFSET
 #define X_MAX		(WIDTH+X_OFFSET)
 #define X_MAX_H		((WIDTH>>1)+X_OFFSET)
+#define VX_MIN		(0)	/* (0 + 16)*256 */
+#define VX_MAX		(65536)	/* (256 - 16)*256 */
 
 #define Y_OFFSET	(256)
+#define VY_OFFSET	(4096)
 #define Y_MIN		Y_OFFSET
 #define Y_MAX		(HEIGHT+Y_OFFSET)
 #define Y_MAX_H		((HEIGHT>>1)+Y_OFFSET)
+#define VY_MIN		(0)	/* (0 + 16)*256 */
+#define VY_MAX		(65536)	/* (256 - 16)*256 */
 
 /* ラスタ情報(256*256 31kHzの場合 ラインは2倍計算) */
 #define RASTER_NEXT	(2)

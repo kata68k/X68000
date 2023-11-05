@@ -11,8 +11,11 @@
  * @retval 最大値
  * @attention 引数は複数回評価される.
  */
-#define Mmax(a, b) ((a) > (b) ? (a) : (b))
-
+#define Mmax(a, b) ({ \
+  typeof(a) A = (a); \
+  typeof(b) B = (b); \
+  A < B ? B : A; \
+})
 /*
         Mmin - 最小値取得 -
 */
@@ -23,7 +26,11 @@
  * @retval 最小値
  * @attention 引数は複数回評価される.
  */
-#define Mmin(a, b) ((a) < (b) ? (a) : (b))
+#define Mmin(a, b) ({ \
+  typeof(a) A = (a); \
+  typeof(b) B = (b); \
+  A < B ? A : B; \
+})
 
 /*
         Mminmax - 最小最大値取得 -
@@ -129,6 +136,18 @@
 	) \
 )
 
+#define SWAP(a, b) do { typeof(a) tmp = a; a = b; b = tmp; } while (0)
+
+#define M1024Roll(x)	(x & 0x3FF)
+#define M512Roll(x)		(x & 0x1FF)
+#define M256Roll(x)		(x & 0xFF)
+
+#define MrasRoll(x)		(((x) < 0) ? (((x) % 224)*-1) : ((x) > 224) ? ((x) % 224) : (x))
+
+#define Msinged_9b(x)	((x) % 256)
+#define Mu9b_To_u8b(x)	(x < 256) ? (x) : (512 - (x))
+#define Ms15b_To_s5b(x)	(31 - (x >> 10))        /*  0 <-> 32767 to 31 <-> 0 */
+
 /* シフト割り算 */
 #define Mdiv2(x)		(x>>1)
 #define Mdiv4(x)		(x>>2)
@@ -196,15 +215,6 @@
 #define Mmul_0p30(x)	((x>>2)+(x>>4)-(x>>7)-(x>>8))					/* x * 0.3007813 */
 #define Mmul_0p20(x)	((x>>3)+(x>>4)+(x>>6)-(x>>8))					/* x * 0.1992188 */
 #define Mmul_0p10(x)	((x>>3)-(x>>5)+(x>>6)-(x>>7))					/* x * 0.1015625 */
-
-#define MrasRoll(x)		((x < 0)?(224 + x):((x>224)?(x-224):x))
-#define M1024Roll(x)	((x < 0)?(0x400 + x):((x>0x400)?(x-0x400):x))
-#define M512Roll(x)		((x < 0)?(0x200 + x):((x>0x200)?(x-0x200):x))
-#define M256Roll(x)		((x < 0)?(0x100 + x):((x>0x100)?(x-0x100):x))
-
-#define Msinged_9b(x)	((x < 256)?x:(x-512))
-#define Mu10b_To_s8b(x)	((x < 512)?(-(x>>1)):(-(x-1024)>>1))
-#define Mu10b_To_s9b(x)	((x < 512)?(-x):(1024-x))
 
 #define SetRGB(R,G,B)	(( G << 11) + (R << 6) + (B << 1))
 #define GetR(color)	(( color >> 6) & 0x1Fu)

@@ -6,10 +6,12 @@
 extern int16_t	g_CpuTime;
 extern volatile uint16_t	g_uGameStatus;
 
-extern int16_t	FlipProc(void);
+extern void App_TimerProc( void );
+extern int16_t App_RasterProc( uint16_t * );
+extern void App_VsyncProc( void );
+extern void App_HsyncProc( void );
+extern int16_t	App_FlipProc(void);
 extern int16_t	SetFlip(uint8_t);
-extern void Set_DI(void);
-extern void Set_EI(void);
 extern int16_t	GetGameMode(uint8_t *);
 extern int16_t	SetGameMode(uint8_t);
 extern int16_t	GetDebugNum(uint16_t *);
