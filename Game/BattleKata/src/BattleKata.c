@@ -1214,7 +1214,7 @@ int32_t main(void)
 				S_Init_Score();		/* スコア初期化 */
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 9, 1, 0x12);
 				PutGraphic_To_Symbol24("Ball und Panzer Golf", 8, 0, 0x86);
-				PutGraphic_To_Symbol12("2023 Ver 0.94", 144, 24, 0x86);
+				PutGraphic_To_Symbol12("2023 Ver 0.95", 144, 24, 0x86);
 				PutGraphic_To_Symbol12("For X680x0", 144, 36, 0x86);
 //				PutGraphic_To_Symbol12("Ver X68KBBS", 150, 24, 0x86);
 				Draw_Message_To_Graphic("START", 160, 116, F_MOJI, 0x30);
@@ -1374,7 +1374,6 @@ int32_t main(void)
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
 			{
 				M_TEMPO(g_nBaseTempo);	/* 通常のテンポ */
-				Music_Play(7);		/* デモ画面(おまじない) */
 				T_Clear();			/* テキストクリア */
 
 				if(ship_data->life <= 0)	/* ゲームオーバー */

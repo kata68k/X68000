@@ -541,7 +541,7 @@ int32_t ADPCM_Play(uint8_t bPlayNum)
 	stInReg.d0 = 0xF0;				/* ZMUSIC.XによるIOCSコール */
 	stInReg.d1 = 0x14;				/* se_adpcm2 $14（ZMUSIC内のファンクションコール） */
 	stInReg.d2 = bPlayNum;			/* ノート番号 */
-	stInReg.d3 = 0xFF43;			/* PAN,FRQ,LV */
+	stInReg.d3 = 0xFF0403;			/* PAN,FRQ,LV */
 //	引数:	d2.l＝ノート番号(0～511)
 //			d3(bit00～07)＝PAN(0－3)
 //			d3(bit08～15)＝FRQ(0－4)
