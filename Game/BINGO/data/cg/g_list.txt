@@ -1,0 +1,2 @@
+0= null.pic 0 0
+1= bani_256.PIC 1 -1
