@@ -1020,6 +1020,8 @@ int16_t G_Stretch_Pict_toVRAM(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 	int16_t	dst_z;
 	int16_t	src_z;
 	int16_t	Pal_offset;
+	int16_t	ConvPal;
+	int8_t	bType;
 
 	int16_t (*pFunc[])(int16_t) = {
 		APL_mul_0p52,	/* 0 -9 */
@@ -1081,6 +1083,9 @@ int16_t G_Stretch_Pict_toVRAM(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 	
 	SrcGR_H = (uint32_t)pSrcBuf;
 	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
+	ConvPal = g_stCG_LIST[bCGNum].TransPal;	
+	bType   = g_stCG_LIST[bCGNum].bType;
+
 #ifdef DEBUG
 //	printf("d(%d, %d)(%d, %d)(%d, %d)\n", dst_x, dst_y, dst_w, dst_h, dst_ex, dst_ey);
 //	printf("s(%d, %d)(%d, %d)(%d, %d)\n", src_x, src_y, src_w, src_h, src_ex, src_ey);
@@ -1115,7 +1120,7 @@ int16_t G_Stretch_Pict_toVRAM(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 			if(cal_x >= src_ex)break;
 			
 			pSrcGR = pSrcGR_tmp + cal_x;
-			if(*pSrcGR != 0)	/* 透過色以外 */
+			if((*pSrcGR != 0) || (ConvPal == -1))	/* 透過色以外 */
 			{
 				*pDstGR = *pSrcGR + Pal_offset;
 			}
@@ -1455,6 +1460,8 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 	int16_t	x_min, y_min;
 	int16_t	x_max, y_max;
 	int16_t	Pal_offset;
+	int16_t	ConvPal;
+	int8_t	bType;
 	
 	/* 描画したいエリアから完全にはみ出てるかどうかチェック */
 	ret = G_ClipAREA_Chk_Width(&dst_x, &x_min, &x_max, src_w, ubMode, ubH);
@@ -1491,6 +1498,8 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 	SrcGR_H = (uint32_t)pSrcImage;	/* Mem */
 	
 	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
+	ConvPal = g_stCG_LIST[bCGNum].TransPal;	
+	bType   = g_stCG_LIST[bCGNum].bType;
 	
 	for(y = dst_y; y < dst_ey; y++)
 	{
@@ -1508,7 +1517,7 @@ int16_t G_BitBlt_From_Mem(	int16_t dst_x, int16_t dst_y, uint8_t ubDstScrn,
 		{
 			if( (x >= x_min) && (x < x_max) )
 			{
-				if(*pSrcGR != 0)
+				if((*pSrcGR != 0) || (ConvPal == -1))	/* 透過色以外 */
 				{
 					*pDstGR = *pSrcGR + Pal_offset;
 				}
@@ -1772,6 +1781,8 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 	uint32_t	uWidth, uHeight, uFileSize;
 	uint16_t	uSize8x = 0;
 	int16_t		Pal_offset;
+	int16_t		ConvPal;
+	int8_t		bType;
 
 	Get_CG_FileList_MaxNum(&uMaxNum);
 	if(uMaxNum <= bCGNum)
@@ -1836,7 +1847,9 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 	}
 
 	Pal_offset = Set_PicImagePallet(bCGNum);	/* パレットを設定 */
-	
+	ConvPal = g_stCG_LIST[bCGNum].TransPal;	
+	bType   = g_stCG_LIST[bCGNum].bType;
+
 	if((posX + uWidth) < X_MAX_DRAW)
 	{
 		ex = posX + uWidth;
@@ -1894,7 +1907,7 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 				/* アドレス算出 */
 //				pDstGR = (uint16_t *)( DstGR_H + ( Mmul1024(posY + y) + Mmul2(posX + x) ) );
 				
-				if(*pSrcGR != 0x00)
+				if((*pSrcGR != 0x00) || (ConvPal == -1))	/* 透過色以外 */
 				{
 #ifdef DEBUG
 //					if(bCGNum == 1)
@@ -2977,7 +2990,7 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 		return -1;
 	}
 
-	if((ConvCol < 0) || (ConvCol > 256))
+	if((ConvCol < 0) || (ConvCol >= 256))
 	{
 		ConvCol = -1;	/* 透過色なし設定 */
 	}
@@ -2993,19 +3006,29 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 			col = GPALET( *pSrc, -1 );	/* 現在の設置を抽出 */
 			pSrc++;
 
-			if(ConvCol == pal_no)	/* 透過色判定 */
-			{
-				/* 透過色（黒）にする */
-				rgb.rgbRed   = 0x00u;
-				rgb.rgbGreen = 0x00u;
-				rgb.rgbBlue  = 0x00u;
-			}
-			else
+			if(ConvCol == -1)		/* 透過色なし判定 */
 			{
 				/* ピクセルデータを取り出す */
 				rgb.rgbRed   = Mmul8( GetR(col) );
 				rgb.rgbGreen = Mmul8( GetG(col) );
 				rgb.rgbBlue  = Mmul8( GetB(col) );
+			}
+			else
+			{
+				if(ConvCol == pal_no)	/* 透過色判定 */
+				{
+					/* 透過色（黒）にする */
+					rgb.rgbRed   = 0x00u;
+					rgb.rgbGreen = 0x00u;
+					rgb.rgbBlue  = 0x00u;
+				}
+				else
+				{
+					/* ピクセルデータを取り出す */
+					rgb.rgbRed   = Mmul8( GetR(col) );
+					rgb.rgbGreen = Mmul8( GetG(col) );
+					rgb.rgbBlue  = Mmul8( GetB(col) );
+				}
 			}
 #ifdef DEBUG
 //			printf("rgb(%d,%d,%d)\n", rgb.rgbRed, rgb.rgbGreen, rgb.rgbBlue, GetR(col), GetG(col), GetB(col) );
@@ -3130,6 +3153,9 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 //	printf("DImg(0x%p)%d,%d,%d)\n", pDstImg, width, height, Size8x );
 //	KeyHitESC();	/* デバッグ用 */
 #endif
+#ifdef DEBUG
+	printf("Bpp(%d)\n", nBpp);
+#endif
 	/* ピクセルデータをDIBに格納します。*/
 	switch(nBpp)
 	{
@@ -3162,15 +3188,22 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 //					printf("pYUV[%d]=(%d)(%d,%d)\n", iYUV, index, x, y);
 //					KeyHitESC();	/* デバッグ用 */
 #endif
-					if( (pColorTable[index].rgbRed   == 0) &&
-						(pColorTable[index].rgbGreen == 0) &&
-						(pColorTable[index].rgbBlue  == 0) )
+					if(ConvCol == -1)		/* 透過色なし判定 */
 					{
-						*pDst = 0;	/* 黒色は強制透過色 */
+						*pDst = index + ubOffsetCol;
 					}
 					else
 					{
-						*pDst = index + ubOffsetCol;
+						if( (pColorTable[index].rgbRed   == 0) &&
+							(pColorTable[index].rgbGreen == 0) &&
+							(pColorTable[index].rgbBlue  == 0) )
+						{
+							*pDst = 0;	/* 黒色は強制透過色 */
+						}
+						else
+						{
+							*pDst = index + ubOffsetCol;
+						}
 					}
 					pDst++;
 				}
@@ -3190,15 +3223,22 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 //					printf("pYUV[%5d]=(%3d)(%3d,%3d)\n", iYUV, index, x, y);
 //					KeyHitESC();	/* デバッグ用 */
 #endif
-					if( (pColorTable[index].rgbRed   == 0) &&
-						(pColorTable[index].rgbGreen == 0) &&
-						(pColorTable[index].rgbBlue  == 0) )
+					if(ConvCol == -1)		/* 透過色なし判定 */
 					{
-						*pDst = 0;	/* 黒色は強制透過色 */
+						*pDst = index + ubOffsetCol;
 					}
 					else
 					{
-						*pDst = index + ubOffsetCol;
+						if( (pColorTable[index].rgbRed   == 0) &&
+							(pColorTable[index].rgbGreen == 0) &&
+							(pColorTable[index].rgbBlue  == 0) )
+						{
+							*pDst = 0;	/* 黒色は強制透過色 */
+						}
+						else
+						{
+							*pDst = index + ubOffsetCol;
+						}
 					}
 					pDst++;
 			    }
@@ -3218,15 +3258,22 @@ int16_t G_MedianCut(uint16_t *pDstImg, uint16_t *pSrcImg, uint16_t uSrcWidth, ui
 //					printf("pYUV[%d]=(%d)(%d,%d)\n", iYUV, index, x, y);
 //					KeyHitESC();	/* デバッグ用 */
 #endif
-					if( (pColorTable[index].rgbRed   == 0) &&
-						(pColorTable[index].rgbGreen == 0) &&
-						(pColorTable[index].rgbBlue  == 0) )
+					if(ConvCol == -1)		/* 透過色なし判定 */
 					{
-						*pDst = 0;	/* 黒色は強制透過色 */
+						*pDst = index + ubOffsetCol;
 					}
 					else
 					{
-						*pDst = index + ubOffsetCol;
+						if( (pColorTable[index].rgbRed   == 0) &&
+							(pColorTable[index].rgbGreen == 0) &&
+							(pColorTable[index].rgbBlue  == 0) )
+						{
+							*pDst = 0;	/* 黒色は強制透過色 */
+						}
+						else
+						{
+							*pDst = index + ubOffsetCol;
+						}
 					}
 					pDst++;
 			    }
@@ -3433,10 +3480,14 @@ void G_Mem_Cnv_Pal(uint16_t *pDstBuf, uint16_t uWidth, uint16_t uHeight, int16_t
 	uint16_t	*pBuf;
 	uint16_t	uSize8x;
 	uint16_t	Pal_offset;
+	int16_t		ConvPal;
+	int8_t		bType;
 	
 	uSize8x	= (((uWidth+7)/8) * 8);	/* 8の倍数 */
 	
 	Pal_offset = Set_PicImagePallet(pal);	/* パレットを設定 */
+	ConvPal = g_stCG_LIST[pal].TransPal;	
+	bType   = g_stCG_LIST[pal].bType;
 
 	/* 512x512 --> uWidth x uHeight */
 

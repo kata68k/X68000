@@ -321,7 +321,7 @@ void Init_Music(void)
 		memset(adpcm_dat[i], 0, FileSize);
 		/* ÉÅÉÇÉäÇ…ìoò^ */
 	 	adpcm_dat_size[i] = (int32_t)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(int8_t), FileSize);
-		//printf("ADPCM File %2d = %s = size(%d[byte]=%d)\n", i, adpcm_list[i], adpcm_dat_size[i], FileSize);
+		printf("ADPCM File %2d = %s = size(%d[byte]=%d)\n", i, adpcm_list[i], adpcm_dat_size[i], FileSize);
 #else
 	#if		ZM_V3 == 1
 		/* ADPCMìoò^ */

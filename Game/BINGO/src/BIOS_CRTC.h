@@ -34,10 +34,11 @@ extern volatile uint16_t	*CRTC_R06;
 extern volatile uint16_t	*CRTC_R09;
 
 extern	int16_t CRTC_INIT(uint16_t);
+extern	int16_t CRTC_EXIT(uint16_t);
 extern	void CRTC_INIT_Manual(void);
 extern	int16_t	GetCRT(ST_CRT *, int16_t);
 extern	int16_t	SetCRT(ST_CRT, int16_t);
-extern	int16_t	CRT_INIT(void);
+extern	int16_t	CRT_INIT_MODE(void);
 extern	int16_t	Get_CRT_Contrast(int8_t *);
 extern	int16_t	Set_CRT_Contrast(int8_t);
 extern	int16_t	Get_CRT_Tmg(uint16_t *);

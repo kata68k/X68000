@@ -13,6 +13,9 @@
 #define T_YELLOW	(6)
 #define T_GREEN		(7)
 
+#define T_WIDTH		(512)
+#define T_HEIGHT	(512)
+
 /* ç\ë¢ëÃ */
 
 struct _xylineptr

@@ -515,12 +515,19 @@ int16_t Load_Music_List(int8_t *fpath, int8_t *fname, int8_t (*music_list)[256],
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
-			if(i == num)
+			if(*p == ';')	/* コメント */
 			{
-				sprintf(music_list[i], "%s%s", fpath, z_name);
+
 			}
-			i++;
+			else
+			{
+				sscanf(p,"%d = %s", &num, z_name);
+				if(i == num)
+				{
+					sprintf(music_list[i], "%s%s", fpath, z_name);
+				}
+				i++;
+			}
 		}
 		fclose(fp);
 	}
@@ -557,12 +564,19 @@ int16_t Load_SE_List(int8_t *fpath, int8_t *fname, int8_t (*music_list)[256], ui
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
-			if(i == num)
+			if(*p == ';')	/* コメント */
 			{
-				sprintf(music_list[i], "%s%s", fpath, z_name);
+
 			}
-			i++;
+			else
+			{
+				sscanf(p,"%d = %s", &num, z_name);
+				if(i == num)
+				{
+					sprintf(music_list[i], "%s%s", fpath, z_name);
+				}
+				i++;
+			}
 		}
 		fclose(fp);
 	}
@@ -600,30 +614,37 @@ int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *l
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d= %s %d %d", &num, z_name, &nType, &nTransPal);	/* format:番号 = ファイルパス＆ファイル名,グラフィックのタイプ,透過色のパレット番号 */
-#if 0
-			FILE *fp_d;
-			
-			p = strtok(z_name, ".");
-			sprintf(z_name, "%s.GRP", p, );
-			fp_d = fopen(z_name, "r");
-			if(fp_d == NULL)
+			if(*p == ';')	/* コメント */
 			{
+
 			}
+			else
+			{
+				sscanf(p,"%d= %s %d %d", &num, z_name, &nType, &nTransPal);	/* format:番号 = ファイルパス＆ファイル名,グラフィックのタイプ,透過色のパレット番号 */
+#if 0
+				FILE *fp_d;
+				
+				p = strtok(z_name, ".");
+				sprintf(z_name, "%s.GRP", p, );
+				fp_d = fopen(z_name, "r");
+				if(fp_d == NULL)
+				{
+				}
 #endif
 			
 #ifdef DEBUG
-//			printf("%d=%s,%d\n", num, z_name, bType);
-//			KeyHitESC();	/* デバッグ用 */
+//				printf("%d=%s,%d\n", num, z_name, bType);
+//				KeyHitESC();	/* デバッグ用 */
 #endif
-			if(i == num)
-			{
-				sprintf( cg_list->bFileName, "%s%s", fpath, z_name );
-				cg_list->bType = (int8_t)nType;
-				cg_list->TransPal = (int16_t)nTransPal;
+				if(i == num)
+				{
+					sprintf( cg_list->bFileName, "%s%s", fpath, z_name );
+					cg_list->bType = (int8_t)nType;
+					cg_list->TransPal = (int16_t)nTransPal;
+				}
+				cg_list++;
+				i++;
 			}
-			cg_list++;
-			i++;
 		}
 		fclose(fp);
 	}
@@ -660,12 +681,19 @@ int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, int8_t (*macs_list)[256], u
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
-			if(i == num)
+			if(*p == ';')	/* コメント */
 			{
-				sprintf(macs_list[i], "%s%s", fpath, z_name);
+
 			}
-			i++;
+			else
+			{
+				sscanf(p,"%d = %s", &num, z_name);
+				if(i == num)
+				{
+					sprintf(macs_list[i], "%s%s", fpath, z_name);
+				}
+				i++;
+			}
 		}
 		fclose(fp);
 	}

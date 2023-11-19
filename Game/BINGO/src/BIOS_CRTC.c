@@ -10,6 +10,7 @@
 #include "BIOS_PCG.h"
 #include "BIOS_CRTC.h"
 #include "BIOS_MFP.h"
+#include "BIOS_MPU.h"
 #include "IF_Input.h"
 
 /* グローバル変数 */
@@ -73,6 +74,7 @@ volatile uint16_t	*SP_CRTC_0E = (uint16_t *)0xEB080Eu;
 volatile uint16_t	*SP_CRTC_10 = (uint16_t *)0xEB0810u;
 
 volatile uint16_t	g_uCRT_Tmg;
+volatile uint32_t	g_uCRT_LCG;
 
 /* 構造体定義 */
 ST_CRT		g_stCRT[CRT_MAX] = {0};
@@ -80,6 +82,7 @@ ST_CRT		g_stCRT[CRT_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 int16_t CRTC_INIT(uint16_t);
+int16_t CRTC_EXIT(uint16_t);
 void CRTC_INIT_Manual(void);
 void CRTC_INIT_SemiManual(void);
 void get_value(int8_t *, uint32_t *, uint32_t, uint32_t);
@@ -88,7 +91,7 @@ void dsp_regs(void);
 void set_regs(void);
 int16_t	GetCRT(ST_CRT *, int16_t);
 int16_t	SetCRT(ST_CRT, int16_t);
-int16_t	CRT_INIT(void);
+int16_t	CRT_INIT_MODE(void);
 int16_t	Get_CRT_Contrast(int8_t *);
 int16_t	Set_CRT_Contrast(int8_t);
 int16_t	Get_CRT_Tmg(uint16_t *);
@@ -119,7 +122,9 @@ int16_t CRTC_G0_Scroll_16(int16_t, int16_t);
 int16_t CRTC_INIT(uint16_t uNum)
 {
 	int16_t ret = 0;
-
+	int32_t romver;
+	uint32_t mode;
+	uint32_t mode_ofst;
 #if 1
 	switch(uNum % 2)
 	{
@@ -136,6 +141,42 @@ int16_t CRTC_INIT(uint16_t uNum)
 		}
 	}
 #endif
+	/* LCDモード判定 */
+	romver = Get_ROM_Ver();
+	if(romver == 0x16)
+	{
+		mode = (_iocs_crtmod(0x16FF) >> 24) & 0xFF;		/* 現設定 */
+		if((g_uCRT_LCG == 0x00) && (g_uCRT_LCG != mode))
+		{
+			g_uCRT_LCG = mode;
+		}
+
+		switch(mode)
+		{
+			case 0x16:
+			{
+//				printf("CRT()=0x%x\n", mode);
+				break;
+			}
+			case 0x96:
+			{
+//				printf("LCD()=0x%x\n", mode);
+//				mode = _iocs_crtmod(0x56FF);		/* 現設定 */
+				break;
+			}
+			default:
+			{
+//				printf("CRT/LCD?()=0x%x\n", mode);
+				break;
+			}
+		}
+		mode_ofst = 0x100;
+//		printf("CRTMOD()=0x%x\n", mode);
+	}
+	else
+	{
+		mode_ofst = 0x100;
+	}
 //	puts("CRTC_INIT tmg");
 //	KeyHitESC();	/* デバッグ用 */
 	ret = _iocs_crtmod(-1);		/* 現設定 */
@@ -155,15 +196,30 @@ int16_t CRTC_INIT(uint16_t uNum)
 		}
 		else
 		{
-			_iocs_crtmod(0x100 + (0xFF & uNum));	/* 初期化付き */
+			_iocs_crtmod(mode_ofst + (0xFF & uNum));	/* 初期化付き */
 		}
 //		KeyHitESC();	/* デバッグ用 */
 //		puts("CRTC_INIT manual");
 	}
 
-	CRT_INIT();	/* 画面位置設定 */
+	CRT_INIT_MODE();	/* 画面位置設定 */
 //	puts("CRTC_INIT Init");
 //	KeyHitESC();	/* デバッグ用 */
+
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_EXIT(uint16_t uNum)
+{
+	int16_t ret = 0;
+
+	CRTC_INIT(uNum);
 
 	return ret;
 }
@@ -503,7 +559,7 @@ int16_t	SetCRT(ST_CRT stDat, int16_t Num)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t CRT_INIT(void)
+int16_t CRT_INIT_MODE(void)
 {
 	int16_t	ret = 0;
 

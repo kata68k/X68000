@@ -26,6 +26,7 @@ uint32_t	g_mov_list_max	=	0u;
 /* 関数のプロトタイプ宣言 */
 void MOV_INIT(void);
 int32_t MOV_Play(uint8_t);
+int32_t MOV_Play2(uint8_t, uint8_t);
 static uint32_t moon_check(void);
 
 /* 関数 */
@@ -88,6 +89,54 @@ int32_t MOV_Play(uint8_t bPlayNum)
 		int32_t	moon_stat = 0;
 
 		moon_stat = MoonPlay(g_mov_list[bPlayNum]);	/* 再生 */
+		if(moon_stat != 0)
+		{
+			//printf("MoonPlay  = %d\n", moon_stat);
+			/* アボート(-4)した場合は、何かしら作法が必要だったような… */
+		}
+		else
+		{
+		}
+	//	MACS_Sleep();	/* スリープ */
+	}
+#else	/* MACSDRV単独の場合 */
+	{
+		int8_t	*pBuff = NULL;
+		int32_t	FileSize = 0;
+
+		GetFileLength(g_mov_list[bPlayNum], &FileSize);	/* ファイルのサイズ取得 */
+		printf("MacsData = %d\n", FileSize);
+		pBuff = (int8_t*)MyMalloc(FileSize);	/* メモリ確保 */
+		if(pBuff != NULL)
+		{
+			File_Load(g_mov_list[bPlayNum], pBuff, sizeof(uint8_t), FileSize );	/* ファイル読み込みからメモリへ保存 */
+			MACS_Play(pBuff);	/* 再生 */
+			MyMfree(pBuff);	/* メモリ解放 */
+		}
+	}
+#endif	/* MACS_MOON */
+
+	return	ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int32_t MOV_Play2(uint8_t bPlayNum, uint8_t bOption)
+{
+	int32_t	ret=0;
+
+	if(bPlayNum >= g_mov_list_max)return ret;
+
+#ifdef 	MACS_MOON
+	{
+		int32_t	moon_stat = 0;
+
+		moon_stat = MoonPlay2(g_mov_list[bPlayNum], bOption);	/* 再生 */
 		if(moon_stat != 0)
 		{
 			//printf("MoonPlay  = %d\n", moon_stat);

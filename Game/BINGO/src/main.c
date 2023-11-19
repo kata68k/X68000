@@ -34,6 +34,16 @@
 #include "IF_Task.h"
 #include "APL_PCG.h"
 
+#define		BALL_MAX	(75)
+#define		TBL_CELL	(32)
+#define		TBL_COLUMN	(5)
+#define		TBL_LINE	(15)
+#define 	X_POS_MAX	(511)
+#define 	Y_POS_MAX	(511)
+
+#define 	FONT24H		(24)
+#define 	FONT12W		(12)
+
 /* グローバル変数 */
 uint32_t	g_unTime_cal = 0u;
 uint32_t	g_unTime_cal_PH = 0u;
@@ -48,25 +58,29 @@ uint8_t		g_bFlip = FALSE;
 uint8_t		g_bFlip_old = FALSE;
 uint8_t		g_bExit = TRUE;
 
-int16_t		g_numbers[75];
+int16_t		g_numbers[BALL_MAX];
 int16_t		g_index;
 int16_t		g_fly_count = 0;
 int16_t		g_OK_num = 0;
 int16_t		g_Circle_Table[360][2];
-int16_t		g_Sign_Table[75];
-int16_t		g_Rand_Table4[75];
-int16_t		g_Rand_Table8[75];
-int16_t		g_Rand_Table16[75];
-int16_t		g_Rand_Table32[75];
+int16_t		g_Circle_Table_x_Min;
+int16_t		g_Circle_Table_x_Max;
+int16_t		g_Circle_Table_y_Min;
+int16_t		g_Circle_Table_y_Max;
+int16_t		g_Sign_Table[BALL_MAX];
+int16_t		g_Rand_Table4[BALL_MAX];
+int16_t		g_Rand_Table8[BALL_MAX];
+int16_t		g_Rand_Table16[BALL_MAX];
+int16_t		g_Rand_Table32[BALL_MAX];
 int16_t		g_Rand_num = 0;
 int16_t		g_GameSpeed;
 
-const uint8_t	g_Colors[5] = {G_RED, G_YELLOW, G_WHITE, G_GREEN, G_BLUE };
-const uint8_t	g_Colors_Dark[5] = {G_D_RED, G_D_YELLOW, G_GRAY, G_D_GREEN, G_D_BLUE };
+const uint8_t	g_Colors[TBL_COLUMN] = {G_RED, G_YELLOW, G_WHITE, G_GREEN, G_BLUE };
+const uint8_t	g_Colors_Dark[TBL_COLUMN] = {G_D_RED, G_D_YELLOW, G_GRAY, G_D_GREEN, G_D_BLUE };
 const int16_t	g_OK_tabel[3][3] ={	{ 0, 1, 1 },
 									{ 1, 0, 1 },
 									{ 1, 1, 0 }};
-const uint8_t	g_Ball_Max[8] = { 16, 24, 32, 40, 56, 64, 72, 75 };
+const uint8_t	g_Ball_Max[8] = { 16, 24, 32, 40, 56, 64, 72, BALL_MAX };
 
 
 /* グローバル構造体 */
@@ -119,23 +133,40 @@ int16_t HIT_Circle_Area(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
 		py = cy + Mdiv256( (h * APL_Sin(i) ) );
 		g_Circle_Table[i][0] = px;
 		g_Circle_Table[i][1] = py;
+		g_Circle_Table_x_Min = Mmin(g_Circle_Table_x_Min, px);
+		g_Circle_Table_x_Max = Mmax(g_Circle_Table_x_Max, px);
+		g_Circle_Table_y_Min = Mmin(g_Circle_Table_y_Min, py);
+		g_Circle_Table_y_Max = Mmax(g_Circle_Table_y_Max, py);
+
 		/* 2 */
 		px = cx + Mdiv256( (w * APL_Cos(i+90)) );
 		py = cy + Mdiv256( (h * APL_Sin(i+90)) );
 		g_Circle_Table[i+90][0] = px;
 		g_Circle_Table[i+90][1] = py;
+		g_Circle_Table_x_Min = Mmin(g_Circle_Table_x_Min, px);
+		g_Circle_Table_x_Max = Mmax(g_Circle_Table_x_Max, px);
+		g_Circle_Table_y_Min = Mmin(g_Circle_Table_y_Min, py);
+		g_Circle_Table_y_Max = Mmax(g_Circle_Table_y_Max, py);
 
 		/* 3 */
 		px = cx + Mdiv256( (w * APL_Cos(i+180)) );
 		py = cy + Mdiv256( (h * APL_Sin(i+180)) );
 		g_Circle_Table[i+180][0] = px;
 		g_Circle_Table[i+180][1] = py;
+		g_Circle_Table_x_Min = Mmin(g_Circle_Table_x_Min, px);
+		g_Circle_Table_x_Max = Mmax(g_Circle_Table_x_Max, px);
+		g_Circle_Table_y_Min = Mmin(g_Circle_Table_y_Min, py);
+		g_Circle_Table_y_Max = Mmax(g_Circle_Table_y_Max, py);
 
 		/* 4 */
 		px = cx + Mdiv256( (w * APL_Cos(i+270)) );
 		py = cy + Mdiv256( (h * APL_Sin(i+270)) );
 		g_Circle_Table[i+270][0] = px;
 		g_Circle_Table[i+270][1] = py;
+		g_Circle_Table_x_Min = Mmin(g_Circle_Table_x_Min, px);
+		g_Circle_Table_x_Max = Mmax(g_Circle_Table_x_Max, px);
+		g_Circle_Table_y_Min = Mmin(g_Circle_Table_y_Min, py);
+		g_Circle_Table_y_Max = Mmax(g_Circle_Table_y_Max, py);
 	}
 		
 	return ret;
@@ -155,69 +186,69 @@ static void Bingo_table_all(void)
 	int8_t	sStr[256];
 
 	/*格子*/
-	for(i = 0; i < 16+1; i++)
+	for(i = 0; i < TBL_LINE+1+1; i++)
 	{
-		T_xLine(511 - (32 * 5), Mmax((i * 32) - 1, 0), 32 * 5, 0xFFFF, 1);
+		T_xLine(X_POS_MAX - (TBL_CELL * TBL_COLUMN), Mmax((i * TBL_CELL) - 1, 0), TBL_CELL * TBL_COLUMN, 0xFFFF, 1);
 	}
-	for(i = 0; i < 5+1; i++)
+	for(i = 0; i < TBL_COLUMN+1; i++)
 	{
-		x = 511 - (32 * 5) + (i * 32);
+		x = X_POS_MAX - (TBL_CELL * TBL_COLUMN) + (i * TBL_CELL);
 		y = 0;
-		T_yLine(x, y, 32 * 16, 0xFFFF, 1);
+		T_yLine(x, y, TBL_CELL * (TBL_LINE+1), 0xFFFF, 1);
 
-		Draw_Fill(x, y, x + 32, y + 511, g_Colors_Dark[i]);
+		Draw_Fill(x, y, x + TBL_CELL, y + Y_POS_MAX, g_Colors_Dark[i]);
 	}
-	x = 511 - (32 * 5);
+	x = X_POS_MAX - (TBL_CELL * TBL_COLUMN);
 	y = 0;
-	Draw_Fill(x, y, x + 32 * 5, y + 31, G_INDIGO);
-	for(i = 0; i < 5+1; i++)
+	Draw_Fill(x, y, x + TBL_CELL * TBL_COLUMN, y + 31, G_INDIGO);
+	for(i = 0; i < TBL_COLUMN+1; i++)
 	{
-		x = 511 - (32 * 5) + (i * 32);
+		x = X_POS_MAX - (TBL_CELL * TBL_COLUMN) + (i * TBL_CELL);
 		y = 4;
 		switch(i)
 		{
 			case 0:
 			{
-				PutGraphic_To_Symbol24("B", x + 12 + 1, y + 1, G_BLACK);
-				PutGraphic_To_Symbol24("B", x + 12, y, G_RED);
+				PutGraphic_To_Symbol24("B", x + FONT12W + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol24("B", x + FONT12W, y, G_RED);
 				break;
 			}
 			case 1:
 			{
-				PutGraphic_To_Symbol24("I", x + 12 + 1, y + 1, G_BLACK);
-				PutGraphic_To_Symbol24("I", x + 12, y, G_YELLOW);
+				PutGraphic_To_Symbol24("I", x + FONT12W + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol24("I", x + FONT12W, y, G_YELLOW);
 				break;
 			}
 			case 2:
 			{
-				PutGraphic_To_Symbol24("N", x + 12 + 1, y + 1, G_BLACK);
-				PutGraphic_To_Symbol24("N", x + 12, y, G_WHITE);
+				PutGraphic_To_Symbol24("N", x + FONT12W + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol24("N", x + FONT12W, y, G_WHITE);
 				break;
 			}
 			case 3:
 			{
-				PutGraphic_To_Symbol24("G", x + 12 + 1, y + 1, G_BLACK);
-				PutGraphic_To_Symbol24("G", x + 12, y, G_GREEN);
+				PutGraphic_To_Symbol24("G", x + FONT12W + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol24("G", x + FONT12W, y, G_GREEN);
 				break;
 			}
 			case 4:
 			{
-				PutGraphic_To_Symbol24("O", x + 12 + 1, y + 1, G_BLACK);
-				PutGraphic_To_Symbol24("O", x + 12, y, G_BLUE);
+				PutGraphic_To_Symbol24("O", x + FONT12W + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol24("O", x + FONT12W, y, G_BLUE);
 				break;
 			}
 		}
 	}
 
-	// 1から75までの数字の配列を作成
-	for (i = 0; i < 75; ++i) {
+	// 1からBALL_MAXまでの数字の配列を作成
+	for (i = 0; i < BALL_MAX; ++i) {
 		g_numbers[i] = i + 1;
 		sprintf(sStr, "%2d", g_numbers[i]);
-		x = 511 - (32 * 5) + ((i / 15) * 32) + 6;
-		y = ((i % 15) * 32) + 32 + 2;
+		x = X_POS_MAX - (TBL_CELL * TBL_COLUMN) + ((i / TBL_LINE) * TBL_CELL) + 6;
+		y = ((i % TBL_LINE) * TBL_CELL) + TBL_CELL + 2;
 		PutGraphic_To_Symbol24(sStr, x, y, G_BLACK);
 		PutGraphic_To_Symbol24(sStr, x-1, y-1, G_BLACK);
-//		Message_Num(&g_numbers[i], (392-1) + (i / 15) * 16, (i % 15) * 16, 4, MONI_Type_SS, "%d");
+//		Message_Num(&g_numbers[i], (392-1) + (i / TBL_LINE) * 16, (i % TBL_LINE) * 16, 4, MONI_Type_SS, "%d");
 	}
 }
 
@@ -236,12 +267,12 @@ static void Bingo_TableOpen(void)
 
 	j = g_numbers[g_index];
 
-	x = 511 - (32 * 5) + (((j-1)/15) * 32);
-	y = 32 + (((j-1)%15) * 32);
-	Draw_Fill(x, y, x + 32, y + 31, g_Colors[(j-1)/15]);
+	x = X_POS_MAX - (TBL_CELL * TBL_COLUMN) + (((j-1)/TBL_LINE) * TBL_CELL);
+	y = TBL_CELL + (((j-1)%TBL_LINE) * TBL_CELL);
+	Draw_Fill(x, y, x + TBL_CELL, y + 31, g_Colors[(j-1)/TBL_LINE]);
 
-	x = 511 - (32 * 5) + (((j-1) / 15) * 32) + 6;
-	y = (((j-1) % 15) * 32) + 32 + 2;
+	x = X_POS_MAX - (TBL_CELL * TBL_COLUMN) + (((j-1) / TBL_LINE) * TBL_CELL) + 6;
+	y = (((j-1) % TBL_LINE) * TBL_CELL) + TBL_CELL + 2;
 	sprintf(sStr, "%2d", j);
 	if((16 <= j) && (j <= 60))
 	{
@@ -269,7 +300,7 @@ static void Bingo_Close(void)
 	x = 15;
 	y = 64;
 
-	Draw_Fill(x, y, x + (24 * 15) - 26, y + (24 * 14) - 4, G_BG);
+	Draw_Fill(x, y, x + (FONT24H * 15) - 26, y + (FONT24H * 14) - 4, G_BG);
 }
 
 /*===========================================================================================*/
@@ -295,7 +326,7 @@ static void Bingo_Open(void)
 
 		sprintf(sStr, "%d", j);
 		PutGraphic_To_Symbol24_Xn(sStr, x + 4, y + 4, G_BLACK, 15);
-		PutGraphic_To_Symbol24_Xn(sStr, x, y, g_Colors[(j-1)/15], 15);
+		PutGraphic_To_Symbol24_Xn(sStr, x, y, g_Colors[(j-1)/TBL_LINE], 15);
 	}
 	else
 	{
@@ -304,7 +335,7 @@ static void Bingo_Open(void)
 
 		sprintf(sStr, "%2d", j);
 		PutGraphic_To_Symbol24_Xn(sStr, x + 4, y + 4, G_BLACK, 15);
-		PutGraphic_To_Symbol24_Xn(sStr, x, y, g_Colors[(j-1)/15], 15);
+		PutGraphic_To_Symbol24_Xn(sStr, x, y, g_Colors[(j-1)/TBL_LINE], 15);
 	}
 }
 /*===========================================================================================*/
@@ -319,14 +350,14 @@ static void Bingo_3_Open(int16_t x, int16_t y, int16_t num)
 	int16_t j;
 	int8_t	sStr[256];
 
-	Draw_Fill(x, y, x + (24 * 4) - 26, y + (24 * 3) - 4, G_BG);
+	Draw_Fill(x, y, x + (FONT24H * 4) - 26, y + (FONT24H * 3) - 4, G_BG);
 
 	j = num;
 
 //	Draw_FillCircle( 47, 398, 64, 64, 0xFFFF, T_GREEN );	/* 円A */
 //	Draw_FillCircle(147, 398, 64, 64, 0xFFFF, T_YELLOW);	/* 円B */
 //	Draw_FillCircle(247, 398, 64, 64, 0xFFFF, T_RED   );	/* 円C */
-	Draw_FillCircle( x + 32, y + 32, 32, g_Colors[(j-1)/15],  0, 360, 255);	/* 円A */
+	Draw_FillCircle( x + TBL_CELL, y + TBL_CELL, TBL_CELL, g_Colors[(j-1)/TBL_LINE],  0, 360, 255);	/* 円A */
 
 	if(j < 10)
 	{
@@ -380,11 +411,11 @@ static void Bingo_History(int16_t index, int16_t nHis)
 	x = 0;
 	y = 488;
 
-	Draw_Fill(x, y, x + 348, y + 32, G_BG);
+	Draw_Fill(x, y, x + 348, y + TBL_CELL, G_BG);
 	for (i = 0; i < nHis; ++i)
 	{
 		y = 488;
-		x = i * 32;
+		x = i * TBL_CELL;
 		if(index < nHis)
 		{
 			j = g_numbers[i];
@@ -396,7 +427,7 @@ static void Bingo_History(int16_t index, int16_t nHis)
 		}
 		sprintf(sStr, "%2d", j);
 		PutGraphic_To_Symbol24(sStr, x + 1, y + 1, G_BLACK);
-		PutGraphic_To_Symbol24(sStr, x, y, g_Colors[(j-1)/15]);
+		PutGraphic_To_Symbol24(sStr, x, y, g_Colors[(j-1)/TBL_LINE]);
 	}
 }
 
@@ -417,29 +448,29 @@ static void Bingo_Shuffle(int16_t nBallCount)
 	int8_t hitFlag = FALSE;
 	uint32_t uTimer;
 
-	ST_PCG	*p_stPCG[75] = {NULL};
-	ST_PCG	*p_stPCG_other[75] = {NULL};
+	ST_PCG	*p_stPCG[BALL_MAX] = {NULL};
+	ST_PCG	*p_stPCG_other[BALL_MAX] = {NULL};
 
 	GetNowTime(&uTimer);	/* 現在時刻を取得 */
 
-	for(i = 0; i < Mmin(nBallCount + g_index, 75); i++)
+	for(i = 0; i < Mmin(nBallCount, BALL_MAX); i++)
 	{
-		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + g_numbers[i] - 1);	/* ステアリングポジション */
+		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + (g_numbers[i + g_index] - 1));	/* ボール */
 	
 		if(p_stPCG[i] != NULL)
 		{
-			if(i <= (g_index - 1))
-			{
-				p_stPCG[i]->update	= FALSE;
-				p_stPCG[i]->x = -16; 
-				p_stPCG[i]->y = -16;
-				continue;
-			}
-			x = p_stPCG[i]->x;
-			y = p_stPCG[i]->y;
+//			if(i <= (g_index - 1))
+//			{
+//				p_stPCG[i]->update	= FALSE;
+//				p_stPCG[i]->x = -16; 
+//				p_stPCG[i]->y = -16;
+//				continue;
+//			}
+			x = p_stPCG[i]->x - 8;
+			y = p_stPCG[i]->y - 8;
 			hitFlag = FALSE;
 
-			for(j = i; j < Mmin(nBallCount + g_index, 75); j++)
+			for(j = i; j < Mmin(nBallCount, BALL_MAX); j++)
 			{
 				if(i == j)
 				{
@@ -447,57 +478,108 @@ static void Bingo_Shuffle(int16_t nBallCount)
 				}
 				else
 				{
-					p_stPCG_other[j] = PCG_Get_Info(SP_BALL_1 + g_numbers[j] - 1);	/* ステアリングポジション */
+					p_stPCG_other[j] = PCG_Get_Info(SP_BALL_1 + (g_numbers[j + g_index] - 1));	/* 他のボール */
 
-					if(p_stPCG[j] != NULL)
+					if(p_stPCG_other[j] != NULL)
 					{
-						x2 = p_stPCG_other[j]->x;
-						y2 = p_stPCG_other[j]->y;
+						x2 = p_stPCG_other[j]->x - 8;
+						y2 = p_stPCG_other[j]->y - 8;
 						dx = McmpSub(x2, x);
 						dy = McmpSub(y2, y);
-						if((dx < 8) && (dy < 8))
+
+						if((dx < 16) && (dy < 16))
 						{
-#ifdef DEBUG	/* デバッグコーナー */
-							printf("[%d,%d](%3d, %3d)(%3d, %3d)(%3d, %3d)\n", i, j, dx, dy, x, y, x2, y2);
-#endif
 							hitFlag = TRUE;	/* 衝突 */
 
-							if(p_stPCG[i]->dx >= 0)
+#ifdef DEBUG	/* デバッグコーナー */
+//							printf("[%d,%d](%3d, %3d)(%3d, %3d)(%3d, %3d)\n", i, j, dx, dy, x, y, x2, y2);
+#endif
+							if(dx == dy)	/* 角 */
 							{
-								p_stPCG[i]->dx = g_Rand_Table8[g_Rand_num] * -1;
+								/* 主ボール設定 */
+								if(p_stPCG[i]->dx >= 0)
+								{
+									p_stPCG[i]->dx = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG[i]->dx = g_Rand_Table16[g_Rand_num];
+								}
+								if(p_stPCG[i]->dy >= 0)
+								{
+									p_stPCG[i]->dy = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG[i]->dy = g_Rand_Table16[g_Rand_num];
+								}
+
+								/* 他ボール設定 */
+								if(p_stPCG_other[j]->dx >= 0)
+								{
+									p_stPCG_other[j]->dx = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG_other[j]->dx = g_Rand_Table16[g_Rand_num];
+								}
+								if(p_stPCG_other[j]->dy >= 0)
+								{
+									p_stPCG_other[j]->dy = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG_other[j]->dy = g_Rand_Table16[g_Rand_num];
+								}
 							}
-							else
+							else if(dx > dy)	/* 横衝突 */
 							{
-								p_stPCG[i]->dx = g_Rand_Table8[g_Rand_num];
+								/* 主ボール設定 */
+								if(p_stPCG[i]->dx >= 0)
+								{
+									p_stPCG[i]->dx = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG[i]->dx = g_Rand_Table16[g_Rand_num];
+								}
+
+								/* 他ボール設定 */
+								if(p_stPCG_other[j]->dx >= 0)
+								{
+									p_stPCG_other[j]->dx = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG_other[j]->dx = g_Rand_Table16[g_Rand_num];
+								}
 							}
-							if(p_stPCG[i]->dy >= 0)
+							else	/* 縦衝突 */
 							{
-								p_stPCG[i]->dy = g_Rand_Table8[g_Rand_num] * -1;
-							}
-							else
-							{
-								p_stPCG[i]->dy = g_Rand_Table8[g_Rand_num];
+								/* 主ボール設定 */
+								if(p_stPCG[i]->dy >= 0)
+								{
+									p_stPCG[i]->dy = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG[i]->dy = g_Rand_Table16[g_Rand_num];
+								}
+
+								/* 他ボール設定 */
+								if(p_stPCG_other[j]->dy >= 0)
+								{
+									p_stPCG_other[j]->dy = g_Rand_Table16[g_Rand_num] * -1;
+								}
+								else
+								{
+									p_stPCG_other[j]->dy = g_Rand_Table16[g_Rand_num];
+								}
 							}
 
-							if(p_stPCG[j]->dx >= 0)
-							{
-								p_stPCG[j]->dx = g_Rand_Table8[g_Rand_num] * -1;
-							}
-							else
-							{
-								p_stPCG[j]->dx = g_Rand_Table8[g_Rand_num];
-							}
-							if(p_stPCG[j]->dy >= 0)
-							{
-								p_stPCG[j]->dy = g_Rand_Table8[g_Rand_num] * -1;
-							}
-							else
-							{
-								p_stPCG[j]->dy = g_Rand_Table8[g_Rand_num];
-							}
 
 							g_Rand_num++;
-							if(g_Rand_num >= 75)g_Rand_num=0;
+							if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 
 							break;
 						}
@@ -508,9 +590,9 @@ static void Bingo_Shuffle(int16_t nBallCount)
 			if(hitFlag == FALSE)
 			{
 				/* ビンの中 */
-				if( x < 163 )
+				if( x < g_Circle_Table_x_Min + Mdiv2(g_Circle_Table_x_Max - g_Circle_Table_x_Min) )
 				{
-					if(y < 196)
+					if(y < g_Circle_Table_y_Min + Mdiv2(g_Circle_Table_y_Max - g_Circle_Table_y_Min) )
 					{
 						/* 2 */
 						for(k=0; k<90; k++)
@@ -521,10 +603,10 @@ static void Bingo_Shuffle(int16_t nBallCount)
 							{
 								p_stPCG[i]->dx = g_Rand_Table16[g_Rand_num];
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->dy = g_Rand_Table16[g_Rand_num];
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->x = hx;
 								p_stPCG[i]->y = hy;
 								hitFlag = TRUE;	/* 衝突 */
@@ -543,10 +625,10 @@ static void Bingo_Shuffle(int16_t nBallCount)
 							{
 								p_stPCG[i]->dx = g_Rand_Table16[g_Rand_num];
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->dy = (g_Rand_Table16[g_Rand_num]) * -1;
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->x = hx;
 								p_stPCG[i]->y = (hy - SP_Y_OFFSET);
 								hitFlag = TRUE;	/* 衝突 */
@@ -557,7 +639,7 @@ static void Bingo_Shuffle(int16_t nBallCount)
 				}
 				else
 				{
-					if(y < 196)
+					if(y < g_Circle_Table_y_Min + Mdiv2(g_Circle_Table_y_Max - g_Circle_Table_y_Min))
 					{
 						/* 1 */
 						for(k=0; k<90; k++)
@@ -568,10 +650,10 @@ static void Bingo_Shuffle(int16_t nBallCount)
 							{
 								p_stPCG[i]->dx = (g_Rand_Table16[g_Rand_num]) * -1;
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->dy = g_Rand_Table16[g_Rand_num];
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->x = (hx - SP_X_OFFSET);
 								p_stPCG[i]->y = hy;
 								hitFlag = TRUE;	/* 衝突 */
@@ -590,10 +672,10 @@ static void Bingo_Shuffle(int16_t nBallCount)
 							{
 								p_stPCG[i]->dx = (g_Rand_Table16[g_Rand_num]) * -1;
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->dy = (g_Rand_Table16[g_Rand_num]) * -1;
 								g_Rand_num++;
-								if(g_Rand_num >= 75)g_Rand_num=0;
+								if(g_Rand_num >= BALL_MAX)g_Rand_num=0;
 								p_stPCG[i]->x = (hx - SP_X_OFFSET);
 								p_stPCG[i]->y = (hy - SP_Y_OFFSET);
 								hitFlag = TRUE;	/* 衝突 */
@@ -607,29 +689,29 @@ static void Bingo_Shuffle(int16_t nBallCount)
 			if(hitFlag == FALSE)
 			{
 				/* ビンの外 */
-				if(x < 32)
+				if(x < g_Circle_Table_x_Min)
 				{
 					p_stPCG[i]->dx = g_Rand_Table4[g_Rand_num];
-					p_stPCG[i]->x = 32;
+					p_stPCG[i]->x = g_Circle_Table_x_Min;
 					hitFlag = TRUE;	/* 衝突 */
 				}
-				if(x > 334)
+				if(x > g_Circle_Table_x_Max)
 				{
 					p_stPCG[i]->dx = (g_Rand_Table4[g_Rand_num]) * -1;
-					p_stPCG[i]->x = 334;
+					p_stPCG[i]->x = g_Circle_Table_x_Max;
 					hitFlag = TRUE;	/* 衝突 */
 				}
 
-				if(y < 80)
+				if(y < g_Circle_Table_y_Min)
 				{
 					p_stPCG[i]->dy = g_Rand_Table4[g_Rand_num];
-					p_stPCG[i]->y = 80;
+					p_stPCG[i]->y = g_Circle_Table_y_Min;
 					hitFlag = TRUE;	/* 衝突 */
 				}
-				if(y > 376)
+				if(y > g_Circle_Table_y_Max)
 				{
 					p_stPCG[i]->dy = (g_Rand_Table4[g_Rand_num]) * -1;
-					p_stPCG[i]->y = 376;
+					p_stPCG[i]->y = g_Circle_Table_y_Max;
 					hitFlag = TRUE;	/* 衝突 */
 				}
 			}
@@ -660,21 +742,21 @@ static void Bingo_Fly(int16_t nBallCount, int8_t bFinal)
 	int16_t sign;
 	static int8_t bFlag = TRUE;
 	
-	ST_PCG	*p_stPCG[75] = {NULL};
+	ST_PCG	*p_stPCG[BALL_MAX] = {NULL};
 
-	for(i = 0; i < 75; i++)
+	for(i = g_index; i < BALL_MAX; i++)
 	{
-		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + g_numbers[i] - 1);	/* ステアリングポジション */
+		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + (g_numbers[i] - 1));	/* ボール */
 	
 		if(p_stPCG[i] != NULL)
 		{
-			if(i <= (g_index - 1))
-			{
-				p_stPCG[i]->update	= FALSE;
-				p_stPCG[i]->x = -16; 
-				p_stPCG[i]->y = -16;
-				continue;
-			}
+//			if(i <= (g_index - 1))
+//			{
+//				p_stPCG[i]->update	= FALSE;
+//				p_stPCG[i]->x = -16; 
+//				p_stPCG[i]->y = -16;
+//				continue;
+//			}
 			if(bFinal == TRUE)
 			{
 				if(bFlag == TRUE)
@@ -704,9 +786,9 @@ static void Bingo_Fly(int16_t nBallCount, int8_t bFinal)
 		}
 	}
 
-	for(i = nBallCount; i < Mmin(nBallCount + 1, 75); i++)
+	for(i = nBallCount; i < Mmin(nBallCount + 1, BALL_MAX); i++)
 	{
-		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + g_numbers[i] - 1);	/* ステアリングポジション */
+		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + (g_numbers[i + g_index] - 1));	/* ボール */
 	
 		if(p_stPCG[i] != NULL)
 		{
@@ -741,11 +823,11 @@ static void Bingo_Ball_Init(void)
 	int16_t	i;
 	int16_t sign;
 	
-	ST_PCG	*p_stPCG[75] = {NULL};
+	ST_PCG	*p_stPCG[BALL_MAX] = {NULL};
 
-	for(i = 0; i < 75; i++)
+	for(i = 0; i < BALL_MAX; i++)
 	{
-		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + i);	/* ステアリングポジション */
+		p_stPCG[i] = PCG_Get_Info(SP_BALL_1 + i);	/* ボール */
 
 		if(p_stPCG[i] != NULL)
 		{
@@ -833,9 +915,9 @@ int16_t main(int16_t argc, int8_t** argv)
 		/* モード引き渡し */
 		GetGameMode(&bMode);
 		
-		/* 終了 */
 		if((g_Input & KEY_b_ESC ) != 0u)	/* ＥＳＣキー */
 		{
+			/* 終了 */
 			pushCount = Minc(pushCount, 1);
 			if(pushCount >= 5)
 			{
@@ -846,6 +928,22 @@ int16_t main(int16_t argc, int8_t** argv)
 				SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
 			}
 		}
+		else if((g_Input & KEY_b_HELP ) != 0u)	/* HELPキー */
+		{
+			if( (stTask.bScene != SCENE_GAME_OVER_S) && (stTask.bScene != SCENE_GAME_OVER) )
+			{
+				/* リセット */
+				pushCount = Minc(pushCount, 1);
+				if(pushCount >= 5)
+				{
+					ADPCM_Play(5);	/* SET */
+
+					Music_Play(1);	/* Stop */
+
+					SetTaskInfo(SCENE_GAME_OVER_S);	/* 終了シーンへ設定 */
+				}
+			}
+		}		
 		else
 		{
 			pushCount = 0;
@@ -860,8 +958,6 @@ int16_t main(int16_t argc, int8_t** argv)
 
 				G_PaletteSetZero();	/* 0番パレット変更 */
 
-				Bingo_Ball_Init();
-
 				Set_CRT_Contrast(0);	/* 真っ暗にする */
 
 				SetTaskInfo(SCENE_TITLE_S);	/* シーン(開始処理)へ設定 */
@@ -871,10 +967,10 @@ int16_t main(int16_t argc, int8_t** argv)
 			{
 				int16_t x, y;
 
-				Music_Play(3);	/* BINGO */
-				
+				Bingo_Ball_Init();	/* ボールの初期化 */
+
 				G_PAGE_SET(2);	/* 奥 */
-				Draw_Fill(0, 0, 511, 511, G_PURPLE);
+				Draw_Fill(0, 0, X_POS_MAX, Y_POS_MAX, G_PURPLE);
 				G_PAGE_SET(1);	/* 手前 */
 
 				G_Load_Mem(1, 16, 64, 1);	/* バニーガール */
@@ -886,6 +982,11 @@ int16_t main(int16_t argc, int8_t** argv)
 				PutGraphic_To_Symbol24_Xn("BINGOでPRO-68k", x + 1, y + 1, G_BLACK, 2);
 				PutGraphic_To_Symbol24_Xn("BINGOでPRO-68k", x, y, G_WHITE, 2);
 
+				x = 280;
+				y = 48;
+				PutGraphic_To_Symbol12("ver 0.9.1", x + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol12("ver 0.9.1", x, y, G_WHITE);
+
 				x = 0;
 				y = 464;
 				PutGraphic_To_Symbol24("Push Space Key or A button", x + 1, y + 1, G_BLACK);
@@ -893,6 +994,8 @@ int16_t main(int16_t argc, int8_t** argv)
 
 				PCG_ON();	/* スプライトON */
 
+				Music_Play(3);	/* BINGO */
+				
 				Set_CRT_Contrast(-1);	/* もとに戻す */
 
 				g_Vwait = 1;
@@ -919,7 +1022,7 @@ int16_t main(int16_t argc, int8_t** argv)
 					x = 0;
 					y = 464;
 					G_PAGE_SET(1);	/* 手前 */
-					Draw_Fill(x, y, 350, 511, G_BG);
+					Draw_Fill(x, y, 350, Y_POS_MAX, G_BG);
 
 					SetTaskInfo(SCENE_START_S);	/* シーン(開始処理)へ設定 */
 				}
@@ -1002,7 +1105,7 @@ int16_t main(int16_t argc, int8_t** argv)
 			{
 				if(ADPCM_SNS() == 0)
 				{
-					if(g_index >= 75)
+					if(g_index >= BALL_MAX)
 					{
 						SetTaskInfo(SCENE_GAME_OVER_S);	/* シーン(開始処理)へ設定 */
 					}
@@ -1027,12 +1130,26 @@ int16_t main(int16_t argc, int8_t** argv)
 
 					if(g_fly_count >= 3)
 					{
+						int16_t nPlayNum = 0;
 						g_fly_count = 0;
 						nNum_old = -1;
 
-						PCG_OFF();			/* SP OFF */
+						nPlayNum = rand() % 6;
 						/* 動画 */
-						MOV_Play(rand() % 6);		/* カットイン */
+						if(nPlayNum > 3)
+						{
+							G_Scroll(17+28, 70, 0);
+							G_Scroll(17+28, 70, 1);
+							MOV_Play2(nPlayNum, 0x64);		/* カットイン */
+							G_Scroll(0, 0, 0);
+							G_Scroll(0, 0, 1);
+						}
+						else
+						{
+							PCG_OFF();				/* SP OFF */
+							MOV_Play(nPlayNum);		/* カットイン */
+						}
+						CRTC_INIT(0x100 + 8);			/* スプライトのズレ対策 */
 
 						SetTaskInfo(SCENE_GAME);	/* シーン(実施処理)へ設定 */
 					}
@@ -1136,7 +1253,17 @@ int16_t main(int16_t argc, int8_t** argv)
 			}
 			case SCENE_GAME_OVER_S:
 			{
+				int16_t x, y;
+
 				Music_Play(6);	/* Game Over */
+
+				x = 0;
+				y = 464;
+				G_PAGE_SET(1);	/* 手前 */
+				Draw_Fill(x, y, 350, Y_POS_MAX, G_BG);
+
+				PutGraphic_To_Symbol24("Game Over", x + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol24("Game Over", x, y, G_WHITE);
 
 				SetTaskInfo(SCENE_GAME_OVER);	/* シーン(実施処理)へ設定 */
 				break;
@@ -1160,7 +1287,7 @@ int16_t main(int16_t argc, int8_t** argv)
 					x = 0;
 					y = 60;
 					G_PAGE_SET(1);	/* 手前 */
-					Draw_Fill(x, y, 350, 511, G_BG);
+					Draw_Fill(x, y, 350, Y_POS_MAX, G_BG);
 
 					SetTaskInfo(SCENE_INIT);	/* シーン(初期化処理)へ設定 */
 				}
@@ -1320,7 +1447,7 @@ static void App_exit(void)
 #endif
 
 	/* 画面 */
-	CRTMOD(0x100 + g_nCrtmod);	/* モードをもとに戻す */
+	CRTC_EXIT(0x100 + g_nCrtmod);	/* モードをもとに戻す */
 #ifdef DEBUG	/* デバッグコーナー */
 	puts("App_exit 画面");
 #endif
@@ -1459,7 +1586,7 @@ void App_TimerProc( void )
 			case SCENE_TITLE_E:
 			case SCENE_START_S:
 			{
-				Bingo_Fly(75, TRUE);	/* スプライトを表示 */
+				Bingo_Fly(BALL_MAX, TRUE);	/* スプライトを表示 */
 				break;
 			}
 			case SCENE_START:
@@ -1469,7 +1596,7 @@ void App_TimerProc( void )
 			}
 			case SCENE_GAME_S:
 			{
-				Bingo_Fly(g_index + g_fly_count, (g_fly_count == 3));	/* スプライトを表示 */
+				Bingo_Fly(g_fly_count, (g_fly_count == 3));	/* スプライトを表示 */
 				break;
 			}
 		}
