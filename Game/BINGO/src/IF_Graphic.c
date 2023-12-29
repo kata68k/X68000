@@ -852,18 +852,24 @@ void G_HOME(uint8_t bMode)
 		{
 			x = stCRT.view_offset_x;
 			y = stCRT.view_offset_y;
+			_iocs_home( 0b0001, x, y );	/* ホーム位置設定 */
+			_iocs_window( x, y, x + WIDTH, y + HEIGHT);	/* クリッピング */
 			break;
 		}
 		case 1:	/* オフスクリーン座標 */
 		case 2:
 		{
+			x = stCRT.view_offset_x;
+			y = stCRT.view_offset_y;
+			_iocs_home( 0b0001, x, y );	/* ホーム位置設定 */
+//			_iocs_window( x, y, x + WIDTH, y + HEIGHT);	/* クリッピング */
+			_iocs_window( x, 0, x + WIDTH, 511);	/* クリッピング */
 			x = stCRT.hide_offset_x;
 			y = stCRT.hide_offset_y;
 			break;
 		}
 	}
-	_iocs_home( 0b0001, x, y );	/* ホーム位置設定 */
-//	_iocs_window( x, y, x + WIDTH, y + HEIGHT);	/* クリッピング */
+//	_iocs_home( 0b0001, x, y );	/* ホーム位置設定 */
 //	_iocs_home(0b0000, X_OFFSET, Y_OFFSET);	/* ホーム位置 */
 //	_iocs_home(1, X_OFFSET, Y_OFFSET);
 //	_iocs_home(2, X_OFFSET, 416);

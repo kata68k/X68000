@@ -14,7 +14,6 @@
 #include "APL_PCG.h"
 
 /* define定義 */
-#define	PCG_16x16_AREA	(0x40)
 
 /* グローバル変数 */
 
@@ -31,9 +30,11 @@ void PCG_INIT_CHAR(void);
 /*===========================================================================================*/
 void PCG_INIT_CHAR(void)
 {
-	uint32_t	j;
+	uint32_t	i, j;
 	uint32_t	uPCG_num, uBufSize;
 	uint8_t		ubOK;
+	uint8_t		ubPri;
+	uint8_t		ubPal;
 
 	printf("SP load");
 #if 0
@@ -161,7 +162,7 @@ void PCG_INIT_CHAR(void)
 				stPCG.Pat_AnimeMax	= 1;
 				stPCG.Pat_DataMax	= 1;
 				
-				PCG_Load_Data("data/sp/BALL.SP", 0x29, stPCG, uPCG_num, 0);
+				PCG_Load_Data("data/sp/BALL.SP", 0x00, stPCG, uPCG_num, 0);
 				if(uPCG_num == SP_BALL_1)
 				{
 					PCG_Load_PAL_Data("data/sp/BALL.PAL", 0x0A, 0x0A);
@@ -198,7 +199,7 @@ void PCG_INIT_CHAR(void)
 				stPCG.Pat_AnimeMax	= 1;
 				stPCG.Pat_DataMax	= 1;
 				
-				PCG_Load_Data("data/sp/BALL.SP", 0x29, stPCG, uPCG_num, 0);
+				PCG_Load_Data("data/sp/BALL.SP", 0x00, stPCG, uPCG_num, 0);
 				if(uPCG_num == SP_BALL_16)
 				{
 					PCG_Load_PAL_Data("data/sp/BALL.PAL", 0x0B, 0x0B);
@@ -234,7 +235,7 @@ void PCG_INIT_CHAR(void)
 				stPCG.Pat_AnimeMax	= 1;
 				stPCG.Pat_DataMax	= 1;
 				
-				PCG_Load_Data("data/sp/BALL.SP", 0x29, stPCG, uPCG_num, 0);
+				PCG_Load_Data("data/sp/BALL.SP", 0x00, stPCG, uPCG_num, 0);
 				if(uPCG_num == SP_BALL_31)
 				{
 					PCG_Load_PAL_Data("data/sp/BALL.PAL", 0x0C, 0x0C);
@@ -270,7 +271,7 @@ void PCG_INIT_CHAR(void)
 				stPCG.Pat_AnimeMax	= 1;
 				stPCG.Pat_DataMax	= 1;
 				
-				PCG_Load_Data("data/sp/BALL.SP", 0x29, stPCG, uPCG_num, 0);
+				PCG_Load_Data("data/sp/BALL.SP", 0x00, stPCG, uPCG_num, 0);
 				if(uPCG_num == SP_BALL_46)
 				{
 					PCG_Load_PAL_Data("data/sp/BALL.PAL", 0x0D, 0x0D);
@@ -306,7 +307,7 @@ void PCG_INIT_CHAR(void)
 				stPCG.Pat_AnimeMax	= 1;
 				stPCG.Pat_DataMax	= 1;
 				
-				PCG_Load_Data("data/sp/BALL.SP", 0x29, stPCG, uPCG_num, 0);
+				PCG_Load_Data("data/sp/BALL.SP", 0x00, stPCG, uPCG_num, 0);
 				if(uPCG_num == SP_BALL_61)
 				{
 					PCG_Load_PAL_Data("data/sp/BALL.PAL", 0x0E, 0x0E);

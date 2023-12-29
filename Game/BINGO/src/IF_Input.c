@@ -88,6 +88,7 @@ int16_t Input_Main(void)
 	int16_t	input = 0;
 
 	get_keyboard(&input, 0, 1);		/* キーボード入力, JoyNo, mode=0:edge on 1:edge off */
+	g_Input = input;
 
 	/* アナログスティック／デジタルスティック切替 */
 	if(ChatCancelSW((g_Input & KEY_b_TAB)!=0u, &g_bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
@@ -117,7 +118,7 @@ int16_t Input_Main(void)
 		g_bAnalogStickMode = FALSE;
 #endif
 	}
-
+	/* 引数のinputは捨てデータ */
 	if(g_bAnalogStickMode == TRUE)
 	{
 #if CNF_JOYDRV360				
@@ -133,7 +134,6 @@ int16_t Input_Main(void)
 		get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
 	
 	}
-	g_Input = input;
 
 	return ret;
 }

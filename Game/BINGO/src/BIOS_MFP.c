@@ -17,6 +17,7 @@
 /* define定義 */
 
 /* グローバル変数 */
+int8_t				g_bMFP = FALSE;
 volatile uint16_t	g_uHsync_count;
 volatile uint16_t	g_uVsync_count;
 volatile uint16_t	g_uRaster_count;
@@ -73,6 +74,8 @@ int16_t MFP_INIT(void)
 	volatile uint8_t *MFP_TACR = (uint8_t *)0xe88019;
 	volatile uint8_t *MFP_TADR = (uint8_t *)0xe8801f;
 
+	g_bMFP = FALSE;
+	
 	/* H-Sync割り込み */
 	g_uHsync_count = 0;
 	/* V-Sync割り込み */
@@ -101,7 +104,8 @@ int16_t MFP_INIT(void)
 	vdispst = VDISPST(Vsync_Func, 0, 1);	/* V-Sync割り込み 帰線 */
 #endif	/* CNF_MACS */
 //	Message_Num(&vdispst,  0, 10, 2, MONI_Type_SI, "%4d");
-	
+	g_bMFP = TRUE;
+
 	return vdispst;
 }
 
@@ -116,28 +120,33 @@ int16_t MFP_EXIT(void)
 {
 	int32_t	vdispst = -1;
 
-	TimerD_EXIT();			/* Timer-D 終了 */
+	if(g_bMFP == TRUE)
+	{
+		g_bMFP = FALSE;
 
-	StopRasterInt();		/* ラスター割り込み処理を停止 */
-	puts("MFP_EXIT CRTCRAS");
-	
+		TimerD_EXIT();			/* Timer-D 終了 */
+
+		StopRasterInt();		/* ラスター割り込み処理を停止 */
+		puts("MFP_EXIT CRTCRAS");
+		
 #if 0
-	_iocs_hsyncst((void *)0);		/* stop */
-	puts("MFP_EXIT HSYNCST");
+		_iocs_hsyncst((void *)0);		/* stop */
+		puts("MFP_EXIT HSYNCST");
 #endif
 #if CNF_MACS
  #ifdef 	MACS_MOON
-	vdispst = MACS_Vsync_R(Vsync_Func);	/* stop */
-	puts("MFP_EXIT MACS_Vsync_R");
+		vdispst = MACS_Vsync_R(Vsync_Func);	/* stop */
+		puts("MFP_EXIT MACS_Vsync_R");
  #else	/* MACS_MOON */
-	vdispst = _iocs_vdispst((void *)0, 0, 0);	/* stop */
- 	puts("MFP_EXIT VDISPST");
+		vdispst = _iocs_vdispst((void *)0, 0, 0);	/* stop */
+		puts("MFP_EXIT VDISPST");
  #endif	/* MACS_MOON */
 #else	/* CNF_MACS */
-	vdispst = _iocs_vdispst((void *)0, 0, 0);	/* stop */
-	puts("MFP_EXIT VDISPST");
+		vdispst = _iocs_vdispst((void *)0, 0, 0);	/* stop */
+		puts("MFP_EXIT VDISPST");
 #endif	/* CNF_MACS */
-//	Message_Num(&vdispst,  6, 10, 2, MONI_Type_SI, "%4d");
+//		Message_Num(&vdispst,  6, 10, 2, MONI_Type_SI, "%4d");
+	}
 
 	return vdispst;
 }
@@ -323,8 +332,11 @@ int16_t StopRasterInt(void)
 {
 	int16_t ret = 0;
 	
-	g_bRasterUse = FALSE;
-	_iocs_crtcras((void *)0, 0);	/* stop */
+	if(g_bRasterUse == TRUE)
+	{
+		g_bRasterUse = FALSE;
+		_iocs_crtcras((void *)0, 0);	/* stop */
+	}
 	
 	return ret;
 }

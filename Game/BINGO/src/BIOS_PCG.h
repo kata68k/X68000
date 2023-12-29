@@ -2,6 +2,9 @@
 #define	BIOS_PCG_H
 
 #include <usr_define.h>
+#include <XSP2lib.H>
+
+#define CNF_XSP (0)
 
 /* スプライトＰＣＧパターン最大数 */
 #define	PCG_MAX		(128)
@@ -21,6 +24,7 @@
 #define SP_16x16	(1)
 #define	SP_PLN_MAX	(128)
 #define	PCG_CODE_MASK	(0xFF)
+#define	PCG_16x16_AREA	(0x00)
 
 enum{
 	SP_BALL_1,

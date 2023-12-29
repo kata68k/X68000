@@ -984,8 +984,8 @@ int16_t main(int16_t argc, int8_t** argv)
 
 				x = 280;
 				y = 48;
-				PutGraphic_To_Symbol12("ver 0.9.1", x + 1, y + 1, G_BLACK);
-				PutGraphic_To_Symbol12("ver 0.9.1", x, y, G_WHITE);
+				PutGraphic_To_Symbol12("ver 0.9.2", x + 1, y + 1, G_BLACK);
+				PutGraphic_To_Symbol12("ver 0.9.2", x, y, G_WHITE);
 
 				x = 0;
 				y = 464;

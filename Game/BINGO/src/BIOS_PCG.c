@@ -14,7 +14,6 @@
 #include "IF_Memory.h"
 
 /* define定義 */
-#define	PCG_16x16_AREA	(0x40)
 
 /* グローバル変数 */
 ST_PCG	g_stPCG_DATA[PCG_MAX] = {0};
@@ -372,13 +371,16 @@ void BG_TEXT_SET(int8_t *fname)
 int16_t PCG_Main(void)
 {
 	int16_t	ret = 0;
-	int16_t	uWidth = 0, uHeight = 0;
-	int16_t	x, y, count, pat_size, Anime_pat_size, pat_data;
-	int16_t	uPCG_prw;
 	int16_t	uPCG_num;
 	uint8_t	Plane_num;
+	int16_t	uWidth = 0, uHeight = 0;
+	int16_t	x, y, count, pat_size, Anime_pat_size, pat_data;
 	uint8_t	Anime_num, Anime_num_old, DataMax;
+
+#if  CNF_XSP
+#else
 	static uint16_t	s_uPCG_Num = PCG_16x16_AREA;
+#endif
 
 	for(uPCG_num = 0; uPCG_num < PCG_NUM_MAX; uPCG_num++)
 	{
@@ -399,7 +401,7 @@ int16_t PCG_Main(void)
 
 		/* プレーン番号 */
 		Plane_num = g_stPCG_DATA[uPCG_num].Plane;
-		
+
 		/* パターンサイズ */
 		pat_size = g_stPCG_DATA[uPCG_num].Pat_w * g_stPCG_DATA[uPCG_num].Pat_h;
 		
@@ -418,8 +420,12 @@ int16_t PCG_Main(void)
 			uWidth = 0;
 			for( x = 0; x < g_stPCG_DATA[uPCG_num].Pat_w; x++ )
 			{
+				int16_t	uPCG_prw;
+
 				pat_data = (count + (Anime_pat_size));
-				
+
+#if  CNF_XSP
+#else
 				/* PCGを定義、再定義する */
 				if(	g_stPCG_DATA[uPCG_num].Plane == 0xFF ) /* 初回 */
 				{
@@ -431,12 +437,10 @@ int16_t PCG_Main(void)
 					/* PCGを定義してパターンデータ書き換え */
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) &= ~0xFFU;
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) |= s_uPCG_Num;
-					
 					/* メモリからPCGエリアへコピー */
 					_iocs_sp_defcg( (Plane_num + count) & (PCG_MAX-1),
 									SP_16x16,
-						g_stPCG_DATA[uPCG_num].pPatData + Mmul64(count + ((Anime_pat_size) % DataMax)) );	/* 64 = 128byte */
-					
+									g_stPCG_DATA[uPCG_num].pPatData + Mmul64(count + ((Anime_pat_size) % DataMax)) );	/* 64 = 128byte */
 					s_uPCG_Num++;
 					if(s_uPCG_Num >= PCG_MAX)
 					{
@@ -448,22 +452,54 @@ int16_t PCG_Main(void)
 					/* メモリからPCGエリアへコピー */
 					_iocs_sp_defcg( (Plane_num + count) & (PCG_MAX-1),
 									SP_16x16,
-						g_stPCG_DATA[uPCG_num].pPatData + Mmul64(count + ((Anime_pat_size) % DataMax)) );	/* 64 = 128byte */
+									g_stPCG_DATA[uPCG_num].pPatData + Mmul64(count + ((Anime_pat_size) % DataMax)) );	/* 64 = 128byte */
 				}
-				
+#endif
+
 				/* 表示 */
 				if(	g_stPCG_DATA[uPCG_num].update == TRUE )	/* 更新アリ */
 				{
+#if  CNF_XSP
+					/* 表示優先度書き換え */
+					uPCG_prw = 0x30;
+					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) &= ~0xFFU;
+					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) |= uPCG_prw;
+#else
 					/* パターンデータ書き換え */
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) &= ~0xFFU;
 					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) |= (Plane_num + count);
 					uPCG_prw = 3;
+#endif
 				}
 				else
 				{
+#if  CNF_XSP
+					/* 表示優先度書き換え */
+					uPCG_prw = 0x00;
+					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) &= ~0xFFU;
+					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) |= uPCG_prw;
+#else
 					uPCG_prw = 0;
+#endif
 				}
 				
+#if  CNF_XSP
+				ret = xsp_set(	g_stPCG_DATA[uPCG_num].x + uWidth + SP_X_OFFSET,
+								g_stPCG_DATA[uPCG_num].y + uHeight + SP_Y_OFFSET,
+								Plane_num + count,
+								*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data));
+	#ifdef DEBUG
+	//			if(uPCG_num == 0)
+				{
+	//				printf("PCG(%d)[%d]=(%d,%d)(0x%04x)\n",
+	//							uPCG_num,
+	//							ret, 
+	//							g_stPCG_DATA[uPCG_num].x + uWidth + SP_X_OFFSET,
+	//							g_stPCG_DATA[uPCG_num].y + uHeight + SP_Y_OFFSET, 
+	//							*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data) );
+				}
+	#endif
+#else
 				/* 移動量 */
 				g_stPCG_DATA[uPCG_num].x += g_stPCG_DATA[uPCG_num].dx;
 				g_stPCG_DATA[uPCG_num].y += g_stPCG_DATA[uPCG_num].dy;
@@ -475,7 +511,7 @@ int16_t PCG_Main(void)
 								g_stPCG_DATA[uPCG_num].y + uHeight + SP_Y_OFFSET,
 								*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data),
 								uPCG_prw);
-				
+#endif
 				uWidth += SP_W;
 				count++;
 			}
@@ -554,6 +590,11 @@ int16_t PCG_Load_Data(int8_t *sFileName, uint16_t uPCG_data_ofst,
 		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, 0x00, 0xFF);	/* パターンコードテーブル */
 	}
 	
+	if(uPCG_Type == 3)	/* XSPモードはパターン不要 */
+	{
+		g_stPCG_DATA[uPCG_num].pPatData		= NULL;
+		return ret;	
+	}
 	/* スプライト画像データ */
 	uBufSize = stPCG.Pat_DataMax;
 	

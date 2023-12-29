@@ -7,7 +7,6 @@
 #include <iocslib.h>
 #include <doslib.h>
 #include <usr_macro.h>
-#include <XSP2lib.H>
 
 #include "IF_PCG.h"
 #include "BIOS_PCG.h"
@@ -26,7 +25,7 @@
 char pcg_alt[PCG_MAX + 1];		/* XSP 用 PCG 配置管理テーブル	スプライト PCG パターン最大使用数 + 1 バイトのサイズが必要。*/
 char pcg_dat[PCG_MAX * 128];	/* ＰＣＧデータファイル読み込みバッファ */
 unsigned short pal_dat[ 256 ];	/* パレットデータファイル読み込みバッファ */
-
+char g_bSP = FALSE;
 
 /* 構造体定義 */
 /* 関数のプロトタイプ宣言 */
@@ -60,7 +59,7 @@ static void sp_dataload(void)
 	
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
 
-	fp = fopen( "data/sp/BK.SP" , "rb" ) ;
+	fp = fopen( "data/sp/BALL.SP" , "rb" ) ;
 //	fp = fopen( "SP_DATA/SAKANA.SP" , "rb" ) ;
 	j = fread( pcg_dat
 			,  128		/* 1PCG = 128byte */
@@ -83,7 +82,7 @@ static void sp_dataload(void)
 	
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
 
-	fp = fopen( "data/sp/BK.PAL" , "rb" ) ;
+	fp = fopen( "data/sp/BALL.PAL" , "rb" ) ;
 //	fp = fopen( "SP_DATA/SAKANA.PAL" , "rb" ) ;
 	fread( pal_dat
 		,  2		/* 1palet = 2byte */
@@ -109,18 +108,31 @@ static void sp_dataload(void)
 void PCG_INIT(void)
 {
 #if  CNF_XSP
-    /*---------------------[ XSP を初期化 ]---------------------*/
-    sp_dataload();  /* スプライトのデータ読み込み */
-	
-    xsp_on();		/* XSP ON */
+#else   /* CNF_XSP 0 */
+	uint32_t	i, j, uPCG_num;
+#endif  /*CNF_XSP*/
 
-	xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));  /* PCG データと PCG 配置管理をテーブルを指定 */
+	/* スプライトの初期化 */
+	g_bSP = FALSE;
+#if  CNF_XSP
+	printf("XSP mode");
+    /*---------------------[ XSP を初期化 ]---------------------*/
+	_iocs_sp_init();			/* スプライトの初期化 */
+
+    sp_dataload();  	/* スプライトのデータ読み込み */
+
+	PCG_ON();			/* XSP 初期化 */
+
+	xsp_mode(1);
+
+	xsp_pcgmask_off(0, 127);
 
 //	xsp_vertical(1);    /* 縦画面モード */
 	/*---------------------[ XSP を初期化 ]---------------------*/
 #else   /* CNF_XSP 0 */
-	uint32_t	i, j, uPCG_num;
 	
+	printf("SP/BG mode");
+
 	/* スプライトの初期化 */
 	_iocs_sp_init();			/* スプライトの初期化 */
 	
@@ -157,12 +169,16 @@ void PCG_INIT(void)
 /*===========================================================================================*/
 void PCG_ON(void)
 {
+	if(g_bSP == FALSE)
+	{
+	    PCG_VIEW(1);        /* SP ON */
 #if  CNF_XSP
-    xsp_on();			/* XSP ON */
-	xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));  /* PCG データと PCG 配置管理をテーブルを指定 */
+    	xsp_on();			/* XSP ON */
+		xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));  /* PCG データと PCG 配置管理をテーブルを指定 */
 #else   /* CNF_XSP 0 */
-    PCG_VIEW(1);        /* SP ON */
 #endif  /*CNF_XSP*/
+		g_bSP = TRUE;
+	}
 }
 
 /*===========================================================================================*/
@@ -174,11 +190,15 @@ void PCG_ON(void)
 /*===========================================================================================*/
 void PCG_OFF(void)
 {
+	if(g_bSP == TRUE)
+	{
+		g_bSP = FALSE;
 #if  CNF_XSP
-	xsp_off();			/* XSP OFF */
+		xsp_off();			/* XSP OFF */
 #else   /* CNF_XSP 0 */
-    PCG_VIEW(0);        /* SP OFF */
 #endif  /*CNF_XSP*/
+	    PCG_VIEW(0);        /* SP OFF */
+	}
 }
 
 /*===========================================================================================*/
@@ -191,7 +211,8 @@ void PCG_OFF(void)
 void PCG_START_SYNC(int16_t count)
 {
 #if  CNF_XSP
-    xsp_vsync2(count);  /* 垂直同期 */
+//	xsp_vsync(count);
+	xsp_vsync2(count);  /* 垂直同期 */
 #else   /* CNF_XSP 0 */
     /* なし */
 #endif  /*CNF_XSP*/
@@ -206,9 +227,12 @@ void PCG_START_SYNC(int16_t count)
 /*===========================================================================================*/
 void PCG_END_SYNC(int16_t count)
 {
+	PCG_Main();	/* スプライト管理 */
+
 #if  CNF_XSP
     /* スプライトを一括表示する */
     xsp_out();
+//	printf("xsp_out()\n");
 #else   /* CNF_XSP 0 */
     /* 垂直同期 */
 	wait_vdisp(count);	/* 約count／60秒待つ	*/
@@ -239,6 +263,24 @@ void PCG_PUT_2x2(int16_t x, int16_t y, int16_t pt, int16_t info)
     xsp_set( x+8, y-8, pt+1, info);
     xsp_set( x-8, y+8, pt+2, info);
     xsp_set( x+8, y+8, pt+3, info);
+#else   /* CNF_XSP 0 */
+#endif  /* CNF_XSP */
+}
+
+void PCG_PUT_3x3(int16_t x, int16_t y, int16_t pt, int16_t info)
+{
+#if  CNF_XSP
+    xsp_set( x-24, y-24, pt+0, info);
+    xsp_set( x- 8, y-24, pt+1, info);
+    xsp_set( x+ 8, y-24, pt+2, info);
+
+    xsp_set( x-24, y- 8, pt+3, info);
+    xsp_set( x- 8, y- 8, pt+4, info);
+    xsp_set( x+ 8, y- 8, pt+5, info);
+
+    xsp_set( x-24, y+ 8, pt+6, info);
+ 	xsp_set( x- 8, y+ 8, pt+7, info);
+ 	xsp_set( x+ 8, y+ 8, pt+8, info);
 #else   /* CNF_XSP 0 */
 #endif  /* CNF_XSP */
 }
