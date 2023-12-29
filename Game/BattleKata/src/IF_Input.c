@@ -17,12 +17,15 @@ uint32_t	get_analog_data(uint32_t, JOY_ANALOG_BUF *);
 #endif
 
 int16_t		g_Input;
+int16_t		g_Input_P[2];
 int16_t		g_AnalogMode = 0xFFFF;
 uint8_t		g_bAnalogStickMode = FALSE;
 uint8_t		g_bAnalogStickMode_flag;
 int16_t		g_Analog_Info[5];
 
 /* 関数のプロトタイプ宣言 */
+int16_t		Input_Init(void);
+int16_t		Input_Main(void);
 uint16_t	get_keyboard( uint16_t *, uint8_t , uint8_t );
 uint16_t	get_djoy(uint16_t *, int32_t, uint8_t );
 uint16_t	get_ajoy(uint16_t *, int32_t, uint8_t, uint8_t );
@@ -36,6 +39,105 @@ uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 int16_t	KeyHitESC(void);
 
 /* 関数 */
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t Input_Init(void)
+{
+	int16_t ret = 0;
+
+#if CNF_JOYDRV360
+	/* アナログスティックモード判定 */
+	if(SetJoyDevMode(0, 0, 0) < 0)	/* JoyNo:0 DevID:0 PortNo:0 */
+	{
+		puts("JOYDRV3.Xが常駐してません。");
+	}
+	#if 0	
+	switch(GetJoyDevice(1, 1, 0))
+	{
+		case 0:
+		default:
+			puts("App_init Digital");	
+			SetJoyDevMode(0, 0, 0);	/* JoyNo:0 DevID:0 PortNo:0 */
+			break;
+		case 1:
+			puts("App_init Analog");
+			SetJoyDevMode(1, 1, 0);	/* JoyNo:1 DevID:1 PortNo:0 */
+			break;
+	}
+	#endif
+#else
+	g_bAnalogStickMode = FALSE;	/* デジタル */
+#endif
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t Input_Main(void)
+{
+	int16_t ret = 0;
+	int16_t	input = 0;
+
+	get_keyboard(&input, 0, 1);		/* キーボード入力, JoyNo, mode=0:edge on 1:edge off */
+
+	/* アナログスティック／デジタルスティック切替 */
+	if(ChatCancelSW((g_Input & KEY_b_TAB)!=0u, &g_bAnalogStickMode_flag) == TRUE)	/* TABでアナログスティックON/OFF */
+	{
+#if CNF_JOYDRV360				
+		if(g_bAnalogStickMode == TRUE)	/* 現在：アナログスティックモードの場合 */
+		{
+			g_bAnalogStickMode = FALSE;
+//					puts("A to D");
+			SetJoyDevMode(0, 0, 0);	/* JoyNo:0 DevID:0 PortNo:0 */
+			if(GetJoyDevMode(0) == 0)
+			{
+//						puts("A to D OK");
+			}
+		}
+		else
+		{
+			g_bAnalogStickMode = TRUE;
+//					puts("D to A");
+			SetJoyDevMode(1, 1, 0);	/* JoyNo:1 DevID:1 PortNo:0 */
+			if(GetJoyDevMode(1) == 0)
+			{
+//						puts("D to A OK");
+			}
+		}
+#else
+		g_bAnalogStickMode = FALSE;
+#endif
+	}
+
+	if(g_bAnalogStickMode == TRUE)
+	{
+#if CNF_JOYDRV360				
+		get_ajoy(&input, 1, 0, 0);	/* アナログジョイスティック入力, JoyNo, mode=0:edge on 1:edge off, Config 0:X680x0 1:rev */
+#else
+		get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
+#endif
+	}
+	else
+	{
+		get_djoy(&input, 1, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
+		
+		get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
+	
+	}
+	g_Input = input;
+
+	return ret;
+}
+
 /*===========================================================================================*/
 /* 関数名	：	*/
 /* 引数		：	*/
@@ -119,16 +221,16 @@ uint16_t get_djoy( uint16_t *key, int32_t nJoyNo, uint8_t mode )
 #if CNF_JOYDRV360
 	uJoyStick = joydrv_djoyget(nJoyNo);
 #else
-	uJoyStick = JOYGET(nJoyNo);
+	uJoyStick = _iocs_joyget(nJoyNo);
 #endif
 	g_AnalogMode = 0xFFFF;	/* アナログモードはOFF */
 	
-	if( !( uJoyStick & UP    ) ) *key |= KEY_UPPER;	/* 上 */
-	if( !( uJoyStick & DOWN  ) ) *key |= KEY_LOWER;	/* 下 */
-	if( !( uJoyStick & LEFT  ) ) *key |= KEY_LEFT;	/* 左 */
-	if( !( uJoyStick & RIGHT ) ) *key |= KEY_RIGHT;	/* 右 */
+	if( !( uJoyStick & JOY_UP    ) ) *key |= KEY_UPPER;	/* 上 */
+	if( !( uJoyStick & JOY_DOWN  ) ) *key |= KEY_LOWER;	/* 下 */
+	if( !( uJoyStick & JOY_LEFT  ) ) *key |= KEY_LEFT;	/* 左 */
+	if( !( uJoyStick & JOY_RIGHT ) ) *key |= KEY_RIGHT;	/* 右 */
 	
-	if( !( uJoyStick & JOYA  ) )	/* Ａボタン */
+	if( !( uJoyStick & JOY_A  ) )	/* Ａボタン */
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
@@ -141,7 +243,7 @@ uint16_t get_djoy( uint16_t *key, int32_t nJoyNo, uint8_t mode )
 		repeat_flag_a = KEY_TRUE;
 	}
 	
-	if( !( uJoyStick & JOYB  )  )	/* Ｂボタン */
+	if( !( uJoyStick & JOY_B  )  )	/* Ｂボタン */
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
@@ -153,6 +255,10 @@ uint16_t get_djoy( uint16_t *key, int32_t nJoyNo, uint8_t mode )
 	{
 		repeat_flag_b = KEY_TRUE;
 	}
+
+	g_Input_P[nJoyNo] = (~uJoyStick) & 0xFF;
+//	printf("get_djoy[%d](0x%x)\n",  nJoyNo, g_Input_P[nJoyNo]);
+
 	return ret;
 }
 
@@ -177,13 +283,13 @@ uint16_t get_ajoy( uint16_t *key, int32_t nJoyNo, uint8_t mode, uint8_t ubConfig
 	AnalogJoyStick	= joydrv_ajoyget(nJoyNo, &analog_buf[0]);
 //	Set_EI();	/* 割り込み禁止解除 */
 #else
-	JOY_ANALOG_BUF	analog_buf_st;
-	AnalogJoyStick	= get_analog_data(nJoyNo, &analog_buf_st);
-	analog_buf[l_stk_ud_2] = analog_buf_st.l_stk_ud;
-	analog_buf[l_stk_lr_3] = analog_buf_st.l_stk_lr;
-	analog_buf[r_stk_ud_0] = analog_buf_st.r_stk_ud;
-	analog_buf[r_stk_lr_1] = analog_buf_st.r_stk_lr;
-	analog_buf[btn_data_4] = analog_buf_st.btn_data;
+//	JOY_ANALOG_BUF	analog_buf_st;
+//	AnalogJoyStick	= get_analog_data(nJoyNo, &analog_buf_st);
+//	analog_buf[l_stk_ud_2] = analog_buf_st.l_stk_ud;
+//	analog_buf[l_stk_lr_3] = analog_buf_st.l_stk_lr;
+//	analog_buf[r_stk_ud_0] = analog_buf_st.r_stk_ud;
+//	analog_buf[r_stk_lr_1] = analog_buf_st.r_stk_lr;
+//	analog_buf[btn_data_4] = analog_buf_st.btn_data;
 #endif
 
 	if(AnalogJoyStick < 0)
@@ -309,11 +415,13 @@ int16_t	SetAnalog_Info(int16_t *Analog_Info)
 int16_t	GetJoyDevice(int32_t nJoyNo, int32_t nDevNo, int32_t nPort)
 {
 	int16_t	ret = 0;
-	int32_t mode;
+	int32_t mode = 0;
 
 	if(nJoyNo < 0)
 	{
+#if CNF_JOYDRV360
 		mode = joydrv_getadd(nDevNo, nPort);	/* 関数名(ジョイスティックモード取得(デバイスID指定)) */
+#endif
 		switch(mode) {
 			case 0:
 				g_bAnalogStickMode = FALSE;	/* デジタル */
@@ -330,7 +438,9 @@ int16_t	GetJoyDevice(int32_t nJoyNo, int32_t nDevNo, int32_t nPort)
 	}
 	else
 	{
+#if CNF_JOYDRV360
 		mode = joydrv_getadj(nJoyNo);			/* 関数名(ジョイスティックモード取得(JOY番号指定)) */
+#endif
 		switch(mode) {
 			case 0:
 				g_bAnalogStickMode = FALSE;	/* デジタル */
@@ -359,6 +469,8 @@ int16_t	GetJoyDevice(int32_t nJoyNo, int32_t nDevNo, int32_t nPort)
 int16_t	GetJoyDevMode(int32_t nJoyNo)
 {
 	int16_t	ret = 0;
+	
+#if CNF_JOYDRV360
 	int32_t nDevId, nPortNo;
 
 	ret = joydrv_getmode(nJoyNo, &nDevId, &nPortNo);
@@ -369,6 +481,7 @@ int16_t	GetJoyDevMode(int32_t nJoyNo)
 	{
 //		printf("joydrv_getmode:エラーが発生しました[%d]\n", ret);
 	}
+#endif
 
 	return ret;
 }
@@ -384,6 +497,7 @@ int16_t	SetJoyDevMode(int32_t nJoyNo, int32_t nDevId, int32_t nPortNo)
 {
 	int16_t	ret = 0;
 
+#if CNF_JOYDRV360
 	ret = joydrv_setmode(nJoyNo, nDevId, nPortNo);	/* 関数名(JOY番号指定、デバイスID、ポート設定) */
 
 	if(ret == 0) {
@@ -392,6 +506,7 @@ int16_t	SetJoyDevMode(int32_t nJoyNo, int32_t nDevId, int32_t nPortNo)
 	else {
 //		printf("joydrv_setmode:エラーが発生しました[%d]\n", ret);
 	}
+#endif
 
 	return ret;
 }
@@ -432,6 +547,23 @@ uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 				}
 			}
 			uCount++;
+#if 0
+			switch(uCount)	/* SE */
+			{
+			case 1:
+				ADPCM_Play(1);
+				break;
+			case 2:
+				ADPCM_Play(2);
+				break;
+			case 3:
+				ADPCM_Play(3);
+				break;
+			default:
+				ADPCM_Play(1);
+				break;
+			}
+#endif
 		}
 	}
 	else
@@ -454,6 +586,23 @@ uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 				}
 			}
 			uCount++;
+#if 0
+			switch(uCount)	/* SE */
+			{
+			case 1:
+				ADPCM_Play(1);
+				break;
+			case 2:
+				ADPCM_Play(2);
+				break;
+			case 3:
+				ADPCM_Play(3);
+				break;
+			default:
+				ADPCM_Play(1);
+				break;
+			}
+#endif
 		}
 	}
 	else

@@ -25,10 +25,16 @@
 #define Bit_14		(0x4000)
 #define Bit_15		(0x8000)
 
+#define Bit_Mask_8	(0x000000FF)
+#define Bit_Mask_9	(0x000001FF)
+#define Bit_Mask_10	(0x000003FF)
+
 /* Ｘ，Ｙ座標（表示座標） */
 #define V_SYNC_MAX		(240)
 #define WIDTH			(256)
 #define HEIGHT			(256)
+#define Y_HORIZON_0		(128)
+#define Y_HORIZON_1		(64)
 #define Y_MAX_WINDOW	(160)	/* Y_HORIZON_1+ROAD_SIZE */
 
 /* Ｘ，Ｙ座標（仮想座標） */

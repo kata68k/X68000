@@ -11,8 +11,10 @@
 
 #include "IF_PCG.h"
 #include "BIOS_PCG.h"
+#include "BIOS_CRTC.h"
+#include "IF_FileManager.h"
 
-#ifdef  CNF_XSP
+#if  CNF_XSP
 #else   /* CNF_XSP 0 */
 #endif  /* CNF_XSP */
 
@@ -28,15 +30,15 @@ unsigned short pal_dat[ 256 ];	/* パレットデータファイル読み込みバッファ */
 
 /* 構造体定義 */
 /* 関数のプロトタイプ宣言 */
-void sp_dataload(void);
+static void sp_dataload(void);
 void PCG_INIT(void);
 void PCG_ON(void);
 void PCG_OFF(void);
-void PCG_START_SYNC(void);
-void PCG_END_SYNC(void);
-void PCG_PUT_1x1(short, short, short, short);
-void PCG_PUT_2x1(short, short, short, short);
-void PCG_PUT_2x2(short, short, short, short);
+void PCG_START_SYNC(int16_t);
+void PCG_END_SYNC(int16_t);
+void PCG_PUT_1x1(int16_t, int16_t, int16_t, int16_t);
+void PCG_PUT_2x1(int16_t, int16_t, int16_t, int16_t);
+void PCG_PUT_2x2(int16_t, int16_t, int16_t, int16_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -46,7 +48,7 @@ void PCG_PUT_2x2(short, short, short, short);
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void sp_dataload(void)
+static void sp_dataload(void)
 {
 	FILE *fp;
 	unsigned int i,j;
@@ -62,7 +64,7 @@ void sp_dataload(void)
 //	fp = fopen( "SP_DATA/SAKANA.SP" , "rb" ) ;
 	j = fread( pcg_dat
 			,  128		/* 1PCG = 128byte */
-			,  PCG_MAX	/* 256PCG */
+			,  PCG_MAX	/* PCGの数 */
 			,  fp
 	) ;
 	fclose( fp ) ;
@@ -106,7 +108,7 @@ void sp_dataload(void)
 /*===========================================================================================*/
 void PCG_INIT(void)
 {
-#ifdef  CNF_XSP
+#if  CNF_XSP
     /*---------------------[ XSP を初期化 ]---------------------*/
     sp_dataload();  /* スプライトのデータ読み込み */
 	
@@ -117,8 +119,7 @@ void PCG_INIT(void)
 //	xsp_vertical(1);    /* 縦画面モード */
 	/*---------------------[ XSP を初期化 ]---------------------*/
 #else   /* CNF_XSP 0 */
-#if 0
-	uint32_t	j;
+	uint32_t	i, j, uPCG_num;
 	
 	/* スプライトの初期化 */
 	_iocs_sp_init();			/* スプライトの初期化 */
@@ -128,10 +129,9 @@ void PCG_INIT(void)
 	{
 		_iocs_sp_regst(j,-1,0,0,0,0);
 	}
-	for(uint32_t i = 0; i < 256; i++ )
+	for( i = 0; i < 256; i++ )
 	{
 		_iocs_sp_cgclr(i);			/* スプライトクリア */
-		_iocs_sp_defcg( i, 1,  );
 	}
 	
 	//	_iocs_bgctrlgt(1);				/* BGコントロールレジスタ読み込み */
@@ -140,10 +140,12 @@ void PCG_INIT(void)
 	_iocs_bgtextcl(0,SetBGcode(0,0,0,0));	/* BGテキストクリア */
 	_iocs_bgtextcl(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
 	//	BGTEXTGT(1,1,0);			/* BGテキスト読み込み */
-#endif
-    PCG_ON();                           /* スプライトON */
-	PCG_SP_dataload("data/sp/BK.SP");	/* スプライトのデータ読み込み */
-	PCG_PAL_dataload("data/sp/BK.PAL");	/* スプライトのパレットデータ読み込み */
+	
+	/* スプライト管理用バッファのクリア */
+	for(uPCG_num = 0; uPCG_num < PCG_MAX; uPCG_num++)
+	{
+		memset(&g_stPCG_DATA[uPCG_num], 0, sizeof(ST_PCG) );
+	}
 #endif  /*CNF_XSP*/
 }
 /*===========================================================================================*/
@@ -155,11 +157,11 @@ void PCG_INIT(void)
 /*===========================================================================================*/
 void PCG_ON(void)
 {
-#ifdef  CNF_XSP
+    PCG_VIEW(1);        /* SP ON */
+#if  CNF_XSP
     xsp_on();			/* XSP ON */
 	xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));  /* PCG データと PCG 配置管理をテーブルを指定 */
 #else   /* CNF_XSP 0 */
-    PCG_VIEW(1);        /* SP ON */
 #endif  /*CNF_XSP*/
 }
 
@@ -172,11 +174,11 @@ void PCG_ON(void)
 /*===========================================================================================*/
 void PCG_OFF(void)
 {
-#ifdef  CNF_XSP
+#if  CNF_XSP
 	xsp_off();			/* XSP OFF */
 #else   /* CNF_XSP 0 */
-    PCG_VIEW(0);        /* SP OFF */
 #endif  /*CNF_XSP*/
+    PCG_VIEW(0);        /* SP OFF */
 }
 
 /*===========================================================================================*/
@@ -186,10 +188,10 @@ void PCG_OFF(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void PCG_START_SYNC(void)
+void PCG_START_SYNC(int16_t count)
 {
-#ifdef  CNF_XSP
-    xsp_vsync2(1);  /* 垂直同期 */
+#if  CNF_XSP
+    xsp_vsync2(count);  /* 垂直同期 */
 #else   /* CNF_XSP 0 */
     /* なし */
 #endif  /*CNF_XSP*/
@@ -202,37 +204,37 @@ void PCG_START_SYNC(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void PCG_END_SYNC(void)
+void PCG_END_SYNC(int16_t count)
 {
-#ifdef  CNF_XSP
+#if  CNF_XSP
     /* スプライトを一括表示する */
     xsp_out();
 #else   /* CNF_XSP 0 */
     /* 垂直同期 */
-    
+	wait_vdisp(count);	/* 約count／60秒待つ	*/
 #endif  /*CNF_XSP*/
 }
 
-void PCG_PUT_1x1(short x, short y, short pt, short info)
+void PCG_PUT_1x1(int16_t x, int16_t y, int16_t pt, int16_t info)
 {
-#ifdef  CNF_XSP
+#if  CNF_XSP
     xsp_set( x, y, pt, info);
 #else   /* CNF_XSP 0 */
 #endif  /* CNF_XSP */
 }
 
-void PCG_PUT_2x1(short x, short y, short pt, short info)
+void PCG_PUT_2x1(int16_t x, int16_t y, int16_t pt, int16_t info)
 {
-#ifdef  CNF_XSP
+#if  CNF_XSP
     xsp_set( x-8, y, pt+0, info);
     xsp_set( x+8, y, pt+1, info);
 #else   /* CNF_XSP 0 */
 #endif  /* CNF_XSP */
 }
 
-void PCG_PUT_2x2(short x, short y, short pt, short info)
+void PCG_PUT_2x2(int16_t x, int16_t y, int16_t pt, int16_t info)
 {
-#ifdef  CNF_XSP
+#if  CNF_XSP
     xsp_set( x-8, y-8, pt+0, info);
     xsp_set( x+8, y-8, pt+1, info);
     xsp_set( x-8, y+8, pt+2, info);

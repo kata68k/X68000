@@ -7,9 +7,11 @@
 #include "IF_Graphic.h"
 
 extern int16_t Init_FileList_Load(void);
-extern int16_t File_Load(int8_t *, void *, size_t, size_t);
+extern size_t File_Load(int8_t *, void *, size_t, size_t);
 extern int16_t File_Save(int8_t *, void *, size_t, size_t);
+extern int16_t File_Save_OverWrite(int8_t *, void *, size_t, size_t);
 extern int16_t File_Load_CSV(int8_t *, uint16_t *, uint16_t *, uint16_t *);
+//extern int16_t File_Load_Course_CSV(int8_t *fname, ST_ROADDATA *st_ptr, uint16_t *Col, uint16_t *Row);
 extern int16_t PCG_SP_dataload(int8_t *);
 extern int16_t PCG_PAL_dataload(int8_t *);
 extern int16_t Load_Music_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);

@@ -11,7 +11,7 @@ MOON_GETBUF		.equ	4
 	.text
 
 	.even
-	.xdef	_MoonPlay,_MoonRegst,_MACS_Vsync,_MACS_Play,_MACS_Vsync_R,_MACS_Sleep
+	.xdef	_MoonRegst,_MoonPlay,_MoonPlay2,_MACS_Play,_MACS_Vsync,_MACS_Vsync_R,_MACS_Sleep
 
 _MoonRegst:
 	*【入力】a1.l = ファイル名文字列へのポインタ
@@ -64,8 +64,8 @@ _MoonPlay:
 	movea.l	8(a6),a1
 	moveq.l	#1,d3			* stop and play
 *	moveq.l	#0,d4			* normal play
-*	moveq.l	#4,d4			* 特殊効果フラグ b0000 0100 
-	moveq.l	#$64,d4			* 特殊効果フラグ b0110 0100 
+	moveq.l	#4,d4			* 特殊効果フラグ b0000 0100 
+*	moveq.l	#$64,d4			* 特殊効果フラグ b0110 0100 
 	moveq.l	#MOON_PLAY,d1
 	IOCS	_MOON
 	tst.l	d0
@@ -76,6 +76,45 @@ _MoonPlay:
 	unlk	a6
 	rts
 
+_MoonPlay2:
+	*	.MCS を再生する
+	*【入力】
+	*		a1.l = ファイル名文字列へのポインタ
+	*		d3.w = アボードフラグ
+	*				既に MACS データが再生中の時にそれを中断して再生するかどうか
+	*		d3.w = 0 : 再生しない
+	*		d3.w = 1 : 中断して再生
+	*
+	*		d4.l = 特殊効果フラグ（MACSパラメータ）
+	*
+	*【出力】
+	*		d0.l = ステータス
+	*			  -1～-8 : MACS エラーコード
+	*				 -64 : バッファサイズよりファイルが大きい
+	*				 -65 : ファイルのオープンに失敗
+	*				-128 : ディスク I/O の最中だった
+	*				0以上: 正常終了
+	*
+	link	a6,#0
+	movem.l	d1-d4/a0-a1,-(sp)
+
+*	lea.l	filename,a1
+	movea.l	8(a6),a1
+	moveq.l	#1,d3			* stop and play
+*	moveq.l	#0,d4			* normal play
+*	moveq.l	#4,d4			* 特殊効果フラグ b0000 0100 
+	move.l	12(a6),d4		* 特殊効果フラグ 第二引数
+*	moveq.l	#$64,d4			* 特殊効果フラグ b0110 0100 
+	moveq.l	#MOON_PLAY,d1
+	IOCS	_MOON
+	tst.l	d0
+*	bmi	error
+*			:
+	
+	movem.l	(sp)+,d1-d4/a0-a1
+	unlk	a6
+	rts
+	
 _MACS_Play:
 *	Input:	d1.w > コマンドコード		Output:  d0.l > Status
 *		d2.l > バッファサイズ

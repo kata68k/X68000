@@ -20,5 +20,6 @@ extern uint32_t	g_mov_list_max;
 /* externéŒ¾ */
 extern void	MOV_INIT(void);
 extern int32_t	MOV_Play(uint8_t);
+extern int32_t MOV_Play2(uint8_t, uint8_t);
 
 #endif	/* IF_MACS_H */

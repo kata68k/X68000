@@ -61,6 +61,8 @@ typedef struct
 	uint32_t	*pPatCodeTbl;	/* パターンコードテーブル */
 }	ST_PCG;
 
+extern ST_PCG	g_stPCG_DATA[PCG_MAX];
+
 extern void PCG_VIEW(uint8_t);
 extern void PCG_Rotation(uint16_t *, uint16_t *, uint8_t, uint8_t, int16_t, int16_t, uint8_t *, uint8_t, uint16_t, uint16_t);
 extern void BG_TEXT_SET(int8_t *);
@@ -68,5 +70,6 @@ extern int16_t PCG_Main(void);
 extern ST_PCG *PCG_Get_Info(uint8_t);
 extern int16_t PCG_Set_Info(ST_PCG, uint8_t);
 extern int16_t PCG_Load_Data(int8_t *, uint16_t , ST_PCG , uint16_t , uint8_t );
+extern int16_t PCG_Load_PAL_Data(int8_t *, uint16_t, uint16_t);
 extern int16_t PCG_PAL_Change(uint16_t , uint16_t , uint16_t);
 #endif	/* BIOS_PCG_H */

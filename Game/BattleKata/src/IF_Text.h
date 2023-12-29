@@ -3,6 +3,19 @@
 
 #include "usr_define.h"
 
+
+#define T_BLACK1	(0)
+#define T_BLACK2	(1)
+#define T_RED		(2)
+#define T_WHITE		(3)
+#define T_SKIN		(4)
+#define T_RED2		(5)
+#define T_YELLOW	(6)
+#define T_GREEN		(7)
+
+#define T_WIDTH		(512)
+#define T_HEIGHT	(512)
+
 /* \‘¢‘Ì */
 
 struct _xylineptr
@@ -50,6 +63,7 @@ extern int32_t T_xLine(int16_t, int16_t, int16_t w, uint16_t, uint8_t);
 extern int32_t T_yLine(int16_t, int16_t, int16_t h, uint16_t, uint8_t);
 extern int32_t T_Line(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 extern int32_t T_Line2(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
+extern int16_t T_Circle(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 extern void T_FillCircle(int16_t, int16_t, int16_t, uint8_t);
 extern int16_t T_SetQuarterFont(int8_t *, int8_t *);
 extern void Message_Num(void *, int16_t, int16_t, uint16_t, uint8_t, uint8_t *);
@@ -59,5 +73,6 @@ extern int16_t BG_TimeCounter(uint32_t, uint16_t, uint16_t);
 extern int16_t BG_Number(uint32_t, uint16_t, uint16_t);
 extern int16_t Text_To_Text(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
 extern int16_t Text_To_Text2(uint64_t, int16_t, int16_t, uint8_t, uint8_t *);
+extern int16_t Put_Message_To_Graphic(uint8_t *, uint8_t);
 
 #endif	/* IF_TEXT_H */

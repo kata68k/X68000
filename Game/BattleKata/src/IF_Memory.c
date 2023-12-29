@@ -40,8 +40,9 @@ void *MyMalloc(int32_t Size)
 	}
 	else
 	{
+#if 0
 		pPtr = _dos_malloc(Size);	/* メモリ確保 */
-//		pPtr = malloc(Size);	/* メモリ確保 */
+		pPtr = malloc(sizeof(uint8_t) * Size);	/* メモリ確保 */
 		
 		if(pPtr == NULL)
 		{
@@ -61,8 +62,17 @@ void *MyMalloc(int32_t Size)
 		}
 		else
 		{
-			//printf("メモリアドレス(0x%p)=%d\n", pPtr, Size);
+			//printf("MyMalloc(0x%p)=%d\n", pPtr, Size);
 		}
+#else
+		pPtr = malloc(sizeof(uint8_t) * Size);	/* メモリ確保 */
+		
+		if(pPtr == NULL)
+		{
+			puts("メモリが確保できませんでした");
+		}
+
+#endif
 	}
 	
 	return pPtr;
@@ -78,20 +88,23 @@ void *MyMalloc(int32_t Size)
 int16_t	MyMfree(void *pPtr)
 {
 	int16_t ret = 0;
-	uint32_t	result;
 	
 	if(pPtr == 0)
 	{
 		puts("自プロセス、子プロセスで確保したメモリをフルで解放します");
 	}
-	
-	result = _dos_mfree(pPtr);
-	//free(pPtr);
-	
-	if(result < 0)
+#if 0
 	{
-		ret = -1;
+		uint32_t	result;
+		result = _dos_mfree(pPtr);
+		if(result < 0)
+		{
+			ret = -1;
+		}
 	}
+#else
+	free(pPtr);
+#endif	
 	
 	return ret;
 }

@@ -9,6 +9,7 @@
 #define	GP_H_SYNC	(0x80)
 #define	GP_V_SYNC	(0x40)
 
+#define X_MAX_DRAW_OFST	(224)
 #define X_MIN_DRAW		(0)
 #define X_MAX_DRAW		(256)
 #define X_MAX_DRAW_OF	(32)
@@ -33,10 +34,11 @@ extern volatile uint16_t	*CRTC_R06;
 extern volatile uint16_t	*CRTC_R09;
 
 extern	int16_t CRTC_INIT(uint16_t);
+extern	int16_t CRTC_EXIT(uint16_t);
 extern	void CRTC_INIT_Manual(void);
 extern	int16_t	GetCRT(ST_CRT *, int16_t);
 extern	int16_t	SetCRT(ST_CRT, int16_t);
-extern	int16_t	CRT_INIT(void);
+extern	int16_t	CRT_INIT_MODE(void);
 extern	int16_t	Get_CRT_Contrast(int8_t *);
 extern	int16_t	Set_CRT_Contrast(int8_t);
 extern	int16_t	Get_CRT_Tmg(uint16_t *);
@@ -44,5 +46,16 @@ extern	int16_t	Set_CRT_Tmg(uint16_t);
 extern int16_t wait_vdisp(int16_t);
 extern int16_t wait_h_sync(void);
 extern int16_t wait_v_sync(void);
+extern uint16_t CRTC_Rastar_FirstPos(void);
+extern uint16_t CRTC_Rastar_EndPos(void);
+extern int16_t CRTC_Rastar_SetPos(uint16_t);
+extern int16_t CRTC_T_Scroll(int16_t, int16_t);
+extern int16_t CRTC_G0_Scroll_4(int16_t, int16_t);
+extern int16_t CRTC_G1_Scroll_4(int16_t, int16_t);
+extern int16_t CRTC_G2_Scroll_4(int16_t, int16_t);
+extern int16_t CRTC_G3_Scroll_4(int16_t, int16_t);
+extern int16_t CRTC_G0_Scroll_8(int16_t, int16_t);
+extern int16_t CRTC_G1_Scroll_8(int16_t, int16_t);
+extern int16_t CRTC_G0_Scroll_16(int16_t, int16_t);
 
 #endif	/* BIOS_CRTC_H */

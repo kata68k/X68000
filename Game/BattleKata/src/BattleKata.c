@@ -653,6 +653,8 @@ void enemy_green_set( void )
 							Mdiv256(enemy->y) + 8,
 							j, i+0x60, 0, 360, 64);
 		}
+		ADPCM_Play(4);
+		while(ADPCM_SNS() == 0);
 	}
 }
 void enemy_move( void )
@@ -691,7 +693,6 @@ void atari( void )
 		SHOT *shot;
 		int32_t j;
 		int32_t dx, dy;
-		int64_t distX, distY;
 		
 		if( enemy->flag == ENEMY_DEAD ) continue;
 
@@ -739,71 +740,54 @@ void atari( void )
 			if( shot->flag == SHOT_ST_OUT )		continue;
 			if( shot->flag == SHOT_ST_MOVE)		continue;
 			if( (shot->x != shot->ex) || (shot->y != shot->ey) )continue;
-//			if(shot->pat > 0)continue;
 
 			dx = shot->x - enemy->x;
-			distX = Mdiv65536((uint64_t)(dx * dx));
-			
 			dy = shot->y - enemy->y;
-			distY = Mdiv65536((uint64_t)(dy * dy));
 			
-			if( ((distX + distY) >= 0) && ((distX + distY) < Mdiv65536(ATARI_XY) )) {
-				enemy->flag = ENEMY_BOM;
+			if(shot->flag == SHOT_ST_TOUCH)
+			{
+				if( (Mabs(dx) < ATARI_YOKO) && (Mabs(dy) < ATARI_TATE) ) {
+					enemy->flag = ENEMY_BOM;
 
-//				area_init(enemy->x, enemy->y);	/* 制限を更新 */
-				area->flag = TP_DEAD;
+					area->flag = TP_DEAD;
 
-#if 0
-				{
-					int8_t	sBuf[128];
-					memset(sBuf, 0, sizeof(sBuf));
-					sprintf(sBuf, "%d, %d", shot->flag, shot->pat);
-					Draw_Message_To_Graphic(sBuf, 0, 224, F_MOJI, F_MOJI_BAK);
-				}
-#endif
-				if(shot->flag == SHOT_ST_TOUCH)
-				{
 					/* スコア */
 					point = (i+1) * 1000;
 #if CNF_MACS
 					PCG_OFF();			/* SP OFF */
 					/* 動画 */
-					MOV_Play(0);		/* カットイン */
+					MOV_Play2(0, 0x64);		/* カットイン */
 					/* 画面モード再設定 */
-					CRTC_INIT(0x10A);	/* 画面モード初期化 */
+					CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
 					PCG_ON();			/* SP ON */
 #else
 #endif
 					/* 効果音 */
 					ADPCM_Play(7);
+
+					S_GetPos(Mdiv256(enemy->x) - 16, Mdiv256(enemy->y) - 48);	/* スコア表示座標更新 */
+					S_Add_Score(point);	/* スコア更新 */
+
+					shot->flag = SHOT_ST_OUT;
 				}
-				else
-				{
+			}
+			else
+			{
+				if( (Mabs(dx) < ATARI_YOKO) && (dy >= 0) && (dy < (ATARI_TATE + ATARI_TATE)) ) {
+					enemy->flag = ENEMY_BOM;
+
+					area->flag = TP_DEAD;
+
 					/* スコア */
 					point = (i+1) * 100;
 					/* 効果音 */
 					ADPCM_Play(5);
-				}
-				S_GetPos(Mdiv256(enemy->x) - 16, Mdiv256(enemy->y) - 48);	/* スコア表示座標更新 */
-				S_Add_Score(point);	/* スコア更新 */
-#if 0
-				{
-					int8_t	sBuf[128];
-					memset(sBuf, 0, sizeof(sBuf));
-					sprintf(sBuf, "s(%d, %d)e(%d, %d)d(%x, %x)", shot->x, shot->y, enemy->x, enemy->y, distX, distY);
-					Draw_Message_To_Graphic(sBuf, 0, 240, F_MOJI, F_MOJI_BAK);
-					KeyHitESC();	/* デバッグ用 */
-				}
-#endif
 
-				shot->flag = SHOT_ST_OUT;
-#ifdef DEBUG
-//				if(i==0)
-//				{				
-//					printf("atari=(%x,%x)(%x,%x)(%x,%x)\n",  shot->x, shot->y, enemy->x, enemy->y, dx, dy);
-//					KeyHitESC();	/* デバッグ用 */
-//				}
-#endif
+					S_GetPos(Mdiv256(enemy->x) - 16, Mdiv256(enemy->y) - 48);	/* スコア表示座標更新 */
+					S_Add_Score(point);	/* スコア更新 */
+
+					shot->flag = SHOT_ST_OUT;
+				}
 			}
 		}
 	}
@@ -832,6 +816,9 @@ void trans_sp( void )
 	int32_t i,j;
 	int32_t ret;
 	
+	ST_TASK stTask;
+	GetTaskInfo(&stTask);	/* タスク取得 */
+
 	/* 自機の表示 */
 	ship_sp();
 	
@@ -842,12 +829,16 @@ void trans_sp( void )
 			case SHOT_ST_OUT:
 				PCG_PUT_1x1( 0, 0, 0x25 + (shot->pat), SetXSPinfo(0, 0, 0x0B, 0x20) );
 				break;
+			case SHOT_ST_TOUCH:
+			case SHOT_ST_RUN:
+				_iocs_apage(0);		/* グラフィックの書き込み(表) */
+				Draw_Pset(Mdiv256(shot->x), Mdiv256(shot->y), 4);	/* ボールの軌跡 */
+		//		Draw_Pset(Mdiv256(shot->x), Mdiv256(shot->y), 1);
 			default:
 				PCG_PUT_1x1( X_OFFSET + Mdiv256(shot->x) - 8, 		Y_OFFSET + Mdiv256(shot->y) - 8, 		0x25 , 				SetXSPinfo(0, 0, 0x0B, 0x20) );	/* 影 */
 				PCG_PUT_1x1( X_OFFSET + Mdiv256(shot->ex) + 2 - 8, 	Y_OFFSET + Mdiv256(shot->ey) - 2 - 8,	0x26 + (shot->pat), SetXSPinfo(0, 0, 0x0B, 0x30) );	/* ボール */
 				break;
 		}
-//		Draw_Pset(Mdiv256(shot->x), Mdiv256(shot->y), 1);
 	}
 	
 	/* 敵の表示 */
@@ -900,21 +891,23 @@ void trans_sp( void )
 	/* 残機表示 */
 	if(ship_data->life > 4)
 	{
-		ST_TASK stTask;
 		int8_t	sBuf[8];
 
-		GetTaskInfo(&stTask);	/* タスク取得 */
 		if(stTask.b496ms == TRUE)
 		{
 			memset(sBuf, 0, sizeof(sBuf));
 			sprintf(sBuf, "x%d", ship_data->life);
-			Draw_Message_To_Graphic(sBuf, 240, 0, F_MOJI, F_MOJI_BAK);
+			Draw_Message_To_Graphic(sBuf, 232, 0, F_MOJI, F_MOJI_BAK);
 		}
 
-		PCG_PUT_1x1( X_OFFSET + 224, Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
+		PCG_PUT_1x1( X_OFFSET + 216, Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
 	}
 	else
 	{
+		if(stTask.b496ms == TRUE)
+		{
+			G_CLR_AREA(232, 24, 0, 16, 0);	/* ページ 0 */
+		}
 		for(i = 0; i < ship_data->life; i++)
 		{
 			PCG_PUT_1x1( X_OFFSET + 240 - (i * 16), Y_OFFSET, 0x29, SetXSPinfo(0, 0, 0x0B, 0x30) );
@@ -1117,6 +1110,7 @@ void App_TimerProc( void )
 int32_t main(void)
 {
 	int16_t	loop = 1;
+	int16_t	rank = -1;
 
 	App_init();	/* 初期設定 */
 
@@ -1124,7 +1118,7 @@ int32_t main(void)
 		uint32_t time_st;
 		ST_TASK stTask;
 
-		PCG_START_SYNC();	/* スプライト開始処理 */
+		PCG_START_SYNC(1);	/* スプライト開始処理 */
 
 		/* 時刻設定 */
 		GetNowTime(&time_st);	/* メイン処理の開始時刻を取得 */
@@ -1246,6 +1240,8 @@ int32_t main(void)
 
 				if(g_Input == KEY_A)	/* Aボタン */
 				{
+					ADPCM_Play(0);
+
 					SetTaskInfo(SCENE_TITLE_E);	/* タイトルシーン(開始処理)へ設定 */
 				}
 				break;
@@ -1306,6 +1302,8 @@ int32_t main(void)
 			}
 			case SCENE_GAME_S:	/* ゲームシーン(開始処理) */
 			{
+				Music_Play(8);	/* ゲーム中 */
+				
 				/*自機の初期設定*/
 				ship_init();
 
@@ -1315,26 +1313,25 @@ int32_t main(void)
 				/* 敵の初期設定 */
 				enemy_init();
 
-				/* 行動制限エリアの初期設定 */
-				area_init(-1, -1);
-
 				G_CLR_AREA(0,0,256,256,1);	/* グラフィック領域クリア */
 				G_Load(1, 0, 0, 1);	/* グラフィックの読み込み */	/* 画像を表示させると終了時におかしな命令エラーになる */
 				
 				enemy_set(18);			/* 敵のステータス（生きる） */
-				enemy_green_set();		/* グリーンを生成 */
-				
+
 				Set_CRT_Contrast(-1);	/* コントラストdef */
 
-				ADPCM_Play(6);
+				enemy_green_set();		/* グリーンを生成 */
+				
+				area_init(-1, -1);		/* 行動制限エリアの初期設定 */
 
-//				Music_Play(4);	/* ゲーム中 */
-				Music_Play(8);	/* ゲーム中 */
 				g_nBaseTempo = M_TEMPO(-1);	/* 現在のテンポを取得 */
 //				printf("tempo=%d\n",  g_nBaseTempo);
 //				KeyHitESC();	/* デバッグ用 */
-				Music_Play(8);	/* ゲーム中 */
 
+				ADPCM_Play(6);
+
+				PCG_ON();		/* スプライトON */
+				
 				SetTaskInfo(SCENE_GAME);	/* ゲームシーンへ設定 */
 				break;
 			}
@@ -1354,10 +1351,7 @@ int32_t main(void)
 				
 //				bg_move();
 
-				if(stTask.b496ms == TRUE)
-				{
-					S_Main_Score();
-				}
+				S_Main_Score();
 
 				if(ship_data->life <= 0)	/* ゲームオーバー */
 				{
@@ -1373,16 +1367,19 @@ int32_t main(void)
 			}
 			case SCENE_GAME_E:	/* ゲームシーン(終了処理) */
 			{
-				M_TEMPO(g_nBaseTempo);	/* 通常のテンポ */
-				T_Clear();			/* テキストクリア */
+				if(ADPCM_SNS() == 0)
+				{
+					M_TEMPO(g_nBaseTempo);	/* 通常のテンポ */
+					T_Clear();			/* テキストクリア */
 
-				if(ship_data->life <= 0)	/* ゲームオーバー */
-				{
-					SetTaskInfo(SCENE_GAME_OVER_S);		/* ゲームオーバーシーン(開始処理)へ設定 */
-				}
-				else
-				{
-					SetTaskInfo(SCENE_NEXT_STAGE_S);	/* NEXTステージ（開始処理）へ設定 */
+					if(ship_data->life <= 0)	/* ゲームオーバー */
+					{
+						SetTaskInfo(SCENE_HI_SCORE_S);	/* ハイスコアランキングシーン(開始処理)へ設定 */
+					}
+					else
+					{
+						SetTaskInfo(SCENE_NEXT_STAGE_S);	/* NEXTステージ（開始処理）へ設定 */
+					}
 				}
 				break;
 			}
@@ -1391,14 +1388,11 @@ int32_t main(void)
 				int8_t	sBuf[128];
 				
 				S_Set_Combo(ship_data->life);	/* コンボカウンタ セット */
-				S_GetPos(56, 96);	/* スコア表示座標更新 */
-				S_Add_Score(10000);	/* スコア更新 */
-				S_Main_Score();		/* スコア更新 */
 				S_Clear_Score();	/* スコア表示 */
 
 				memset(sBuf, 0, sizeof(sBuf));
-				strcpy(sBuf, "Push Trigger A button --> TITLE");
-				Draw_Message_To_Graphic(sBuf, 24, 192, F_MOJI, F_MOJI_BAK);
+				strcpy(sBuf, "Push Trigger A button");
+				Draw_Message_To_Graphic(sBuf, 56, 192, F_MOJI, F_MOJI_BAK);
 
 				Music_Play(9);	/* 次のステージ */
 
@@ -1411,25 +1405,25 @@ int32_t main(void)
 
 				if(g_Input == KEY_A)	/* Aボタン */
 				{
-					SetTaskInfo(SCENE_TITLE_S);	/* タイトルシーン(開始処理)へ設定 */
-//					SetTaskInfo(SCENE_NEXT_STAGE_E);	/* NEXTステージ（終了処理）へ設定 */
+					SetTaskInfo(SCENE_NEXT_STAGE_E);	/* NEXTステージ（終了処理）へ設定 */
 				}
 				break;	
 			}
 			case SCENE_NEXT_STAGE_E:	/* NEXTステージ（終了処理） */
 			{
-				Music_Stop();
-				
-				S_Init_Score();			/* スコアクリア */
-				
-				Set_CRT_Contrast(0);	/* コントラスト暗 */
+				if(ADPCM_SNS() == 0)
+				{
+					Music_Stop();
 
-				SetTaskInfo(SCENE_START_S);	/* ゲーム開始シーン(開始処理)へ設定 */
+					SetTaskInfo(SCENE_HI_SCORE_S);	/* ハイスコアランキングシーン(開始処理)へ設定 */
+				}
 				break;	
 			}
 			case SCENE_GAME_OVER_S:	/* ゲームオーバーシーン(開始処理) */
 			{
 				int8_t	sBuf[128];
+
+				G_CLR_AREA(0, 255, 16, 255, 0);	/* ページ 0 */
 
 //				PutGraphic_To_Symbol24("SCORE", 9, 1, F_MOJI_BAK);
 //				PutGraphic_To_Symbol24("SCORE", 8, 0, F_MOJI);
@@ -1468,19 +1462,132 @@ int32_t main(void)
 			}
 			case SCENE_GAME_OVER_E:	/* ゲームオーバーシーン(終了処理) */
 			{
-				Music_Stop();
+				if(ADPCM_SNS() == 0)
+				{
+					Music_Stop();
 
-//				SetTaskInfo(SCENE_HI_SCORE_S);	/* ハイスコアランキングシーン(開始処理)へ設定 */
-				SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
+					SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
+				}
 				break;
 			}
 			case SCENE_HI_SCORE_S:	/* ハイスコアランキングシーン(開始処理) */
+			{
+				Music_Play(5);	/* ローディング中 */
+
+				rank = S_Score_Board();	/* ハイスコア表示 */
+				
+				SetTaskInfo(SCENE_HI_SCORE);	/* ハイスコアランキングシーンへ設定 */
+				break;
+			}
 			case SCENE_HI_SCORE:	/* ハイスコアランキングシーン */
+			{
+				static int16_t nCol = 0;
+				static int8_t bInput_c = 0;
+				static int8_t bMoji = 0;
+				static int8_t bFlagInput = FALSE;
+				static int8_t bFlagInputAB = FALSE;
+				int16_t nColSin, nColCos;
+				
+				if(rank >= 0)
+				{
+					nColSin = Mdiv256(31 * APL_Sin(nCol++));
+					nColCos = Mdiv256(31 * APL_Cos(nCol++));
+					G_PaletteSet(G_RED, SetRGB(nColCos, nColSin, nColCos));	/* パレットアニメ */
+					
+					if( ( g_Input & KEY_UPPER ) != 0) { /* 上 */
+						if(bFlagInput == FALSE)
+						{
+							ADPCM_Play(0);
+							bFlagInput = TRUE;
+							bMoji++;
+							if(bMoji > 26 + 6)
+							{
+								bMoji = 0;
+							}
+						}
+					}
+					else if( ( g_Input & KEY_LOWER ) != 0 ) { /* 下 */
+						if(bFlagInput == FALSE)
+						{
+							ADPCM_Play(0);
+							bFlagInput = TRUE;
+							bMoji--;
+							if(bMoji < 0)
+							{
+								bMoji = 26 + 6;
+							}
+						}
+					}
+					else /* なし */
+					{
+						bFlagInput = FALSE;
+					}
+
+					if(g_Input == KEY_A)	/* Aボタン */
+					{
+						if(bFlagInputAB == FALSE)
+						{
+							ADPCM_Play(4);
+							bFlagInputAB = TRUE;
+							bInput_c++;
+						}
+					}
+					else if(g_Input == KEY_B)	/* Bボタン */
+					{
+						if(bFlagInputAB == FALSE)
+						{
+							ADPCM_Play(3);
+							bFlagInputAB = TRUE;
+							bInput_c--;
+						}
+					}
+					else /* なし */
+					{
+						bFlagInputAB = FALSE;
+					}
+
+					if(bInput_c >= 3)
+					{
+						bInput_c = 0;
+						bMoji = 0;
+						ADPCM_Play(4);
+						S_Score_Save();
+						SetTaskInfo(SCENE_HI_SCORE_E);	/* ハイスコアランキングシーン(終了処理)へ設定 */
+					}
+					else
+					{
+						if(bInput_c < 0)
+						{
+							bInput_c = 0;
+						}
+						else /* なし */
+						{
+
+						}
+						S_Score_NameInput(rank, bInput_c, bMoji + 'A');
+					}
+				}
+				else
+				{
+					bInput_c = 0;
+					bMoji = 0;
+					if(g_Input == KEY_A)	/* Aボタン */
+					{
+						ADPCM_Play(0);
+						SetTaskInfo(SCENE_HI_SCORE_E);	/* ハイスコアランキングシーン(終了処理)へ設定 */
+					}
+				}
+				
+				break;
+			}
 			case SCENE_HI_SCORE_E:	/* ハイスコアランキングシーン(終了処理) */
 			{
-				Music_Stop();
-				
-				SetTaskInfo(SCENE_TITLE_S);	/* タイトルシーン(開始処理)へ設定 */
+				if(ADPCM_SNS() == 0)
+				{
+					Music_Stop();
+					
+					SetTaskInfo(SCENE_GAME_OVER_S);		/* ゲームオーバーシーン(開始処理)へ設定 */
+				}
 				break;
 			}
 			case SCENE_OPTION_S:	/* オプションシーン */
@@ -1529,7 +1636,7 @@ int32_t main(void)
 		{
 //			printf("%d, %d, %d, %d, %d\n", stTask.b8ms, stTask.b16ms, stTask.b32ms, stTask.b96ms, stTask.b496ms);
 		}
-		PCG_END_SYNC();
+		PCG_END_SYNC(1);
 	}
 	while( loop );
 

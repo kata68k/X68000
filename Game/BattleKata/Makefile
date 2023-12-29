@@ -12,22 +12,25 @@ OBJS		:= $(addprefix $(OBJDIR)/,$(SOURCES_EX))
 DPNDS		:= $(OBJ:.o=.d)
 #$(warning $(OBJS))
 
-CC		= gcc
+CC			= gcc
 CFLAGS		= -Wall -O2 -I $(INCDIR)
 #CFLAGS		= -O -fomit-frame-pointer -fstrength-reduce -Wall
 #CFLAGS		= -g -O0 -Wall
-AS			= has
+AS			= has060
 LD			= hlk
 LKFLAGS		= -z-stack=131072
 LDFLAGS 	= -s
 LIBS		= libc.a libgnu.a libdos.a libiocs.a lib/APICGLIB.a lib/ZMUSIC.L lib/JOYLIB3.L lib/XSP2lib.o
+#LIBS		= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMUSIC.L
+#LIBS		= libc.a libgnu.a LIB/APICGLIB.a LIB/ZMSC3LIB.L
+#LIBS		= libc.a libgnu.a LIB/APICGLIB.a LIB/mcclib.a
 
 
 .PHONY: all clean dist
 all: $(TARGET)
 
 clean:
-	-rm $(OBJDIR)
+	del $(OBJDIR)\*.o
 
 dist:
 	LHA a -t $(LZH)
@@ -36,6 +39,7 @@ $(TARGET): $(OBJS)
 	$(LD) -o $@ $^ -l $(LIBS) $(LDFLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
+#	-mkdir -p ./$(OBJDIR)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.s

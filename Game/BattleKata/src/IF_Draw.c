@@ -1,6 +1,7 @@
 #ifndef	IF_DRAW_C
 #define	IF_DRAW_C
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iocslib.h>
@@ -10,6 +11,7 @@
 #include "BIOS_CRTC.h"
 #include "IF_Draw.h"
 #include "IF_Graphic.h"
+#include "IF_Memory.h"
 
 int Draw_Pset(short x, short y, unsigned short color);
 int Draw_Pget(short x, short y, unsigned short *color);
@@ -17,8 +19,16 @@ int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsi
 int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style);
 int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color);
 int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat);
+int Draw_FillCircle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat);
 int16_t Draw_Message_To_Graphic(uint8_t *, uint16_t, uint16_t, int16_t, int16_t);
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int Draw_Pset(short x, short y, unsigned short color)
 {
 	struct _psetptr stPset;
@@ -30,6 +40,13 @@ int Draw_Pset(short x, short y, unsigned short color)
 	return _iocs_pset(&stPset);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int Draw_Pget(short x, short y, unsigned short *color)
 {
 	struct _pointptr stPget;
@@ -45,6 +62,13 @@ int Draw_Pget(short x, short y, unsigned short *color)
 	return ret;
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
 {
 	struct _lineptr stLine;
@@ -64,6 +88,13 @@ int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsi
 	return _iocs_line(&stLine);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
 {
 	struct _boxptr stBox;
@@ -83,6 +114,13 @@ int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsig
 	return _iocs_box(&stBox);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
 {
 	struct _fillptr stFill;
@@ -101,6 +139,13 @@ int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
 	return _iocs_fill(&stFill);
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
 int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat)
 {
 	struct _circleptr stCircle;
@@ -114,6 +159,51 @@ int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, shor
 	stCircle.ratio = rat;
 	
 	return _iocs_circle(&stCircle);
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int Draw_FillCircle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat)
+{
+	struct _circleptr stCircle;
+	int16_t *pBuf;
+	size_t Size;
+
+	stCircle.x = x;
+	stCircle.y = y;
+	stCircle.radius = rad;
+	stCircle.color = color;
+	stCircle.start = st;
+	stCircle.end = ed;
+	stCircle.ratio = rat;
+	_iocs_circle(&stCircle);
+
+	Size = (rad * 2) * (rad * 2) * sizeof(int16_t);
+	pBuf = (int16_t*)MyMalloc(Size);
+	if(pBuf != NULL)
+	{
+		struct _paintptr stPaint;
+
+//		printf("pBuf(0x%p)=%d\n", pBuf, Size);
+		
+		stPaint.x = x;
+		stPaint.y = y;
+		stPaint.color = color;
+		stPaint.buf_start = pBuf;
+		stPaint.buf_end = pBuf + Size;
+//		printf("area(0x%p)(0x%p)\n", stPaint.buf_start, stPaint.buf_end);
+
+		_iocs_paint(&stPaint);
+
+		MyMfree(pBuf);
+	}
+	
+	return 0;
 }
 
 /*===========================================================================================*/

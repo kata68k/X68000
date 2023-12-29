@@ -14,19 +14,17 @@
 
 #include "IF_FileManager.h"
 
+#include "BIOS_PCG.h"
 #include "IF_MACS.h"
 #include "IF_Graphic.h"
 #include "IF_MUSIC.h"
 #include "IF_Memory.h"
-#include "BIOS_PCG.h"
 
-static uint8_t		*pcg_dat;		/* ＰＣＧデータファイル読み込みバッファ */
-static 	uint16_t	pal_dat[ 128 ];	/* パレットデータファイル読み込みバッファ */
 //static int32_t		nMaxFreeMem;
 
 /* 関数のプロトタイプ宣言 */
 int16_t Init_FileList_Load(void);
-int16_t File_Load(int8_t *, void *, size_t, size_t);
+size_t File_Load(int8_t *, void *, size_t, size_t);
 int16_t File_Save(int8_t *, void *, size_t, size_t);
 int16_t File_Load_CSV(int8_t *, uint16_t *, uint16_t *, uint16_t *);
 int16_t PCG_SP_dataload(int8_t *);
@@ -114,10 +112,10 @@ int16_t Init_FileList_Load(void)
 /* *ptr		格納先の先頭アドレス */
 /* size		データのサイズ */
 /* n		データの個数 */
-int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
+size_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 {
 	FILE *fp;
-	int16_t ret = 0;
+	size_t ret = 0;
 
 	/* ファイルを開ける */
 	fp = fopen(fname, "rb");
@@ -139,6 +137,14 @@ int16_t File_Load(int8_t *fname, void *ptr, size_t size, size_t n)
 		
 		/* ファイル読み込み */
 		ret = fread (ptr, size, n, fp);
+
+		if (ret != n) {
+	        if (feof(fp)) {
+				fprintf(stderr, "Premature end of file reached\n");
+			} else if (ferror(fp)) {
+				perror("Error while reading from file");
+			}
+		}
 
 		/* ファイルを閉じる */
 		fclose (fp);
@@ -176,6 +182,44 @@ int16_t File_Save(int8_t *fname, void *ptr, size_t size, size_t n)
 	else
 	{
 		/* ファイルが存在する場合は何もしない */
+	}
+	/* ファイルを閉じる */
+	fclose (fp);
+
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* ファイル保存 */
+/* *fname	ファイル名 */
+/* *ptr		格納先の先頭アドレス */
+/* size		データのサイズ */
+/* n		データの個数 */
+int16_t File_Save_OverWrite(int8_t *fname, void *ptr, size_t size, size_t n)
+{
+	FILE *fp;
+	int16_t ret = 0;
+
+	/* ファイルを開ける */
+	fp = fopen(fname, "rb");
+	
+	if(fp == NULL)	/* ファイルが無い */
+	{
+		/* ファイルを開ける */
+		fp = fopen(fname, "wb");
+		fwrite(ptr, size, n, fp);
+	}
+	else
+	{
+		/* ファイルが存在する場合は何もしない */
+		fp = fopen(fname, "wb");
+		fwrite(ptr, size, n, fp);
 	}
 	/* ファイルを閉じる */
 	fclose (fp);
@@ -273,12 +317,139 @@ int16_t File_Load_CSV(int8_t *fname, uint16_t *ptr, uint16_t *Col, uint16_t *Row
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
+/* CSV コースデータファイル読み込み */
+/* *fname	ファイル名 */
+/* *st_ptr	格納先の先頭アドレス */
+/* *Col		データの行数のアドレス */
+/* *Row		データの列数のアドレス */
+#if 0
+int16_t File_Load_Course_CSV(int8_t *fname, ST_ROADDATA *st_ptr, uint16_t *Col, uint16_t *Row)
+{
+	FILE *fp;
+	int16_t ret = 0;
+	uint16_t x, y, flag, cnv_flag;
+	char buf[1000], *p, *end;
+	
+	x = 0;
+	y = 0;
+	flag = 0;
+	cnv_flag = 0;
+	
+	fp = fopen(fname, "r");
+	if(fp == NULL)
+	{
+		ret = -1;
+	}
+	else
+	{
+		while(fgets(buf, sizeof(buf), fp) != NULL)
+		{
+	        p = buf;
+			do
+			{
+				int64_t num = strtol(p, &end, 0);
+
+//				printf("(%d,%d)=%d ->%s\n", x, y, num, end);
+
+				if(*end == '\0')
+				{
+					/* 文字列の終わりだった */
+					st_ptr++;
+					if(flag==0)
+					{
+						*Col = x;
+					}
+					flag = 1;
+					break;
+				}
+				else if(p != end)
+				{
+					/* 変換できた */
+					switch(x)
+					{
+						case 0:
+						{
+							st_ptr->bHeight = (uint8_t)num;
+							break;
+						}
+						case 1:
+						{
+							st_ptr->bWidth = (uint8_t)num;
+							break;
+						}
+						case 2:
+						{
+							st_ptr->bAngle = (uint8_t)num;
+							break;
+						}
+						case 3:
+						{
+							st_ptr->bfriction = (uint8_t)num;
+							break;
+						}
+						case 4:
+						{
+							st_ptr->bPat = (uint8_t)num;
+							break;
+						}
+						case 5:
+						{
+							st_ptr->bObject = (uint8_t)num;
+							break;
+						}
+						case 6:
+						{
+							st_ptr->bRepeatCount = (uint8_t)num;
+							break;
+						}
+						default:
+						{
+							break;
+						}
+					}
+
+					p = end + 1;
+					
+					cnv_flag = 1;
+					x++;
+				}
+				else
+				{
+					/* 変換できなかった */
+					p = end + 1;
+				}
+			}
+			while(1);
+			
+			if(cnv_flag != 0){
+				cnv_flag = 0;
+				y++;
+			}
+			x = 0;
+		}
+		fclose(fp);
+	}
+	
+	*Row = y;
+	
+	return ret;
+}
+#endif
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static uint8_t		pcg_dat[PCG_MAX][SP_16_SIZE];		/* ＰＣＧデータファイル読み込みバッファ */
+
 int16_t PCG_SP_dataload(int8_t *fname)
 {
 	int16_t ret = 0;
 	
 	FILE *fp;
-
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
 
 	fp = fopen( fname , "rb" ) ;
@@ -288,39 +459,25 @@ int16_t PCG_SP_dataload(int8_t *fname)
 	}
 	else
 	{
-		int32_t	pcg_size;
+		uint32_t i, j;
+		size_t	pcg_size;
+		uint32_t pat;
 		pcg_size = filelength( fileno( fp ) );
+		pcg_size = Mmin(pcg_size, PCG_MAX * SP_16_SIZE);	/* BGの設定状態でサイズが異なる？？ */
+
+		pat = pcg_size / SP_16_SIZE;
 		
-		if(pcg_dat != NULL)
+		j = fread( &pcg_dat[0][0]
+			,  SP_16_SIZE				/* 1PCG = 128byte */
+			,  pat	/* PCG */
+			,  fp
+			) ;
+		fclose( fp ) ;
+
+		for( i = 0; i < pat; i++ )
 		{
-//			MyMfree(pcg_dat);	/* メモリ解放 */
+			_iocs_sp_defcg( i, 1, &pcg_dat[i][0] );
 		}
-		pcg_dat = (uint8_t*)MyMalloc( pcg_size );
-		if(pcg_dat != NULL)
-		{
-			uint32_t j;
-			uint32_t pat;
-#if 0
-			uint32_t i;
-#endif
-			
-			pat = pcg_size / SP_16_SIZE;
-			
-			j = fread( pcg_dat
-				,  SP_16_SIZE				/* 1PCG = 128byte */
-				,  pat	/* PCG */
-				,  fp
-				) ;
-			fclose( fp ) ;
-#if 0
-			for( i = 0; i < pat; i++ )
-			{
-				_iocs_sp_defcg( i, 1, pcg_dat );
-				pcg_dat += SP_16_SIZE;
-			}
-#endif
-		}
-//		MyMfree(pcg_dat);	/* メモリ解放 */
 	}
 	
 	return ret;
@@ -333,6 +490,8 @@ int16_t PCG_SP_dataload(int8_t *fname)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
+static uint16_t	pal_dat[ 128 ];	/* パレットデータファイル読み込みバッファ */
+
 int16_t PCG_PAL_dataload(int8_t *fname)
 {
 	int16_t ret = 0;
@@ -394,12 +553,19 @@ int16_t Load_Music_List(int8_t *fpath, int8_t *fname, int8_t (*music_list)[256],
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
-			if(i == num)
+			if(*p == ';')	/* コメント */
 			{
-				sprintf(music_list[i], "%s%s", fpath, z_name);
+
 			}
-			i++;
+			else
+			{
+				sscanf(p,"%d = %s", &num, z_name);
+				if(i == num)
+				{
+					sprintf(music_list[i], "%s%s", fpath, z_name);
+				}
+				i++;
+			}
 		}
 		fclose(fp);
 	}
@@ -436,12 +602,19 @@ int16_t Load_SE_List(int8_t *fpath, int8_t *fname, int8_t (*music_list)[256], ui
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
-			if(i == num)
+			if(*p == ';')	/* コメント */
 			{
-				sprintf(music_list[i], "%s%s", fpath, z_name);
+
 			}
-			i++;
+			else
+			{
+				sscanf(p,"%d = %s", &num, z_name);
+				if(i == num)
+				{
+					sprintf(music_list[i], "%s%s", fpath, z_name);
+				}
+				i++;
+			}
 		}
 		fclose(fp);
 	}
@@ -463,7 +636,8 @@ int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *l
 	int16_t ret = 0;
 	int8_t buf[1000], *p;
 	int8_t z_name[256];
-	uint32_t i=0, num=0, bType = 0, bTransPal = 0;
+	uint32_t i=0, num=0;
+	int32_t nType = 0, nTransPal = 0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -478,30 +652,37 @@ int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *l
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d= %s %d %d", &num, z_name, &bType, &bTransPal);
-#if 0
-			FILE *fp_d;
-			
-			p = strtok(z_name, ".");
-			sprintf(z_name, "%s.GRP", p, );
-			fp_d = fopen(z_name, "r");
-			if(fp_d == NULL)
+			if(*p == ';')	/* コメント */
 			{
+
 			}
+			else
+			{
+				sscanf(p,"%d= %s %d %d", &num, z_name, &nType, &nTransPal);	/* format:番号 = ファイルパス＆ファイル名,グラフィックのタイプ,透過色のパレット番号 */
+#if 0
+				FILE *fp_d;
+				
+				p = strtok(z_name, ".");
+				sprintf(z_name, "%s.GRP", p, );
+				fp_d = fopen(z_name, "r");
+				if(fp_d == NULL)
+				{
+				}
 #endif
 			
 #ifdef DEBUG
-//			printf("%d=%s,%d\n", num, z_name, bType);
-//			KeyHitESC();	/* デバッグ用 */
+//				printf("%d=%s,%d\n", num, z_name, bType);
+//				KeyHitESC();	/* デバッグ用 */
 #endif
-			if(i == num)
-			{
-				sprintf( cg_list->bFileName, "%s%s", fpath, z_name );
-				cg_list->ubType = bType;
-				cg_list->ubTransPal = bTransPal;
+				if(i == num)
+				{
+					sprintf( cg_list->bFileName, "%s%s", fpath, z_name );
+					cg_list->bType = (int8_t)nType;
+					cg_list->TransPal = (int16_t)nTransPal;
+				}
+				cg_list++;
+				i++;
 			}
-			cg_list++;
-			i++;
 		}
 		fclose(fp);
 	}
@@ -538,12 +719,19 @@ int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, int8_t (*macs_list)[256], u
 		while(fgets(buf, sizeof(buf), fp) != NULL)
 		{
 	        p = buf;
-			sscanf(p,"%d = %s", &num, z_name);
-			if(i == num)
+			if(*p == ';')	/* コメント */
 			{
-				sprintf(macs_list[i], "%s%s", fpath, z_name);
+
 			}
-			i++;
+			else
+			{
+				sscanf(p,"%d = %s", &num, z_name);
+				if(i == num)
+				{
+					sprintf(macs_list[i], "%s%s", fpath, z_name);
+				}
+				i++;
+			}
 		}
 		fclose(fp);
 	}

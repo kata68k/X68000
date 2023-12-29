@@ -13,6 +13,23 @@ enum
 	POS_RIGHT,
 };
 
+#define G_BG		(0x00)
+#define G_BLACK		(0x01)
+#define G_GRAY		(0x02)
+#define G_WHITE		(0x03)
+#define G_D_RED		(0x04)
+#define G_D_GREEN	(0x05)
+#define G_D_YELLOW	(0x06)
+#define G_D_BLUE	(0x07)
+#define G_PURPLE	(0x08)
+#define G_INDIGO	(0x09)
+#define G_RED		(0x0A)
+#define G_GREEN		(0x0B)
+#define G_YELLOW	(0x0C)
+#define G_BLUE		(0x0D)
+#define G_L_PURPLE	(0x0E)
+#define G_L_BLUE	(0x0F)
+
 /* 画面内登場数 */
 enum
 {
@@ -121,8 +138,8 @@ typedef struct tagPICIMAGE {
 
 typedef struct tagCG_LIST {
 	int8_t	bFileName[256];		/* パス */
-	uint8_t	ubType;				/* 0:通常、1:スプライトライク */
-	uint8_t	ubTransPal;			/* 透過色パレット番号 */
+	int8_t	bType;				/* 0:通常、1:スプライトライク */
+	int16_t	TransPal;			/* 透過色パレット番号 */
 } CG_LIST;
 
 /* 外部参照 変数 */
@@ -147,26 +164,29 @@ extern	void	G_HOME(uint8_t);
 extern	void	G_VIEW(uint8_t);
 extern	void	G_Palette_INIT(void);
 extern	void	G_PaletteSetZero(void);
+extern	void	G_PaletteSet(int16_t, int16_t);
 extern	int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
 extern	int16_t G_Stretch_Pict_toVRAM(	int16_t, int16_t, uint8_t, uint8_t, uint8_t , uint8_t , uint16_t *, uint16_t, uint16_t, int8_t, uint8_t);
 extern	int16_t G_Stretch_Pict_To_Mem( uint16_t	*, uint16_t, uint16_t, uint16_t	*, uint16_t, uint16_t);
 extern	int16_t G_Copy_Pict_To_Mem(	uint16_t *, uint16_t , uint16_t , uint16_t *, uint16_t , uint16_t);
 extern	int16_t	G_BitBlt(int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t , int16_t , uint16_t , uint8_t , uint8_t , uint8_t , uint8_t );
 extern	int16_t G_BitBlt_From_Mem(	int16_t, int16_t , uint8_t , uint16_t *, uint16_t , uint16_t , uint8_t , uint8_t , uint8_t, uint8_t );
+extern	int32_t G_PAGE_SET(uint16_t);
 extern	int32_t	G_CLR(void);
 extern	int16_t G_CLR_HS(void);
 extern	int16_t	G_CLR_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t);
-extern	int16_t	G_CLR_ALL_OFFSC(void);
+extern	int16_t	G_CLR_ALL_OFFSC(uint8_t);
 extern	int16_t	G_FILL_AREA(int16_t, uint16_t, int16_t, uint16_t, uint8_t, uint8_t);
 extern	int16_t	G_Load(uint8_t, uint16_t, uint16_t, uint16_t);
 extern	int16_t	G_Load_Mem(uint8_t, int16_t, int16_t, uint16_t);
 extern	int16_t	APICG_DataLoad2G(int8_t *, uint64_t, uint64_t, uint16_t);
 extern	int16_t	APICG_DataLoad2M(uint8_t, uint64_t, uint64_t, uint16_t, uint16_t *);
 extern	int16_t	G_Subtractive_Color(uint16_t *, uint16_t *, uint16_t, uint16_t, uint16_t, uint32_t);
-extern	int16_t	PutGraphic_To_Text(uint8_t , uint16_t , uint16_t );
+extern	int16_t	PutGraphic_To_Text(uint8_t , uint16_t , uint16_t, uint16_t);
 extern	int16_t	PutGraphic_To_Symbol12(uint8_t *, uint16_t , uint16_t , uint16_t );
 extern	int16_t	PutGraphic_To_Symbol16(uint8_t *, uint16_t , uint16_t , uint16_t );
 extern	int16_t	PutGraphic_To_Symbol24(uint8_t *, uint16_t , uint16_t , uint16_t );
+extern	int16_t PutGraphic_To_Symbol24_Xn(uint8_t *, uint16_t, uint16_t, uint16_t, uint16_t);
 extern	int16_t	G_Scroll(int16_t, int16_t, uint8_t);
 
 #endif	/* IF_GRAPHIC_H */

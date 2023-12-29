@@ -17,7 +17,7 @@
 #define	PCG_16x16_AREA	(0x40)
 
 /* グローバル変数 */
-static ST_PCG	g_stPCG_DATA[PCG_MAX] = {0};
+ST_PCG	g_stPCG_DATA[PCG_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 void PCG_VIEW(uint8_t);
@@ -471,8 +471,8 @@ int16_t PCG_Main(void)
 				/* スプライトレジスタの設定 */
 				_iocs_sp_regst( (Plane_num + count) & (SP_PLN_MAX-1),
 								-1,	/* mode:最上位ビット 1=垂直同期検出 0=垂直同期検出しない */
-								g_stPCG_DATA[uPCG_num].x + uWidth,
-								g_stPCG_DATA[uPCG_num].y + uHeight,
+								g_stPCG_DATA[uPCG_num].x + uWidth + SP_X_OFFSET,
+								g_stPCG_DATA[uPCG_num].y + uHeight + SP_Y_OFFSET,
 								*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data),
 								uPCG_prw);
 				

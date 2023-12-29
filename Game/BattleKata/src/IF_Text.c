@@ -8,8 +8,11 @@
 #include <doslib.h>
 
 #include "usr_macro.h"
+#include "BIOS_CRTC.h"
 #include "BIOS_PCG.h"
+#include "IF_Draw.h"
 #include "IF_Text.h"
+#include "IF_Graphic.h"
 #include "IF_Math.h"
 
 /* define定義 */
@@ -33,6 +36,7 @@ int32_t T_yLine(int16_t, int16_t, int16_t h, uint16_t, uint8_t);
 int32_t _iocs_txline(struct _xylineptr *);
 int32_t T_Line(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 int32_t T_Line2(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
+int16_t T_Circle(int16_t, int16_t, int16_t, int16_t, uint16_t, uint8_t);
 void T_FillCircle(int16_t, int16_t, int16_t, uint8_t);
 void Message_Num(void *, int16_t, int16_t, uint16_t, uint8_t, uint8_t *);
 int16_t BG_TextPut(int8_t *, int16_t, int16_t);
@@ -41,7 +45,7 @@ int16_t BG_TimeCounter(uint32_t, uint16_t, uint16_t);
 int16_t BG_Number(uint32_t, uint16_t, uint16_t);
 int16_t Text_To_Text(uint16_t, int16_t, int16_t, uint8_t, uint8_t *);
 int16_t Text_To_Text2(uint64_t, int16_t, int16_t, uint8_t, uint8_t *);
-int16_t Put_Message_To_Graphic(uint8_t *, uint16_t, uint16_t);
+int16_t Put_Message_To_Graphic(uint8_t *, uint8_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -65,6 +69,7 @@ void T_INIT(void)
 	_iocs_b_curoff();			/* カーソルを消します */
 	_iocs_ms_curof();			/* マウスカーソルを消します */
 	_iocs_skey_mod(0, 0, 0);	/* ソフトウェアキーボードを消します */
+	_dos_c_fnkmod(3);			/* ファンクションキー行無効化 */
 }
 
 /*===========================================================================================*/
@@ -78,6 +83,8 @@ void T_EXIT(void)
 {
 	uint16_t i;
 	
+	T_Clear();				/* テキストクリア */
+
 	_iocs_os_curon();		/* カーソルを表示します */
 	_iocs_b_curon();		/* カーソルを表示します */
 	_dos_c_fnkmod(0);		/* ファンクションキー行の設定 */
@@ -124,6 +131,7 @@ void T_Clear(void)
 	stTxFill.vram_page = 3;
 	_iocs_txfill(&stTxFill);
 #endif
+
 	_iocs_b_curoff();			/* カーソルを消します */
 }
 
@@ -140,8 +148,8 @@ void T_PALET(void)
 	_iocs_tpalet2( 0, SetRGB( 0,  0,  0));	/* Black */
 	_iocs_tpalet2( 1, SetRGB( 1,  0,  0));	/* Black2 */
 	_iocs_tpalet2( 2, SetRGB(31,  0,  0));	/* Red */
-	_iocs_tpalet2( 3, SetRGB(30, 26, 16));	/* Red2 */
-	_iocs_tpalet2( 4, SetRGB(31, 31, 31));	/* White */
+	_iocs_tpalet2( 3, SetRGB(31, 31, 31));	/* White */
+	_iocs_tpalet2( 4, SetRGB(30, 26, 16));	/* Red2 */
 	_iocs_tpalet2( 5, SetRGB(30,  8,  0));	/* Orenge */
 	_iocs_tpalet2( 6, SetRGB(30, 30,  0));	/* Yellow */
 	_iocs_tpalet2( 7, SetRGB( 0, 31,  0));	/* Green */
@@ -188,11 +196,6 @@ int32_t T_Box(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_styl
 	stTxBox.y1= y2;
 	stTxBox.line_style = line_style;
 	
-	if((color == 0) && (line_style == 0))
-	{
-		color = 0x0F;
-	}
-
 	if((color & 0x01) != 0u)
 	{
 		stTxBox.vram_page = 0;
@@ -213,6 +216,7 @@ int32_t T_Box(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_styl
 		stTxBox.vram_page = 3;
 		_iocs_txbox(&stTxBox);
 	}
+
 	return ret;
 }
 
@@ -234,11 +238,6 @@ int32_t T_Fill(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_sty
 	stTxFill.y1= y2;
 	stTxFill.fill_patn = line_style;
 	
-	if((color == 0) && (line_style == 0))
-	{
-		color = 0x0F;
-	}
-	
 	if((color & 0x01) != 0u)
 	{
 		stTxFill.vram_page = 0;
@@ -259,6 +258,7 @@ int32_t T_Fill(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_sty
 		stTxFill.vram_page = 3;
 		_iocs_txfill(&stTxFill);
 	}
+	
 	return ret;
 }
 
@@ -304,6 +304,7 @@ int32_t T_xLine(int16_t x1, int16_t y1, int16_t w, uint16_t line_style, uint8_t 
 		stTxLine.vram_page = 3;
 		_iocs_txxline(&stTxLine);
 	}
+
 	return ret;
 }
 
@@ -349,6 +350,7 @@ int32_t T_yLine(int16_t x1, int16_t y1, int16_t h, uint16_t line_style, uint8_t 
 		stTyLine.vram_page = 3;
 		_iocs_txyline(&stTyLine);
 	}
+
 	return ret;
 }
 
@@ -389,11 +391,6 @@ int32_t T_Line(int16_t x1, int16_t y1, int16_t v, int16_t h, uint16_t line_style
 	stTLine.y1= h;
 	stTLine.line_style = line_style;
 	
-	if((color == 0) && (line_style == 0))
-	{
-		color = 0x0F;
-	}
-
 	if((color & 0x01) != 0u)
 	{
 		stTLine.vram_page = 0;
@@ -414,6 +411,7 @@ int32_t T_Line(int16_t x1, int16_t y1, int16_t v, int16_t h, uint16_t line_style
 		stTLine.vram_page = 3;
 		_iocs_txline(&stTLine);
 	}
+
 	return ret;
 }
 
@@ -435,6 +433,121 @@ int32_t T_Line2(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_st
 	
 	ret = T_Line(x1, y1, v, h, line_style, color);
 	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t T_Circle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t line_style, uint8_t color)
+{
+	int16_t	ret = 0;
+	int16_t	i;
+	int16_t	w, h;
+	int16_t	cx, cy;
+	int16_t	px, py;
+	
+	x2 += x1;
+	y2 += y1;
+	
+	/* 縦線 */
+	if(x1 == x2)
+	{
+		T_yLine(x1, y1, 1, line_style, color);
+		return ret;
+	}
+	
+	/* 横線 */
+	if(y1 == y2)
+	{
+		T_xLine(x1, y1, 1, line_style, color);
+		return ret;
+	}
+	
+	w = Mdiv2(x2 - x1);
+	h = Mdiv2(y2 - y1);
+	cx = x1 + w;
+	cy = y1 + h;
+	
+#ifdef DEBUG
+//	printf("T_Circle=(%d,%d,%d,%d)(%d,%d)(%d,%d)\n",  x1, y1, x2, y2, cx, cy, w, h);
+//	KeyHitESC();	/* デバッグ用 */
+#endif
+	
+	for(i=0; i<90; i++)
+	{
+		/* 1 */
+		px = cx + Mdiv256( (w * APL_Cos(i) ) );
+		py = cy + Mdiv256( (h * APL_Sin(i) ) );
+		if(line_style == 0xFFFF)
+		{
+			T_Fill( cx, py, px - cx, cy - py, line_style, color);
+		}
+		else
+		{
+			T_xLine( px, py, 1, 0xFFFF, color);
+		}
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, cx, py, px - cx, cy - py);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+
+		/* 2 */
+		px = cx + Mdiv256( (w * APL_Cos(i+90)) );
+		py = cy + Mdiv256( (h * APL_Sin(i+90)) );
+
+		if(line_style == 0xFFFF)
+		{
+			T_Fill( px, py, cx - px, cy - py, line_style, color);
+		}
+		else
+		{
+			T_xLine( px, py, 1, 0xFFFF, color);
+		}
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, px, py, cx - px, cy - py);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+
+		/* 3 */
+		px = cx + Mdiv256( (w * APL_Cos(i+180)) );
+		py = cy + Mdiv256( (h * APL_Sin(i+180)) );
+
+		if(line_style == 0xFFFF)
+		{
+			T_Fill( px, cy, cx - px, py - cy, line_style, color);
+		}
+		else
+		{
+			T_xLine( px, py, 1, 0xFFFF, color);
+		}
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, px, cy, cx - px, py - cy);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+
+		/* 4 */
+		px = cx + Mdiv256( (w * APL_Cos(i+270)) );
+		py = cy + Mdiv256( (h * APL_Sin(i+270)) );
+
+		if(line_style == 0xFFFF)
+		{
+			T_Fill( cx, cy, px - cx, py - cy, line_style, color);
+		}
+		else
+		{
+			T_xLine( px, py, 1, 0xFFFF, color);
+		}
+#ifdef DEBUG
+//		printf("T_Circle(%d)=(%d,%d,%d,%d)\n", i, cx, cy, px - cx, py - cy);
+//		KeyHitESC();	/* デバッグ用 */
+#endif
+	}
+		
 	return ret;
 }
 
@@ -518,7 +631,7 @@ void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, 
 {
 	char str[64];
 	volatile uint16_t *CRTC_480 = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
-
+	size_t strLength;
 	memset(str, 0, sizeof(str));
 
 	switch(mode){
@@ -602,7 +715,11 @@ void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, 
 	//Text_To_Text(atoi(str), x << 4, y << 4, FALSE);
 	if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
 	{
-		B_PUTMES( nCol, x, y, 64, str);	/* 高速クリアの処理を阻害している */
+		strLength = strlen(str);
+//		printf("%s %d\n", str, strLength);
+
+		x = _iocs_b_putmes( nCol, x, y, strLength + 1, str);	/* 高速クリアの処理を阻害している */
+		printf("%d\n", x);
 		//B_LOCATE(x, y);
 		//B_PRINT(str);
 		//B_CUROFF();
@@ -1301,6 +1418,37 @@ int16_t Text_To_Text2(uint64_t ulNum, int16_t x, int16_t y, uint8_t bLarge, uint
 		}
 		pString++;
 	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t Put_Message_To_Graphic(uint8_t *str, uint8_t bMode )
+{
+	int16_t	ret = 0;
+	
+	int16_t	x, y;
+	ST_CRT	stCRT = {0};
+	
+	GetCRT(&stCRT, bMode);	/* 画面情報を取得 */
+	
+	/* 座標設定 */
+	x = stCRT.hide_offset_x;
+	y = stCRT.hide_offset_y + 0;
+	
+	/* メッセージエリア クリア */
+	_iocs_window( x, y, x + WIDTH, y + 12);	/* 描画可能枠再設定 */
+
+	Draw_Fill( x, y, x + WIDTH, y + 12, 0x01);	/* Screen0 指定パレットで塗りつぶし */
+	
+	/* メッセージエリア 描画 */
+	PutGraphic_To_Symbol12(str, x, y, 0x03);
 	
 	return ret;
 }

@@ -9,6 +9,7 @@ typedef struct{
 	uint64_t	ulScore;
 	uint64_t	ulScoreMax;
 	uint16_t	uCombo;
+	uint16_t	uComboMax;
 } ST_SCORE;
 
 typedef struct{
@@ -29,5 +30,9 @@ extern	int16_t S_Init_Score(void);
 extern	int16_t S_GetPos(int16_t, int16_t);
 extern	int16_t S_Clear_Score(void);
 extern	int16_t S_Main_Score(void);
+extern	int16_t S_Score_Board(void);
+extern	int16_t S_Score_NameInput(int16_t, int8_t, int8_t);
+extern	int16_t S_Score_Save(void);
+extern	int16_t S_Score_Load(void);
 
 #endif	/* APL_SCORE_H */

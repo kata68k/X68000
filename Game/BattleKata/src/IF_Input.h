@@ -5,16 +5,16 @@
 
 #define	CNF_JOYDRV360	(1)
 
-/* ジョイスティック１のその１ */
-#define UP		(0x01)
-#define DOWN	(0x02)
-#define LEFT	(0x04)
-#define RIGHT	(0x08)
-#define JOYA	(0x40)
-#define JOYB	(0x20)
-#define ESC_S	(27)
+/* ジョイスティックその１ */
+#define JOY_UP		(0x01)
+#define JOY_DOWN	(0x02)
+#define JOY_LEFT	(0x04)
+#define JOY_RIGHT	(0x08)
+#define JOY_B		(0x20)
+#define JOY_A		(0x40)
+#define ESC_S		(27)
 
-/* ジョイスティック１のその１ */
+/* ジョイスティックその２ */
 #define KEY_NULL		(0x0000)
 #define KEY_LEFT		(0x0001)
 #define KEY_RIGHT		(0x0002)
@@ -66,9 +66,12 @@ typedef struct tagANALOG {
 } JOY_ANALOG_BUF;
 
 extern	int16_t	g_Input;
+extern	int16_t	g_Input_P[2];
 extern	uint8_t	g_bAnalogStickMode;
 extern	uint8_t	g_bAnalogStickMode_flag;
 
+extern	int16_t Input_Init(void);
+extern	int16_t Input_Main(void);
 extern uint16_t	get_keyboard( uint16_t *, uint8_t , uint8_t );
 extern uint16_t	get_djoy(uint16_t *, int32_t, uint8_t );
 extern uint16_t	get_ajoy(uint16_t *, int32_t, uint8_t, uint8_t );

@@ -9,6 +9,8 @@
 #include <usr_macro.h>
 #include "BIOS_PCG.h"
 #include "BIOS_CRTC.h"
+#include "BIOS_MFP.h"
+#include "BIOS_MPU.h"
 #include "IF_Input.h"
 
 /* グローバル変数 */
@@ -72,6 +74,7 @@ volatile uint16_t	*SP_CRTC_0E = (uint16_t *)0xEB080Eu;
 volatile uint16_t	*SP_CRTC_10 = (uint16_t *)0xEB0810u;
 
 volatile uint16_t	g_uCRT_Tmg;
+volatile uint32_t	g_uCRT_LCG;
 
 /* 構造体定義 */
 ST_CRT		g_stCRT[CRT_MAX] = {0};
@@ -79,14 +82,16 @@ ST_CRT		g_stCRT[CRT_MAX] = {0};
 
 /* 関数のプロトタイプ宣言 */
 int16_t CRTC_INIT(uint16_t);
+int16_t CRTC_EXIT(uint16_t);
 void CRTC_INIT_Manual(void);
+void CRTC_INIT_SemiManual(void);
 void get_value(int8_t *, uint32_t *, uint32_t, uint32_t);
 void cal_regs(void);
 void dsp_regs(void);
 void set_regs(void);
 int16_t	GetCRT(ST_CRT *, int16_t);
 int16_t	SetCRT(ST_CRT, int16_t);
-int16_t	CRT_INIT(void);
+int16_t	CRT_INIT_MODE(void);
 int16_t	Get_CRT_Contrast(int8_t *);
 int16_t	Set_CRT_Contrast(int8_t);
 int16_t	Get_CRT_Tmg(uint16_t *);
@@ -94,7 +99,17 @@ int16_t	Set_CRT_Tmg(uint16_t);
 int16_t wait_vdisp(int16_t);
 int16_t wait_h_sync(void);
 int16_t wait_v_sync(void);
-
+uint16_t CRTC_Rastar_FirstPos(void);
+uint16_t CRTC_Rastar_EndPos(void);
+int16_t CRTC_Rastar_SetPos(uint16_t);
+int16_t CRTC_T_Scroll(int16_t, int16_t);
+int16_t CRTC_G0_Scroll_4(int16_t, int16_t);
+int16_t CRTC_G1_Scroll_4(int16_t, int16_t);
+int16_t CRTC_G2_Scroll_4(int16_t, int16_t);
+int16_t CRTC_G3_Scroll_4(int16_t, int16_t);
+int16_t CRTC_G0_Scroll_8(int16_t, int16_t);
+int16_t CRTC_G1_Scroll_8(int16_t, int16_t);
+int16_t CRTC_G0_Scroll_16(int16_t, int16_t);
 
 /* 関数 */
 /*===========================================================================================*/
@@ -106,85 +121,165 @@ int16_t wait_v_sync(void);
 /*===========================================================================================*/
 int16_t CRTC_INIT(uint16_t uNum)
 {
-	int16_t ret;
-
-	ret = _iocs_crtmod(uNum);	/* uNum = 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
-
-#if 0
-	switch(uNum)
+	int16_t ret = 0;
+	int32_t romver;
+	uint32_t mode;
+	uint32_t mode_ofst;
+#if 1
+	switch(uNum % 2)
 	{
-		case 0:	/* 31kHz mode 10 */
+		case 0:	/* 偶数：31kHz */
 		{
 			Set_CRT_Tmg(0);
 			break;
 		}
-		case 1:	/* 15kHz mode 11*/
+		case 1:	/* 奇数：15kHz */
 		default:
 		{
 			Set_CRT_Tmg(1);
 			break;
 		}
 	}
-	
-#if 1
-	/* CRTC_レジスタの結果を反映したもの */
-	uint32_t i;
-	uint32_t pat;
-	uint16_t crtcdata[5][9] = {   69,    6, 11+8, 59-8,   567,    5,   40,   552, 0x111,	/* otoko */
-								0x44, 0x06, 0x10, 0x36, 0x237, 0x05, 0x48, 0x208, 0x111,	/* pacland 31kHz */
-								0x42, 0x06, 0x10, 0x36, 0x103, 0x02, 0x18, 0x0F8, 0x114,	/* pacland 15kHz */
-								0x45, 0x06, 0x12, 0x32, 0x237, 0x05, 0x28, 0x228, 0x111,	/* 超連射68k 31kHz */
-								0x25, 0x01, 0x00, 0x20, 0x103, 0x02, 0x10, 0x100, 0x100};	/* 超連射68k 15kHz */
-	pat = 1 + uNum;
-	
-	for(i=0; i<8; i++)
-	{
-		ir[i] = (uint32_t)crtcdata[pat][i];
-	}
-	ir20 = (uint32_t)crtcdata[pat][8];
-	hl = 2;
-	hres = (ir[3] - ir[2]) * 8;
-	vres = ir[7] - ir[6];
-
-	scanmode = 2;	/* 走査モード 0:ノン・インターレース 1:インターレース 2:二度読み */
-	
-	if(scanmode == 1)
-	{
-		vres *= 2;
-	}
-	if(scanmode == 2)
-	{
-		vres /= 2;
-	}
-	
 #else
-	/* CRTC_INIT_Manual をダイレクトに入力したもの */
-	hl		= 3 - 1;	/* Middle */
+	#if 1
+		/* CRTC_レジスタの結果を反映したもの */
+		uint32_t i;
+		uint32_t pat;
+		uint16_t crtcdata[5][9] = {   69,    6, 11+8, 59-8,   567,    5,   40,   552, 0x111,	/* otoko */
+									0x44, 0x06, 0x10, 0x36, 0x237, 0x05, 0x48, 0x208, 0x111,	/* pacland 31kHz */
+									0x42, 0x06, 0x10, 0x36, 0x103, 0x02, 0x18, 0x0F8, 0x114,	/* pacland 15kHz */
+									0x45, 0x06, 0x12, 0x32, 0x237, 0x05, 0x28, 0x228, 0x111,	/* 超連射68k 31kHz */
+									0x25, 0x01, 0x00, 0x20, 0x103, 0x02, 0x10, 0x100, 0x100};	/* 超連射68k 15kHz */
+		pat = 1 + uNum;
+		
+		for(i=0; i<8; i++)
+		{
+			ir[i] = (uint32_t)crtcdata[pat][i];
+		}
+		ir20 = (uint32_t)crtcdata[pat][8];
+		hl = 2;
+		hres = (ir[3] - ir[2]) * 8;
+		vres = ir[7] - ir[6];
 	
-	clk		= 2 - 1;	/* 512 */
-	if( (hl == 0) && (clk == 2) )
-	{
-		clk = 0;
-	}
+		scanmode = 2;	/* 走査モード 0:ノン・インターレース 1:インターレース 2:二度読み */
+		
+		if(scanmode == 1)
+		{
+			vres *= 2;
+		}
+		if(scanmode == 2)
+		{
+			vres /= 2;
+		}
+		
+	#else
+		/* CRTC_INIT_Manual をダイレクトに入力したもの */
+		hl		= 3 - 1;	/* Middle */
+		
+		clk		= 2 - 1;	/* 512 */
+		if( (hl == 0) && (clk == 2) )
+		{
+			clk = 0;
+		}
+		
+		freq	= 1 - 1;	/* 31kHz */
+		
+		do
+		{
+			scanmode= 3 - 1;	/* 二度読み */
+		}
+		while( (hl == 0) && (scanmode == 2) );
+		
+		size	= 1 - 1;	/* 512 x 512 */
+		
+		colmode	= 3 - 1;	/* 256色 */
 	
-	freq	= 1 - 1;	/* 31kHz */
+		cal_regs();
 	
-	do
-	{
-		scanmode= 3 - 1;	/* 二度読み */
-	}
-	while( (hl == 0) && (scanmode == 2) );
-	
-	size	= 1 - 1;	/* 512 x 512 */
-	
-	colmode	= 3 - 1;	/* 256色 */
-
-	cal_regs();
-
-	dsp_regs();
-#endif
+		dsp_regs();
+	#endif
 	set_regs();
 #endif
+	/* LCDモード判定 */
+	romver = Get_ROM_Ver();
+	if(romver == 0x16)
+	{
+		mode = (_iocs_crtmod(0x16FF) >> 24) & 0xFF;		/* 現設定 */
+		if((g_uCRT_LCG == 0x00) && (g_uCRT_LCG != mode))
+		{
+			g_uCRT_LCG = mode;
+		}
+
+		switch(mode)
+		{
+			case 0x16:
+			{
+//				printf("CRT()=0x%x\n", mode);
+				break;
+			}
+			case 0x96:
+			{
+//				printf("LCD()=0x%x\n", mode);
+//				mode = _iocs_crtmod(0x56FF);		/* 現設定 */
+				break;
+			}
+			default:
+			{
+//				printf("CRT/LCD?()=0x%x\n", mode);
+				break;
+			}
+		}
+		mode_ofst = 0x100;
+//		printf("CRTMOD()=0x%x\n", mode);
+	}
+	else
+	{
+		mode_ofst = 0x100;
+	}
+//	puts("CRTC_INIT tmg");
+//	KeyHitESC();	/* デバッグ用 */
+	ret = _iocs_crtmod(-1);		/* 現設定 */
+//	puts("CRTC_INIT crtmod old");
+//	KeyHitESC();	/* デバッグ用 */
+
+	if(uNum <= 18u)
+	{
+		_iocs_crtmod(uNum);	/* uNum = 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+//	puts("CRTC_INIT num");
+//	KeyHitESC();	/* デバッグ用 */
+	}
+	else{
+		if(uNum >= 0x200u)
+		{
+			CRTC_INIT_SemiManual();		/* 384 x 256 31kHz 256color */
+		}
+		else
+		{
+			_iocs_crtmod(mode_ofst + (0xFF & uNum));	/* 初期化付き */
+		}
+//		KeyHitESC();	/* デバッグ用 */
+//		puts("CRTC_INIT manual");
+	}
+
+	CRT_INIT_MODE();	/* 画面位置設定 */
+//	puts("CRTC_INIT Init");
+//	KeyHitESC();	/* デバッグ用 */
+
+	return ret;
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_EXIT(uint16_t uNum)
+{
+	int16_t ret = 0;
+
+	CRTC_INIT(uNum);
+
 	return ret;
 }
 
@@ -231,6 +326,47 @@ void CRTC_INIT_Manual(void)
 	}
 }
 
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void CRTC_INIT_SemiManual(void)
+{
+	hl = 3-1;	/* Middle */
+	clk = 2-1;	/* 512 */
+	
+	if( (hl == 0) && (clk == 2) )
+	{
+		printf("Lowモードでは256と同じ\n");
+		clk = 0;
+	}
+	
+	freq = 1-1;	/* 31kHz */
+	
+	do
+	{
+		scanmode = 3-1;	/* 二度読み */
+	}
+	while( (hl == 0) && (scanmode == 2) );
+	
+	size = 1-1;	/* 512 x 512 */
+	
+	colmode = 2-1;	/* 256色 */
+	
+	cal_regs();
+#if 0	
+	dsp_regs();
+#endif	
+	yesno = 2-1;
+	
+	if(yesno != 0)
+	{
+		set_regs();
+	}
+}
 /*===========================================================================================*/
 /* 関数名	：	*/
 /* 引数		：	*/
@@ -482,21 +618,37 @@ int16_t	SetCRT(ST_CRT stDat, int16_t Num)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t CRT_INIT(void)
+int16_t CRT_INIT_MODE(void)
 {
 	int16_t	ret = 0;
+
+	ST_CRT stDat;
 #if 1
 #else
 	volatile uint16_t *CRTC_R21 = (uint16_t *)0xE8002Au;
 #endif
 	
-	ret = CRTMOD(-1);	/* 現在のモードを返す */
+
 	
 #if 1
 //	CRTC_INIT_Manual();
-	CRTC_INIT(1);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
+//	CRTC_INIT(1);		/* 偶数：31kHz、奇数：15kHz(17,18:24kHz) */
 #else
 
+#ifdef DEBUG
+	/* デバッグウィンドウあり */
+#else	/* デバッグウィンドウなし */
+	uint16_t	uCRT_Tmg;
+	Get_CRT_Tmg(&uCRT_Tmg);
+	if(uCRT_Tmg == 0)	/* ラスタ２度読みの場合(31kHz) */
+	{
+		*CRTC_R07 = Mmul2(V_SYNC_MAX) + 8;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
+	}
+	else				/* ノンインターレースモードの場合(15kHz) */
+	{
+		*CRTC_R07 = V_SYNC_MAX;			/* 縦の表示範囲を決める(画面下のゴミ防止) */
+	}
+#endif
 	*CRTC_R07 = V_SYNC_MAX;	/* 縦の表示範囲を決める(画面下のゴミ防止) */
 //										   FEDCBA9876543210
 	*CRTC_R21 = Mbset(*CRTC_R21, 0x03FF, 0b0000000000000000);	/* CRTC R21 */
@@ -513,29 +665,32 @@ int16_t CRT_INIT(void)
 #endif
 	/* CRTの設定 */
 	/* 画面（オフセットなし） */
-	g_stCRT[0].view_offset_x	= X_MIN_DRAW;
-	g_stCRT[0].view_offset_y	= Y_MIN_DRAW;
-	g_stCRT[0].hide_offset_x	= X_MIN_DRAW;
-	g_stCRT[0].hide_offset_y	= Y_MIN_DRAW + Y_OFFSET;
-	g_stCRT[0].BG_offset_x		= 0 + SP_X_OFFSET;
-	g_stCRT[0].BG_offset_y		= 0 + SP_Y_OFFSET;
+	stDat.view_offset_x	= X_MIN_DRAW;
+	stDat.view_offset_y	= Y_MIN_DRAW;
+	stDat.hide_offset_x	= X_MIN_DRAW;
+	stDat.hide_offset_y	= Y_MIN_DRAW + Y_OFFSET;
+	stDat.BG_offset_x	= SP_X_OFFSET;
+	stDat.BG_offset_y	= Y_HORIZON_0 + SP_Y_OFFSET;
+	SetCRT(stDat , 0);
+	
+	/* 画面（オフセットあり 表示：上側） */
+	stDat.view_offset_x	= X_MIN_DRAW + X_OFFSET;
+	stDat.view_offset_y	= Y_MIN_DRAW;
+	stDat.hide_offset_x	= X_MIN_DRAW + X_OFFSET;
+	stDat.hide_offset_y	= Y_MIN_DRAW + Y_OFFSET;
+	stDat.BG_offset_x	= 0;
+	stDat.BG_offset_y	= Y_HORIZON_1;
+	SetCRT(stDat , 1);
 	
 	/* 画面（オフセットあり 表示：下側） */
-	g_stCRT[1].view_offset_x	= X_MIN_DRAW + X_OFFSET;
-	g_stCRT[1].view_offset_y	= Y_MIN_DRAW + Y_OFFSET;
-	g_stCRT[1].hide_offset_x	= X_MIN_DRAW + X_OFFSET;
-	g_stCRT[1].hide_offset_y	= Y_MIN_DRAW;
-	g_stCRT[1].BG_offset_x		= 0;
-	g_stCRT[1].BG_offset_y		= 0;
+	stDat.view_offset_x	= X_MIN_DRAW + X_OFFSET;
+	stDat.view_offset_y	= Y_MIN_DRAW + Y_OFFSET;
+	stDat.hide_offset_x	= X_MIN_DRAW + X_OFFSET;
+	stDat.hide_offset_y	= Y_MIN_DRAW;
+	stDat.BG_offset_x	= 0;
+	stDat.BG_offset_y	= Y_HORIZON_1;
+	SetCRT(stDat , 2);
 
-	/* 画面（オフセットあり 表示：上側） */
-	g_stCRT[2].view_offset_x	= X_MIN_DRAW + X_OFFSET;
-	g_stCRT[2].view_offset_y	= Y_MIN_DRAW;
-	g_stCRT[2].hide_offset_x	= X_MIN_DRAW + X_OFFSET;
-	g_stCRT[2].hide_offset_y	= Y_MIN_DRAW + Y_OFFSET;
-	g_stCRT[2].BG_offset_x		= 0;
-	g_stCRT[2].BG_offset_y		= 0;
-	
 	Set_CRT_Contrast(-1);	/* コントラスト初期化 */
 	
 	return ret;
@@ -675,6 +830,210 @@ int16_t wait_v_sync(void)
 	while((*pGPIP) & GP_V_SYNC);
 	while(!((*pGPIP) & GP_V_SYNC));
 	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+uint16_t CRTC_Rastar_FirstPos(void)
+{
+	return (uint16_t)*CRTC_R06;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+uint16_t CRTC_Rastar_EndPos(void)
+{
+	return (uint16_t)*CRTC_R07;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_Rastar_SetPos(uint16_t pos)
+{
+	int16_t ret = 0;
+	uint16_t buf;
+	buf = (pos & Bit_Mask_10);
+	*CRTC_R09 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_T_Scroll(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_10);
+	*CRTC_R10 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_10);
+	*CRTC_R11 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G0_Scroll_4(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R12 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R13 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G1_Scroll_4(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R14 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R15 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G2_Scroll_4(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R16 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R17 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G3_Scroll_4(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R18 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R19 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G0_Scroll_8(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R12 = (uint16_t)buf;
+	*CRTC_R14 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R13 = (uint16_t)buf;
+	*CRTC_R15 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G1_Scroll_8(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R16 = (uint16_t)buf;
+	*CRTC_R18 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R17 = (uint16_t)buf;
+	*CRTC_R19 = (uint16_t)buf;
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t CRTC_G0_Scroll_16(int16_t pos_x, int16_t pos_y)
+{
+	int16_t ret = 0;
+
+	int16_t buf;
+	buf = (pos_x & Bit_Mask_9);
+	*CRTC_R12 = (uint16_t)buf;
+	*CRTC_R14 = (uint16_t)buf;
+	*CRTC_R16 = (uint16_t)buf;
+	*CRTC_R18 = (uint16_t)buf;
+
+	buf = (pos_y & Bit_Mask_9);
+	*CRTC_R13 = (uint16_t)buf;
+	*CRTC_R15 = (uint16_t)buf;
+	*CRTC_R17 = (uint16_t)buf;
+	*CRTC_R19 = (uint16_t)buf;
+
 	return ret;
 }
 

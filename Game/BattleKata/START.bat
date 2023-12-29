@@ -2,7 +2,7 @@ ECHO OFF
 JOYDRV3.X data\JOYDRV3.CNF
 MACSDRV116.X
 MOON.x -f1 -m16
-ZMUSIC.X -M -N -T128 -W0 -Sdata\music\68SND.ZMS -Bdata\se\BK.ZPD
+ZMUSIC.X -M -N -T128 -W0 -Sdata\music\68SND.ZMS
 BattleKata.x
 ZMUSIC.X -R
 MOON.x -r

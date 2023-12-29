@@ -13,8 +13,7 @@
 #include "IF_MUSIC.h"
 #include "IF_FileManager.h"
 
-#define FM_CH_MAX	(8)
-#define FM_USE_CH	(1)
+#define FM_USE_CH	(8)
 #define MML_BUF		(128)
 #define MML_BUF_N	(2048)
 
@@ -43,10 +42,9 @@
 int8_t		music_list[MUSIC_MAX][256]	=	{0};
 uint32_t	m_list_max	=	0u;
 
-#if		ZM_V2 == 1
-#elif	ZM_V3 == 1
+#if		((ZM_V2 == 1) || (ZM_V3 == 1))
 	int8_t	*music_dat[MUSIC_MAX];
-	static int32_t	music_dat_size[MUSIC_MAX]	=	{0};
+	static size_t	music_dat_size[MUSIC_MAX]	=	{0};
 #elif	MC_DRV == 1
 #else
 	#error "No Music Lib"
@@ -57,7 +55,7 @@ uint32_t	m_list_max	=	0u;
 	int8_t		se_list[SOUND_MAX][256]	=	{0};
 	uint32_t	s_list_max	=	0u;
 	int8_t		*se_dat[SOUND_MAX];
-	static int32_t	se_dat_size[SOUND_MAX]	=	{0};
+	static size_t	se_dat_size[SOUND_MAX]	=	{0};
 	static int32_t	se_dat_addr[SOUND_MAX]	=	{0};
 #elif	MC_DRV == 1
 #else
@@ -66,11 +64,8 @@ uint32_t	m_list_max	=	0u;
 
 int8_t		adpcm_list[ADPCM_MAX][256]	=	{0};
 uint32_t	p_list_max	=	0u;
-#if		(ZM_V2 == 1) || (ZM_V3 == 1)
-#else
 int8_t		*adpcm_dat[ADPCM_MAX];
-static int32_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
-#endif
+static size_t	adpcm_dat_size[ADPCM_MAX]	=	{0};
 
 uint8_t	SE_Data[] = {	/* 構造体にした方がよい？ */
 //		0x01,										/* (+1)ZMDの構造 */
@@ -112,8 +107,11 @@ int32_t Music_Play(uint8_t);
 int32_t Music_Stop(void);
 int32_t FM_SE_Play(uint8_t);
 int32_t FM_SE_Play_Fast(uint8_t);
+int32_t SE_Play(uint8_t);
+int32_t SE_Stop(void);
 int32_t ADPCM_Play(uint8_t);
 int32_t ADPCM_Stop(void);
+int32_t ADPCM_SNS(void);
 int32_t Get_ZMD_Trak_Head(uint8_t *, int16_t);
 int32_t M_SetMusic(uint32_t);
 int32_t M_Play(int16_t, int16_t);
@@ -134,9 +132,11 @@ void Init_Music(void)
 	uint32_t	unZmusicVer;
 	uint32_t	unZmusicVerNum;
 #endif
+	int8_t Ch, Trk;
 	int8_t	data_b;
 	int32_t	nSysStat;
 
+	puts("Music Init...");
 	/* 機種判別 */
 	data_b = _iocs_b_bpeek((int32_t *)0xCBC);	/* 機種判別 */
 	//printf("機種判別(MPU680%d0)\n", data_b);
@@ -157,7 +157,7 @@ void Init_Music(void)
 		puts("Music Ver chk...");
 #if		ZM_V2 == 1
 		unZmusicVer = zm_ver();
-		puts("Music Ver chk e...");
+		printf("zm_ver = 0x%x\n", unZmusicVer);
 		if(unZmusicVer == 0)		/* 0:常駐ナシ */
 		{
 			puts("Z-MUSICを常駐してください。");
@@ -208,48 +208,53 @@ void Init_Music(void)
 		}
 #endif
 	}	
-	
+
 	/* サウンド初期化 */
-	puts("Music Init...");
 #if		ZM_V2 == 1
 	m_init();		/* 初期化 */
 	m_ch("fm");		/* FM */
-	for(i = 0; i < 8; i++)
+#if 1
+	for(i = 0; i < 8; i++)	/* ch8 をのぞく */
 	{
 		int32_t	err = 0;
-		uint16_t uCh, uTrk;
 
-		uCh = i + 1;
-		uTrk = i + 1;
+		Ch = i + 1;
+		Trk = 60 + Ch;
 		
 		/* トラックバッファ設定 */
-		err = m_alloc( uTrk, MML_BUF_N );	/* trk(1-80) */
+		err = m_alloc( Trk, MML_BUF_N );	/* trk(1-80) */
 		if(err != 0)
 		{
-			printf("m_alloc error %d-(%hd,%d)\n", err, uTrk, MML_BUF_N);
+			printf("m_alloc error %d-(%hd,%d)\n", err, Trk, MML_BUF_N);
 		}
 		/* チャンネルとトラックの割り付け */
-		err = m_assign( uCh, uTrk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
+		err = m_assign( Ch, Trk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
 		if(err != 0)
 		{
 			printf("m_assign error %d\n", err);
 		}
+		err = m_free(Trk);
+		if(err < 0)
+		{
+			printf("m_free size %d\n", err);
+		}
 	}
+#endif
+
 #elif	ZM_V3 == 1
 	ret = zm_init(0);		/* 初期化 */
 	printf("zm_init = %d\n", ret);
 #elif	MC_DRV == 1
 	/* 何もしない */
 #else
-	#error "No Music Lib"
+	//#error "No Music Lib"
 #endif
 
 	Music_Stop();	/* 音楽停止 */
 	
 	/* BGM */
-#if		ZM_V2 == 1
+#if		((ZM_V2 == 1) || (ZM_V3 == 1))
 	/* 何もしない */
-#elif	ZM_V3 == 1
 	for(i = 0; i < m_list_max; i++)
 	{
 		int32_t	FileSize;
@@ -303,10 +308,12 @@ void Init_Music(void)
 	/* PDX登録 */
 #else
 	/* No Driver */
+#endif
+
 	puts("Music ADPCM...");
 	for(i = 0; i < p_list_max; i++)
 	{
-	#if		ZM_V2 == 1
+#if	1
 		int32_t	FileSize;
 		
 		GetFileLength(adpcm_list[i], &FileSize);
@@ -314,8 +321,9 @@ void Init_Music(void)
 		memset(adpcm_dat[i], 0, FileSize);
 		/* メモリに登録 */
 	 	adpcm_dat_size[i] = (int32_t)File_Load(adpcm_list[i], adpcm_dat[i], sizeof(int8_t), FileSize);
-		//printf("ADPCM File %2d = %s = size(%d[byte]=%d)\n", i, adpcm_list[i], adpcm_dat_size[i], FileSize);
-	#elif		ZM_V3 == 1
+		printf("ADPCM File %2d = %s = size(%d[byte]=%d)\n", i, adpcm_list[i], adpcm_dat_size[i], FileSize);
+#else
+	#if		ZM_V3 == 1
 		/* ADPCM登録 */
 		static int8_t	*adpcm_addr[ADPCM_MAX];
 		sprintf( sTONE, "%s", "test" );
@@ -335,8 +343,8 @@ void Init_Music(void)
 		*/
 		printf("ADPCM File %2d = %s = addr(0x%x)\n", i, adpcm_list[i], adpcm_addr[i]);
 	#endif
-	}
 #endif
+	}
 }
 
 /*===========================================================================================*/
@@ -372,12 +380,43 @@ void Exit_Music(void)
 int32_t Music_Play(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
+#if 0	
+	struct	_regs	stInReg = {0}, stOutReg = {0};
+	uint32_t	retReg;
+#endif
+
 	if(bPlayNum > m_list_max)return -1;
 
+	Music_Stop();	/* 音楽停止 */
+
 #if		ZM_V2 == 1
-	ret = zmd_play(&music_list[bPlayNum][0]);	
+#if 0	
+	stInReg.d0 = 0xF0;						/* ZMUSIC.XによるIOCSコール */
+	stInReg.d1 = 0x11;						/* play_cnv_data $11（ZMUSIC内のファンクションコール） */
+	stInReg.d2 = music_dat_size[bPlayNum];	/* d2.l＝データ総サイズ */
+//	stInReg.d2 = 0;							/* d2.l＝0の場合はドライバ内にデータを転送せず即演奏(高速応答) */
+	stInReg.a1 = (int32_t)&music_list[bPlayNum][7];	/* a1.l＝演奏データ格納アドレス(備考参照) */
+//	stInReg.a1 = (int32_t)&SE_Data[0];		/* a1.l＝演奏データ格納アドレス(備考参照) */
+/* 備考：  ＺＭＤの構造
+	Offset  ＋0    :$10(.b)        ←偶数アドレス}
+	＋1～＋6:'ZmuSiC'                           }メモリ上に無くても構わない
+	＋7    :Version Number(.b)     ←a1.lで指し示すべきアドレス(奇数アドレス)
+	なお、内部フォーマットについての詳しい解説はMEASURE12参照 */
+
+	retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
+#else
+//	printf("Music File %2d = %s\n", bPlayNum, music_list[bPlayNum]);
+	ret = zmd_play(&music_list[bPlayNum][0]);
+	if(ret != 0)
+	{
+		printf("Music File %2d = %s\n", bPlayNum, music_list[bPlayNum]);
+		printf("zmd_play error %d\n", ret);
+	}
+#endif
+
 #elif	ZM_V3 == 1
 	ret = zm_play_zmd(music_dat_size[bPlayNum], &music_dat[bPlayNum][0]);
+	printf("Music File %2d = %s = size(%d[byte])\n", bPlayNum, music_list[bPlayNum], music_dat_size[bPlayNum]);
 #elif	MC_DRV == 1
 	MC_MMCP_PLAY(&music_list[bPlayNum][0]);
 #else
@@ -402,7 +441,11 @@ int32_t Music_Stop(void)
 	int32_t	ret=0;
 	
 #if		ZM_V2 == 1
-	m_stop(0,0,0,0,0,0,0,0,0,0);
+	ret = m_stop(0,0,0,0,0,0,0,0,0,0);
+	if(ret != 0)
+	{
+		printf("m_stop %d\n", ret);
+	}
 #elif	ZM_V3 == 1
 	zm_stop_all();
 #elif	MC_DRV == 1
@@ -467,8 +510,8 @@ int32_t FM_SE_Play_Fast(uint8_t bPlayNum)
 
 	if(bPlayNum > m_list_max)return -1;
 
-	bCh		= 6;
-	bTrk	= 6;
+	bCh = FM_USE_CH;
+	bTrk = 60 + bCh;
 	
 	if(m_stat(bCh) != 0u)	/* bChが演奏中かどうか判定 */
 	{
@@ -530,8 +573,8 @@ int32_t FM_SE_Play_Fast(uint8_t bPlayNum)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-/* (AD)PCM効果音の演奏 */
-int32_t ADPCM_Play(uint8_t bPlayNum)
+/* ドライバ経由(AD)PCM効果音の演奏 */
+int32_t SE_Play(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
 	struct	_regs	stInReg = {0}, stOutReg = {0};
@@ -542,7 +585,7 @@ int32_t ADPCM_Play(uint8_t bPlayNum)
 	stInReg.d1 = 0x14;				/* se_adpcm2 $14（ZMUSIC内のファンクションコール） */
 	stInReg.d2 = bPlayNum;			/* ノート番号 */
 	stInReg.d3 = 0xFF0403;			/* PAN,FRQ,LV */
-//	引数:	d2.l＝ノート番号(0～511)
+//	引数:	d2.l         ＝ノート番号(0～511)
 //			d3(bit00～07)＝PAN(0－3)
 //			d3(bit08～15)＝FRQ(0－4)
 //			d3(bit16～23)＝優先レベル(低0～255高)	
@@ -622,8 +665,8 @@ int32_t ADPCM_Play(uint8_t bPlayNum)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-/* (AD)PCM効果音の停止 */
-int32_t ADPCM_Stop(void)
+/* ドライバ経由(AD)PCM効果音の停止 */
+int32_t SE_Stop(void)
 {
 	int32_t	ret=0;
 	
@@ -638,6 +681,67 @@ int32_t ADPCM_Stop(void)
 		_iocs_adpcmmod(0);	/* 終了 */
 	}
 #endif
+
+	return	ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* (AD)PCM効果音の演奏 */
+int32_t ADPCM_Play(uint8_t bPlayNum)
+{
+	int32_t	ret=0;
+	
+	if(bPlayNum > p_list_max)return ret;
+
+	/* 色々試したけどIOCSライブラリの方を使う */
+	_iocs_adpcmout(adpcm_dat[bPlayNum], Mmul256(4) + 3, adpcm_dat_size[bPlayNum]);	/* 再生 */
+
+	return	ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* (AD)PCM効果音の停止 */
+int32_t ADPCM_Stop(void)
+{
+	int32_t	ret=0;
+	
+	if(_iocs_adpcmsns() != 0)	/* 何かしている */
+	{
+		_iocs_adpcmmod(1);	/* 中止 */
+		_iocs_adpcmmod(0);	/* 終了 */
+	}
+
+	return	ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+/* (AD)PCM効果音の状態 */
+int32_t ADPCM_SNS(void)
+{
+	int32_t	ret=0;
+	
+	if(_iocs_adpcmsns() != 0)	/* 何かしている */
+	{
+		ret = 1;
+	}
 
 	return	ret;
 }
@@ -678,28 +782,24 @@ int32_t	M_SetMusic(uint32_t uNum)
 {
 	int32_t	ret = 0;
 #if		ZM_V2 == 1
-	uint32_t	i = 0u;
 	int32_t	err = 0;
 	
 	/* トラックの割り付け変更 */
-	for(i = 0; i < FM_USE_CH; i++)
+	int32_t	ch, trk;
+		
+	ch = FM_USE_CH;
+	trk = 60 + ch;
+		
+	err = m_alloc( trk, MML_BUF );
+	if(err != 0)
 	{
-		int32_t	ch, trk;
+		printf("m_alloc error %d-(%d,%d)\n", err, trk, MML_BUF);
+	}
 		
-		ch = (FM_CH_MAX - FM_USE_CH + 1) + i;
-		trk = 60 + ch;
-		
-		err = m_alloc( trk, MML_BUF );
-		if(err != 0)
-		{
-			printf("m_alloc error %d-(%d,%d)\n", err, trk, MML_BUF);
-		}
-		
-		err = m_assign( ch, trk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
-		if(err != 0)
-		{
-			printf("m_assign error %d\n", err);
-		}
+	err = m_assign( ch, trk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
+	if(err != 0)
+	{
+		printf("m_assign error %d\n", err);
 	}
 
 #endif	
@@ -722,72 +822,74 @@ int32_t	M_Play(int16_t Num, int16_t Key)
 	
 	uint8_t	uMML[MML_BUF] = {0};
 	int32_t	err = 0;
-	int32_t	uCh = 8;
-	int32_t	uTrk = 8;
+	int32_t	Ch = 0;
+	int32_t	Trk = 0;
 	static uint8_t ubCount = 0u;
 
-	err = m_alloc( uTrk, MML_BUF );	/* trk(1-80) */
+	Ch = FM_USE_CH;
+	Trk = Ch;
+
+	err = m_alloc( Trk, MML_BUF );	/* trk(1-80) */
 	if(err != 0)
 	{
-		printf("m_alloc error %d-(%d,%d)\n", err, uTrk, MML_BUF);
+		printf("m_alloc error %d-(%d,%d)\n", err, Trk, MML_BUF);
 	}
+
+
+	switch(Num)
 	{
-		switch(Num)
+		case 0:
 		{
-			case 0:
-			{
-//				strcpy(uMML, "t100@200v15o0k0d+1");	/* OK */
-				strcpy(uMML, "@34@V127o4(g2<g)");	/* OK */
-				break;
-			}
-			case 1:
-			{
-				strcpy(uMML, "@34@V127o5(g>g2)");	/* OK */
-				break;
-			}
-			case 2:
-			{
-				strcpy(uMML, "v15o4(g2<g)");	/* OK */
-				break;
-			}
-			case 3:
-			{
-				sprintf(uMML, "v15o1k %d d+1", Key % 80);	/* OK */
-				break;
-			}
-			case 4:
-			{
-				sprintf(uMML, "v15(o3d*96,e),48", Key % 80);	/* OK */
-				break;
-			}
-			default:
-			{
-				sprintf(uMML, "@29v15o5l4q1@k%hd C+&", Key );	/* OK */
-				break;
-			}
+//			strcpy(uMML, "t100@200v15o0k0d+1");	/* OK */
+			strcpy(uMML, "@34@V127o4(g2<g)");	/* OK */
+			break;
 		}
+		case 1:
+		{
+			strcpy(uMML, "@34@V127o5(g>g2)");	/* OK */
+			break;
+		}
+		case 2:
+		{
+			strcpy(uMML, "v15o4(g2<g)");	/* OK */
+			break;
+		}
+		case 3:
+		{
+			sprintf(uMML, "v15o1k %d d+1", Key % 80);	/* OK */
+			break;
+		}
+		case 4:
+		{
+			sprintf(uMML, "v15(o3d*96,e),48", Key % 80);	/* OK */
+			break;
+		}
+		default:
+		{
+			sprintf(uMML, "@29v15o5l4q1@k%hd C+&", Key );	/* OK */
+			break;
+		}
+
 	}
-	err = m_assign( uCh, uTrk );	/* ch(FM:1-8 ADPCM:9 MIDI:10-25 PCM8:26-32) trk(1-80) */
+
+	err = m_trk( Trk, uMML );	
 	if(err != 0)
 	{
-		printf("m_assign error %d\n", err);
+//		printf("m_trk error %d-(%d,%s,%d)\n", err, Trk, uMML, ubCount);
 	}
-	err = m_trk( uTrk, uMML );	
-	if(err != 0)
-	{
-		printf("m_trk error %d-(%d,%s,%d)\n", err, uTrk, uMML, ubCount);
-	}
+	
 	/* 注意：X-BASICのm_playの引数は、チャンネル。Z-MUSICは、トラック番号 */
 	/* 10個の引数はチャンネルを示すので再生したいトラックNoを設定する */
-	err = m_play(uTrk,'NASI','NASI','NASI','NASI','NASI','NASI','NASI','NASI','NASI');	/* 1 */
+	err = m_play(Trk,'NASI','NASI','NASI','NASI','NASI','NASI','NASI','NASI','NASI');	/* 1 */
 	if(err != 0)
 	{
-		printf("m_play error %d %d %d\n", err, uCh, uTrk);
+		printf("m_play error %d %d %d\n", err, Ch, Trk);
 	}
 	
 	ubCount++;
 	
-#endif	
+#endif
+
 	return ret;
 }
 /*===========================================================================================*/
