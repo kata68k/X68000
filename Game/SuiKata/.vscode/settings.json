@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "xsp2lib.h": "c",
+        "if_task.h": "c",
+        "XSP2lib.H": "cpp"
+    }
+}

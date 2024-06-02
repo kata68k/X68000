@@ -1,0 +1,5 @@
+0= null.pic 0 0
+1= SUIKATA_T_256.PIC 1 -1
+2= TITLE_256.pic 1 -1
+3= TITLE_256.pic 1 -1
+
