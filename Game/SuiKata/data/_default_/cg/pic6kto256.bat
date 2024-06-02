@@ -1,0 +1,7 @@
+ECHO ‰æ‘œ‚ð‚P‚UF‚É•ÏŠ·‚µ‚Ä•Û‘¶‚µ‚Ü‚·
+SCREEN 1,3
+APICG %1
+PS16G -512 -256
+APICG -S0,0,%3,%4 %2
+APICG -PP %2
+

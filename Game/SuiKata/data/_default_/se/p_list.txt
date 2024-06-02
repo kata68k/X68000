@@ -1,0 +1,33 @@
+;	/* SELECT音 */
+0 = BOM2.PCM
+;	/* 終了音 */
+1 = CLR13.PCM
+;	/* ゲームクリア */
+2 = CLR14.pcm
+;	/* キャンセル音 */
+3 = CLR15.PCM
+;	/* 決定音 */
+4 = Fpcm17.pcm
+;	/* SET */
+5 = GET.PCM
+;	/* shot */
+6 = GMSE_008.pcm
+;	/* 連鎖音 */
+7 = KW_SE14.PCM
+;	/* 連鎖音 */
+8 = KW_SE16.PCM
+;	/* 連鎖音 */
+9 = KW_SE17.PCM
+;	/* 連鎖音 */
+10 = KW_SE18.PCM
+;	/* 連鎖音 */
+11 = KW_SE19.PCM
+;	/* 連鎖音 */
+12 = KW_SE3.PCM
+;	/* 連鎖音 */
+13 = KW_SE6.PCM
+;	/* 連鎖音 */
+14 = KW_SE9.PCM
+;	/* 連鎖音 */
+15 = KW_SE10.PCM
+

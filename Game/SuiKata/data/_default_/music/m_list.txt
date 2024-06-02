@@ -1,0 +1,21 @@
+;初期化用
+0 = init.ZMD
+;停止用
+1 = STOP.ZMD
+;ローディング
+2 = DAKYOK16.ZMD
+;タイトル
+3 = DAKYOK17.ZMD
+;メイン１
+4 = DAKYOK18.ZMD
+;メイン２
+5 = DAKYOK20.ZMD
+;ゲームオーバー
+6 = DAKYOK21.ZMD
+;設定
+7 = DAKYOK22.ZMD
+;ハイスコア
+8 = DAKYOK23.ZMD
+;ランキング表示
+9 = DAKYOK24.ZMD
+
