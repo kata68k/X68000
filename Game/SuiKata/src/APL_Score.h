@@ -3,6 +3,8 @@
 
 #include <usr_define.h>
 
+#define		COMBO_TIMEOUT				(1000)
+
 /* \‘¢‘Ì’è‹` */
 typedef struct{
 	uint64_t	ulScoreAdd;

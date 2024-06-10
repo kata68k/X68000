@@ -66,8 +66,7 @@ enum
 #define		START_LOGO_INTERVAL_TIME	(1000)
 #define		PLAYER_INPUT_INTERVAL_TIME	(800)
 #define		COMBO_RECOVER_COUNT			(5)
-#define		COMBO_TIMEOUT				(1000)
-#define		COMBO_INTERVAL_SE_TIME		(64)
+#define		COMBO_INTERVAL_SE_TIME		(500)
 #define		GAL_ANIME_INT_TIME			(112)
 #define		DEMO_LOGO_INTERVAL_TIME		(1000)
 #define		DEMO_START_END_TIME			(30000)
@@ -88,7 +87,7 @@ uint32_t	g_unTime_cal_PH = 0u;
 uint32_t	g_unTime_Pass = 0xFFFFFFFFul;
 int32_t		g_nSuperchk = 0;
 int32_t		g_nCrtmod = 0;
-int32_t		g_nMaxMemSize;
+int32_t		g_nMaxUseMemSize;
 int16_t		g_CpuTime = 0;
 uint8_t		g_mode;
 uint8_t		g_mode_rev;
@@ -283,7 +282,6 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 	int16_t i, j, k, m, n, p;
 //	int16_t width, height;
 	int16_t pal;
-	static uint32_t s_ComboTime = PASSTIME_INIT;
 
 	ST_PCG	*p_stPCG_new = NULL;
 
@@ -295,12 +293,6 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 	x1 = Mdiv2(x + p_stPCG_other->x);
 	y1 = Mdiv2(y + p_stPCG_other->y);
 
-
-	if(	GetPassTime(COMBO_TIMEOUT, &s_ComboTime) != 0u)	/* 1000ms経過 */
-	{
-		S_Set_Combo(0);	/* コンボカウンタ リセット */
-	}
-
 	/* 当たり判定 */
 	if( ((g_stBall[i].bSize)   == (g_stBall[j].bSize))	&&
 		((g_stBall[i].bStatus) == (g_stBall[j].bStatus)) )
@@ -311,8 +303,6 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 		{
 			return ret;
 		}
-
-		GetNowTime(&s_ComboTime);	/* コンボタイムアウトカウンタリセットで延長 */
 
 		/* 自分 */
 		g_stBall[i].bStatus++;
@@ -641,6 +631,8 @@ static void Ball_Check(int16_t nBallCount)
 
 	int16_t	sound = 0;
 	static uint32_t s_WaitTime = PASSTIME_INIT;
+	static uint8_t s_bErase = FALSE;
+	uint8_t bEraseTmp = FALSE;
 
 	uint8_t allRectanglesNonOverlapping;
 #if 0
@@ -772,7 +764,7 @@ static void Ball_Check(int16_t nBallCount)
 				{
 					p_stPCG_other->dy = Y_ACC2;
 				}
-			}
+			}			
 #if 1
 			xs = x + dw;
 			ys = y + dh;
@@ -783,11 +775,19 @@ static void Ball_Check(int16_t nBallCount)
 			ys1 = y1 + dh1;
 			xe1 = x1 + width1 - dw1;
 			ye1 = y1 + height1 - dh1;
-
-			if( (xs < xe1) && (xe > xs1) && (ys < ye1) && (ye > ys1) )
 #else
-			if(distance < distance_src)		/* 距離がさらに近い */
+			xs = x;
+			ys = y;
+			xe = x + width;
+			ye = y + height;
+
+			xs1 = x1;
+			ys1 = y1;
+			xe1 = x1 + width1;
+			ye1 = y1 + height1;
 #endif
+			if( (xs < xe1) && (xe > xs1) && (ys < ye1) && (ye > ys1) )
+//			if(distance < distance_src)		/* 距離がさらに近い */
 			{
 				if(p_stPCG->dy != 0)		/* 停止 */
 				{
@@ -814,9 +814,26 @@ static void Ball_Check(int16_t nBallCount)
 		}
 	}
 
+	if(line != g_TB_GameLevel[g_nGameLevel])
+	{
+		g_Boder_line = line;
+	}
+
 #ifdef DEBUG	/* デバッグコーナー */
 //	printf("Ball_Check st2(%d)\n", count);
 #endif
+
+	if(s_bErase == TRUE)
+	{
+		if(	GetPassTime(COMBO_INTERVAL_SE_TIME, &s_WaitTime) != 0u  )	/* 500ms経過 */
+		{
+			s_bErase = FALSE;
+		}
+		else
+		{
+			//return;
+		}
+	}
 
     allRectanglesNonOverlapping = FALSE;
 
@@ -869,10 +886,10 @@ static void Ball_Check(int16_t nBallCount)
 			width	= Mmul16(p_stPCG->Pat_w);
 			height	= Mmul16(p_stPCG->Pat_h);
 
-			cx = x + Mdiv2(width); 
-			cy = y + Mdiv2(height);
 			w = Mdiv2(width);
 			h = Mdiv2(height);
+			cx = x + w; 
+			cy = y + h;
 
 			xs = x;// + w;
 			ys = y;// + h;
@@ -888,10 +905,10 @@ static void Ball_Check(int16_t nBallCount)
 			width1	= Mmul16(p_stPCG_other->Pat_w);
 			height1	= Mmul16(p_stPCG_other->Pat_h);
 
-			cx1 = x1 + Mdiv2(width1); 
-			cy1 = y1 + Mdiv2(height1);
 			w1 = Mdiv2(width1);
 			h1 = Mdiv2(height1);
+			cx1 = x1 + w1; 
+			cy1 = y1 + h1;
 
 			xs1 = x1;// + w1;
 			ys1 = y1;// + h1;
@@ -901,186 +918,176 @@ static void Ball_Check(int16_t nBallCount)
 			Prex = x;
 			Prey = y;
 
-			if(Ball_Combine(p_stPCG, i, p_stPCG_other, j) != 0)	/* 合体成立 */
+			if(s_bErase == FALSE)
 			{
-				if(	(ADPCM_SNS() == 0) || 					/* 効果音停止中 */
-					(GetPassTime(COMBO_INTERVAL_SE_TIME, &s_WaitTime) != 0u ) )	/* 64ms経過 */
+				if( Ball_Combine(p_stPCG, i, p_stPCG_other, j) != 0 )	/* 合体成立 */
 				{
 					ADPCM_Play(Mmin(S_Get_Combo() + 7 - 1, p_list_max - 1));	/* 連鎖音 */
-				}	
+					s_bErase = TRUE;
+					bEraseTmp = TRUE;
+				}
+				else
+				{
+					bEraseTmp = FALSE;
+				}
 			}
 			else
 			{
-				int16_t *pmx, *pmy;
-				// 移動先の候補の位置
-				int16_t mx[] = {  0, 4,-4, 0, 0 };	// 右、左、上、下、０
-				int16_t my[] = {  4, 0, 0, 4, 0 };	// 右、左、上、下、０
+				bEraseTmp = FALSE;
+			}
 
-				pmx = &mx[0];	/* 右優先 */
-				pmy = &my[0];	/* 右優先 */
+			if(bEraseTmp == FALSE)
+			{
+#if 0
+				distance = APL_distance(cx, cy, cx1, cy1);
+				distance_src = Mmin((w + w1), (h + h1));
 
-				distance_min = 0xFFFFFFFF;
-
-				// 移動先の候補を試す
-				for(l = 0; l < 5; l++)
+				if(distance < distance_src)		/* 距離が近い */
 				{
-					x += *(pmx + l) * w;
-					y += *(pmy + l) * h;
-
-					// 移動先が他の矩形と重なっていないかチェック
-#if 1					
-					distance = APL_distance(x + Mdiv2(width), y + Mdiv2(height), cx1, cy1);
-					distance_src = Mmin((w + w1), (h + h1));
-					distance_src *= distance_src;
-					distance_src = (Mdiv2(distance_src) - Mdiv4(distance_src)); 
-
-					if(distance > distance_src)		/* 距離が離れた */
-#else
-					xs = Mmax(x, X_POS_MIN);// + w;
-					ys = Mmax(y, 0);// + h;
-					xe = Mmin(x + width, X_POS_MAX);// - w;
-					ye = Mmin(y + height, g_TB_GameLevel[g_nGameLevel]);// - h;
-
-					if( (xs < xe1) && (xe > xs1) && (ys < ye1) && (ye > ys1) ) 
-#endif
-					{
-						allRectanglesNonOverlapping = FALSE;	/* オーバーラップ回避 */
-#if 0						
-						if( (g_stBall[i].bSize) == (g_stBall[j].bSize) )
-						{
-							dx  = *(pmx + pos) *  X_ACC;
-							dy  = *(pmy + pos) *  Y_ACC2;
-
-							dx1 = *(pmx + pos) * -X_ACC;
-							dy1 = *(pmy + pos) * -Y_ACC2;
-						}
-						else if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )
-						{
-							dx  = *(pmx + pos) *  X_ACC;
-							dy  = *(pmy + pos) *  Y_ACC2;
-
-							dx1 = 0;
-							dy1 = 0;
-						}
-						else
-						{
-							dx  = 0;
-							dy  = 0;
-
-							dx1 = 0;
-							dy1 = 0;
-						}
-#endif
-						if(distance < distance_min)
-						{
-							distance_min = distance;
-
-							if( (g_stBall[i].bSize) == (g_stBall[j].bSize) )	/* 同じサイズ */
-							{
-								if(cy < cy1)
-								{
-									dy   = -Y_ACC;
-									dy1  =  Y_ACC;
-								}
-								else
-								{
-									dy  =   Y_ACC;
-									dy1  = -Y_ACC;
-								}
-
-								if(cx < cx1)
-								{
-									dx   = -X_ACC;
-									dx1  =  X_ACC;
-								}
-								else
-								{
-									dx   =  X_ACC;
-									dx1  = -X_ACC;
-								}
-							}
-							else if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )	/* サイズが異なる */
-							{
-								if(cy < cy1)
-								{
-									dy   = -Y_ACC;
-									dy1  =  0;
-								}
-								else
-								{
-									dy  =   Y_ACC;
-									dy1  =  0;
-								}
-
-								if(cx < cx1)
-								{
-									dx   = -X_ACC;
-									dx1  =  0;
-								}
-								else
-								{
-									dx   =  X_ACC;
-									dx1  =  0;
-								}
-							}
-							else	/* j側が小さい */
-							{
-								if(cy < cy1)
-								{
-									dy   =  0;
-									dy1  =  Y_ACC;
-								}
-								else
-								{
-									dy   =  0;
-									dy1  =  -Y_ACC;
-								}
-
-								if(cx < cx1)
-								{
-									dx   = 0;
-									dx1  = X_ACC;
-								}
-								else
-								{
-									dx   = 0;
-									dx1  = -X_ACC;
-								}
-							}
-						}
-					}
-					else
-					{
-						/* 動けない */
-						if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )	/* サイズが異なる */
-						{
-							if(cy < cy1)
-							{
-								dy   = -Y_ACC;
-								dy1  =  Y_ACC;
-							}
-							else
-							{
-								dy  =  -Y_ACC;
-								dy1  =  0;
-							}
-						}
-						else
-						{
-							if(cy < cy1)
-							{
-								dy1  = Y_ACC;
-							}
-							else
-							{
-								dy  = Y_ACC;
-							}
-						}
-					}
-					// 位置を戻す
-					x = Prex;
-					y = Prey;
+					dy  =   0;
+					dy1  =  0;
 				}
+				else
+#endif
+				{
+					int16_t *pmx, *pmy;
+					// 移動先の候補の位置
+					int16_t mx[] = {  0, 4,-4, 0, 0 };	// 右、左、上、下、０
+					int16_t my[] = {  4, 0, 0, 4, 0 };	// 右、左、上、下、０
+
+					pmx = &mx[0];	/* 右優先 */
+					pmy = &my[0];	/* 右優先 */
+
+					distance_min = 0xFFFFFFFF;
+
+					// 移動先の候補を試す
+					for(l = 0; l < 5; l++)
+					{
+						x += *(pmx + l) * w;
+						y += *(pmy + l) * h;
+
+						// 移動先が他の矩形と重なっていないかチェック
+						distance = APL_distance(x + Mdiv2(width), y + Mdiv2(height), cx1, cy1);
+						distance_src = Mmin((w + w1), (h + h1));
+						distance_src *= distance_src;
+						distance_src = (Mdiv2(distance_src) - Mdiv4(distance_src)); 
+
+						if(distance > distance_src)		/* 距離が離れた */
+						{
+							allRectanglesNonOverlapping = FALSE;	/* オーバーラップ回避 */
+
+							if(distance < distance_min)
+							{
+								distance_min = distance;
+
+								if( (g_stBall[i].bSize) == (g_stBall[j].bSize) )	/* 同じサイズ */
+								{
+									if(cy < cy1)
+									{
+										dy   = -Y_ACC;
+										dy1  =  Y_ACC;
+									}
+									else
+									{
+										dy  =   Y_ACC;
+										dy1  = -Y_ACC;
+									}
+
+									if(cx < cx1)
+									{
+										dx   = -X_ACC;
+										dx1  =  X_ACC;
+									}
+									else
+									{
+										dx   =  X_ACC;
+										dx1  = -X_ACC;
+									}
+								}
+								else if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )	/* サイズが異なる */
+								{
+									if(cy < cy1)
+									{
+										dy   = -Y_ACC;
+										dy1  =  0;
+									}
+									else
+									{
+										dy  =   Y_ACC;
+										dy1  =  0;
+									}
+
+									if(cx < cx1)
+									{
+										dx   = -X_ACC;
+										dx1  =  0;
+									}
+									else
+									{
+										dx   =  X_ACC;
+										dx1  =  0;
+									}
+								}
+								else	/* j側が小さい */
+								{
+									if(cy < cy1)
+									{
+										dy   =  0;
+										dy1  =  Y_ACC;
+									}
+									else
+									{
+										dy   =  0;
+										dy1  =  -Y_ACC;
+									}
+
+									if(cx < cx1)
+									{
+										dx   = 0;
+										dx1  = X_ACC;
+									}
+									else
+									{
+										dx   = 0;
+										dx1  = -X_ACC;
+									}
+								}
+							}
+						}
+						else
+						{
+							/* 動けない */
+							if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )	/* サイズが異なる */
+							{
+								if(cy < cy1)
+								{
+									dy   = -Y_ACC;
+									dy1  =  Y_ACC;
+								}
+								else
+								{
+									dy  =  -Y_ACC;
+									dy1  =  0;
+								}
+							}
+							else
+							{
+								if(cy < cy1)
+								{
+									dy1  = Y_ACC;
+								}
+								else
+								{
+									dy  = Y_ACC;
+								}
+							}
+						}
+						// 位置を戻す
+						x = Prex;
+						y = Prey;
+					}
+				}
+
 				p_stPCG->x = x;
 				p_stPCG->y = y;
 				p_stPCG->dx = dx;
@@ -1137,11 +1144,6 @@ static void Ball_Check(int16_t nBallCount)
 #ifdef DEBUG	/* デバッグコーナー */
 //	printf("Ball_Check st3(%d)\n", count);
 #endif
-
-	if(line != g_TB_GameLevel[g_nGameLevel])
-	{
-		g_Boder_line = line;
-	}
 
 #ifdef DEBUG	/* デバッグコーナー */
 //	printf("Ball_Check ed(%d)\n", count);
@@ -1760,7 +1762,7 @@ int16_t main(int16_t argc, int8_t** argv)
 //				PutGraphic_To_Symbol12("PUSH A BUTTON TO START!", X_POS_MIN, 192, F_MOJI );			/* title画面入力待ち */
 				BG_TextPut("PUSH A BUTTON TO START!", 36, 224);
 //				PutGraphic_To_Symbol12("VERSION 0.0.4", X_POS_MAX, 244, F_MOJI );	/* Ver */
-				BG_TextPut("VER0.0.5", 192, 244);
+				BG_TextPut("VER0.0.6", 192, 244);
 
 				GetNowTime(&s_PassTime);	/* タイムアウトカウンタリセット */
 				GetNowTime(&s_DemoTime);	/* デモ開始カウンタリセット */
@@ -2127,7 +2129,7 @@ int16_t main(int16_t argc, int8_t** argv)
 
 				if(g_Boder_line < Y_POS_BD + 48)
 				{
-					if(S_Get_Combo() != 0)
+					if(S_IsUpdate_Combo() != 0)
 					{
 						if(S_Get_Combo() >= COMBO_RECOVER_COUNT)
 						{
@@ -2204,7 +2206,7 @@ int16_t main(int16_t argc, int8_t** argv)
 
 				if(g_Boder_line < Y_POS_BD)
 				{
-					if(S_Get_Combo() != 0)
+					if(S_IsUpdate_Combo() != 0)
 					{
 						if(S_Get_Combo() >= COMBO_RECOVER_COUNT)
 						{
@@ -2485,6 +2487,7 @@ int16_t main(int16_t argc, int8_t** argv)
 			unTime_cal_PH = Mmax(unTime_cal, unTime_cal_PH);
 			g_unTime_cal_PH = unTime_cal_PH;
 		}
+		GetFreeMem();	/* 空きメモリサイズ確認 */
 #endif
 	}
 	while( loop );
@@ -2506,6 +2509,9 @@ static void App_Init(void)
 {
 #ifdef DEBUG	/* デバッグコーナー */
 	puts("App_Init 開始");
+	g_nMaxUseMemSize = GetFreeMem();
+	printf("FreeMem(%d[kb])\n", g_nMaxUseMemSize);	/* 空きメモリサイズ確認 */
+	puts("App_Init メモリ");
 #endif
 
 	puts("App_Init FileList");
@@ -2672,6 +2678,7 @@ static void App_exit(void)
 	
 	MyMfree(0);				/* 全てのメモリを解放 */
 #ifdef DEBUG	/* デバッグコーナー */
+	printf("MaxUseMem(%d[kb])\n", g_nMaxUseMemSize - GetMaxFreeMem());
 	puts("App_exit メモリ");
 #endif
 

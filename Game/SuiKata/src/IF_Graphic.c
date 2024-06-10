@@ -1955,7 +1955,7 @@ int16_t G_Load_Mem(uint8_t bCGNum, int16_t posX, int16_t posY, uint16_t uArea)
 		if( ((posY + y) >= Y_MIN_DRAW) && ((posY + y) < Y_MAX_DRAW) )
 		{
 			/* アドレス算出 */
-			pDstGR = (uint16_t *)( DstGR_H + Mmul2(Mmul512(posY + y)) );
+			pDstGR = (uint16_t *)( DstGR_H + Mmul2(Mmul512(posY + y) + posX) );
 		}
 		else
 		{

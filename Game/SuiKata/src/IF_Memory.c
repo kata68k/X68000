@@ -186,10 +186,7 @@ int32_t	GetFreeMem(void)
 	mem = (int)_dos_malloc(-1);
 	ret	= Mdiv1024(mem-0x81000000);
 
-	if(g_nMaxFreeMem >= ret)
-	{
-		g_nMaxFreeMem = ret;
-	}
+	g_nMaxFreeMem = Mmin(ret, g_nMaxFreeMem);
 
 	return ret;
 }
@@ -203,11 +200,7 @@ int32_t	GetFreeMem(void)
 /*===========================================================================================*/
 int32_t	GetMaxFreeMem(void)
 {
-	int32_t ret = 0;
-
-	ret = g_nMaxFreeMem;
-
-	return ret;
+	return g_nMaxFreeMem;
 }
 
 #endif	/* IF_MEMORY_C */

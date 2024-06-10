@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <usr_macro.h>
+#include "BIOS_MFP.h"
 #include "APL_Score.h"
 #include "IF_Draw.h"
 #include "IF_FileManager.h"
@@ -43,6 +44,7 @@ static	int8_t	g_bUpdateScore[3];
 static	uint32_t g_uScoreRanking[10] = {0};
 static	int8_t  g_bNameRanking[10][5] = {0};
 static	uint16_t g_ComboCount_Old;
+static	uint32_t g_ComboTime = PASSTIME_INIT;
 
 /* 構造体定義 */
 
@@ -183,6 +185,11 @@ int16_t S_Set_Combo(int16_t uNum)
 {
 	int16_t	ret = 0;
 
+	if(uNum != 0)
+	{
+		GetNowTime(&g_ComboTime);	/* コンボタイムアウトカウンタリセットで延長 */
+	}
+	
 	g_ComboCount_Old = g_stScore.uCombo;	/* 前回値 */
 
 	g_stScore.uCombo = uNum;
@@ -217,7 +224,9 @@ int16_t S_IsUpdate_Combo(void)
 {
 	int16_t	ret = 0;
 
-	ret = (g_stScore.uCombo != g_ComboCount_Old);
+	ret = (g_stScore.uCombo > g_ComboCount_Old);
+
+	g_ComboCount_Old = g_stScore.uCombo;	/* 前回値 */
 
 	return ret;
 }
@@ -396,6 +405,11 @@ int16_t S_Clear_Score(void)
 int16_t S_Main_Score(void)
 {
 	int16_t	ret = 0;
+
+	if(	GetPassTime(COMBO_TIMEOUT, &g_ComboTime) != 0u)	/* 1000ms経過 */
+	{
+		S_Set_Combo(0);	/* コンボカウンタ リセット */
+	}
 
 	if(g_bUpdateScore[0] == TRUE)
 	{
