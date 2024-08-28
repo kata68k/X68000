@@ -63,7 +63,7 @@
 * PCM8A.X  
 * ZMUSIC.X ver2.08
 
-## [[Download]](https://github.com/kata68k/X68000/blob/master/Game/SuiKata/SUIKATA006.LZH)	ver0.0.6(2024/06/07)
+## [[Download]](https://github.com/kata68k/X68000/blob/master/Game/SuiKata/SUIKATA010.LZH)	ver0.1.0(2024/08/28)
 
 ## 履歴  
 * 2024/08/28	ver.0.1.0  
