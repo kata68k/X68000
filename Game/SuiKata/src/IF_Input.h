@@ -20,9 +20,9 @@
 #define KEY_RIGHT		(0x0002)
 #define KEY_UPPER		(0x0004)
 #define KEY_LOWER		(0x0008)
-#define KEY_A			(0x0010)
-#define KEY_B			(0x0020)
-#define KEY_b_ESC		(0x0040)
+#define KEY_b_ESC		(0x0010)
+#define KEY_b_Z			(0x0020)
+#define KEY_b_X			(0x0040)
 #define KEY_b_Q			(0x0080)
 #define KEY_b_M			(0x0100)
 #define KEY_b_SP		(0x0200)
@@ -65,7 +65,7 @@ typedef struct tagANALOG {
 	int16_t	btn_data;	/* ボタンデータ */
 } JOY_ANALOG_BUF;
 
-extern	int16_t	g_Input;
+extern	int32_t	g_Input;
 extern	int16_t	g_Input_P[2];
 extern	uint8_t	g_bAnalogStickMode;
 extern	uint8_t	g_bAnalogStickMode_flag;

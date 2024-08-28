@@ -252,8 +252,8 @@ void PCG_ON(void)
 #if  CNF_XSP
     	xsp_on();			/* XSP ON */
 
-		xsp_pcgmask_on(0, 0x2F);		/* 0-47 */		
-		xsp_pcgmask_on(0x80, 0xFF);		/* 128-255 */
+		xsp_pcgmask_on(0, Mmax(PCG_16x16_AREA - 1, 0));		/* 0-PCG_16x16_AREA-1 */		
+		xsp_pcgmask_on(0x80, 0xFF);							/* 128-255 */
 
 		xsp_pcgdat_set(pcg_dat, pcg_alt, sizeof(pcg_alt));  /* PCG データと PCG 配置管理をテーブルを指定 */
 
@@ -395,6 +395,11 @@ void PCG_END_SYNC(int16_t count)
 #else   /* CNF_XSP 0 */
     /* 垂直同期 */
 	wait_vdisp(count);	/* 約count／60秒待つ	*/
+#if CNF_VDISP
+#else
+	Timer_D_Less_NowTime();
+#endif
+
 #endif  /*CNF_XSP*/
 }
 

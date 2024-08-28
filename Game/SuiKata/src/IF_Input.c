@@ -10,6 +10,7 @@
 #include "IF_Input.h"
 #include "BIOS_MPU.h"
 #include "BIOS_MFP.h"
+#include "IF_MUSIC.h"
 
 #if CNF_JOYDRV360
 #include <JOYLIB3.H>
@@ -19,7 +20,7 @@ uint32_t	get_analog_data(uint32_t, JOY_ANALOG_BUF *);
 
 #define		IPUT_INTERVAL_TIME	(1000)
 
-int16_t		g_Input;
+int32_t		g_Input;
 int16_t		g_Input_P[2];
 int16_t		g_AnalogMode = 0xFFFF;
 uint8_t		g_bAnalogStickMode = FALSE;
@@ -124,24 +125,28 @@ int16_t Input_Main(uint8_t ubAuto)
 #endif
 	}
 
-	if(g_bAnalogStickMode == TRUE)
-	{
-#if CNF_JOYDRV360				
-		get_ajoy(&input, 1, 0, 0);	/* アナログジョイスティック入力, JoyNo, mode=0:edge on 1:edge off, Config 0:X680x0 1:rev */
-#else
-		get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
-#endif
-	}
-	else
-	{
-		get_djoy(&input, 1, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
-		
-		get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
-	}
 
 	if(ubAuto == FALSE)
 	{
-		g_Input = input;	/* 通常の入力 */
+		if(g_bAnalogStickMode == TRUE)
+		{
+	#if CNF_JOYDRV360				
+			get_ajoy(&input, 1, 0, 0);	/* アナログジョイスティック入力, JoyNo, mode=0:edge on 1:edge off, Config 0:X680x0 1:rev */
+	#else
+			get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
+	#endif
+			g_Input = input;	/* 通常の入力 */
+		}
+		else
+		{
+			get_djoy(&input, 1, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
+			
+			g_Input = (g_Input & 0xFFFF) | (input << 16);	/* 通常の入力 */
+			
+			get_djoy(&input, 0, 1);		/* ジョイスティック入力, JoyNo, mode=0:edge on 1:edge off */
+
+			g_Input = (g_Input & 0xFFFF0000) | (input);		/* 通常の入力 */
+		}
 	}
 	else
 	{
@@ -152,7 +157,7 @@ int16_t Input_Main(uint8_t ubAuto)
 
 		if(	GetPassTime(IPUT_INTERVAL_TIME, &s_PassTime) != 0u)	/* 1s経過 */
 		{
-			g_Input = KEY_A;
+			g_Input |= KEY_b_Z;
 		}
 		else
 		{
@@ -207,7 +212,7 @@ uint16_t get_keyboard( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
-			*key |= KEY_A;
+			*key |= KEY_b_Z;
 			repeat_flag_a = KEY_FALSE;
 		}
 	}
@@ -220,7 +225,7 @@ uint16_t get_keyboard( uint16_t *key, uint8_t bPlayer, uint8_t mode )
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
-			*key |= KEY_B;
+			*key |= KEY_b_X;
 			repeat_flag_b = KEY_FALSE;
 		}
 	}
@@ -259,7 +264,7 @@ uint16_t get_djoy( uint16_t *key, int32_t nJoyNo, uint8_t mode )
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
-			*key |= KEY_A;
+			*key |= KEY_b_Z;
 			repeat_flag_a = KEY_FALSE;
 		}
 	}
@@ -272,7 +277,7 @@ uint16_t get_djoy( uint16_t *key, int32_t nJoyNo, uint8_t mode )
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
-			*key |= KEY_B;
+			*key |= KEY_b_X;
 			repeat_flag_b = KEY_FALSE;
 		}
 	}
@@ -367,7 +372,7 @@ uint16_t get_ajoy( uint16_t *key, int32_t nJoyNo, uint8_t mode, uint8_t ubConfig
 	{
 		if( repeat_flag_a || (mode != 0u))
 		{
-			*key |= KEY_A;
+			*key |= KEY_b_Z;
 			repeat_flag_a = KEY_FALSE;
 		}
 	}
@@ -380,7 +385,7 @@ uint16_t get_ajoy( uint16_t *key, int32_t nJoyNo, uint8_t mode, uint8_t ubConfig
 	{
 		if( repeat_flag_b || (mode != 0u))
 		{
-			*key |= KEY_B;
+			*key |= KEY_b_X;
 			repeat_flag_b = KEY_FALSE;
 		}
 	}
@@ -572,20 +577,20 @@ uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 				}
 			}
 			uCount++;
-#if 0
+#if 1
 			switch(uCount)	/* SE */
 			{
 			case 1:
-				ADPCM_Play(1);
+				ADPCM_Play(7);
 				break;
 			case 2:
-				ADPCM_Play(2);
+				ADPCM_Play(8);
 				break;
 			case 3:
-				ADPCM_Play(3);
+				ADPCM_Play(9);
 				break;
 			default:
-				ADPCM_Play(1);
+				ADPCM_Play(7);
 				break;
 			}
 #endif

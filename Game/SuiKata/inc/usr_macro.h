@@ -221,6 +221,10 @@
 #define GetR(color)	(( color >> 6) & 0x1Fu)
 #define GetG(color)	(( color >> 11) & 0x1Fu)
 #define GetB(color)	(( color >> 1) & 0x1Fu)
+#define SetRGB_24BIT_TO_16BIT(val) ( \
+                                        (((((val) >>  0) & 0xFF) << 5) >> 8) << 1 | \
+                                        (((((val) >> 16) & 0xFF) << 5) >> 8) << 6 | \
+                                        (((((val) >>  8) & 0xFF) << 5) >> 8) << 11 )
 
 #define SetXSPinfo(V,H,PAL,PRI)	(0xCFFFU & (((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((PAL & 0xFU)<<8U) | (PRI & 0xFFU)))
 #define SetBGcode(V,H,PAL,PCG)	(0xCFFFU & (((V & 0x01U)<<15U) | ((H & 0x01U)<<14U) | ((PAL & 0xFU)<<8U) | (PCG & 0xFFU)))

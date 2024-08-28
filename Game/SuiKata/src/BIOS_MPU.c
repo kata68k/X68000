@@ -41,6 +41,9 @@ static struct {
 int32_t	g_nIntLevel = 0;
 int32_t	g_nIntCount = 0;
 
+uint16_t *p_PhantomX_IO_REG = (uint16_t *)0xEA8000;
+uint16_t *p_PhantomX_IO 	= (uint16_t *)0xEA8002;
+
 /* スタティック変数 */
 static void (*trap_12)();	/* 元の trap 12 ベクタを保存*/
 static void (*trap_14)();	/* 元の trap 14 ベクタを保存*/

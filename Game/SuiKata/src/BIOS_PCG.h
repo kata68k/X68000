@@ -5,10 +5,13 @@
 #include <XSP2lib.H>
 
 #define CNF_XSP (1)
+#define	CNF_PCG_AUTO_ACCELERATION	(0)
+#define	CNF_PCG_AUTO_UPDATE_OFF		(0)
 
 /* スプライトＰＣＧパターン最大数 */
 #define	PCG_MAX		(256)
 #define	PAL_MAX		(16)
+#define PCG_LSB		(8)		/* bit x */
 #define BG_P0		(0)
 #define BG_P1		(1)
 #define	BG_WIDTH	(8)
@@ -18,7 +21,9 @@
 #define BG_1_W		(280)
 #define BG_1_H		(63)
 #define SP_W		(16)
+#define SP_W2		(8)
 #define SP_H		(16)
+#define SP_H2		(8)
 #define SP_X_OFFSET	(16)
 #define SP_Y_OFFSET	(16)
 #define SP_8_SIZE	(32)
@@ -27,9 +32,10 @@
 #define SP_16x16	(1)
 #define	SP_PLN_MAX	(128)
 #define	PCG_CODE_MASK	(0xFF)
-#define	PCG_16x16_AREA	(0x00)
+#define	PCG_16x16_AREA	(0x30)
 
 enum{
+	BG_DATA,
 	SP_BALL_S_1,
 	SP_BALL_S_2,
 	SP_BALL_S_3,
@@ -62,6 +68,22 @@ enum{
 	SP_BALL_S_30,
 	SP_BALL_S_31,
 	SP_BALL_S_32,
+	SP_BALL_S_33,
+	SP_BALL_S_34,
+	SP_BALL_S_35,
+	SP_BALL_S_36,
+	SP_BALL_S_37,
+	SP_BALL_S_38,
+	SP_BALL_S_39,
+	SP_BALL_S_40,
+	SP_BALL_S_41,
+	SP_BALL_S_42,
+	SP_BALL_S_43,
+	SP_BALL_S_44,
+	SP_BALL_S_45,
+	SP_BALL_S_46,
+	SP_BALL_S_47,
+	SP_BALL_S_48,
 	SP_BALL_M_1,
 	SP_BALL_M_2,
 	SP_BALL_M_3,
@@ -88,23 +110,26 @@ enum{
 	SP_BALL_L_8,
 	SP_BALL_XL_1,
 	SP_BALL_XL_2,
-	SP_BALL_XL_3,
-	SP_BALL_XL_4,
 	SP_SHIP_0,
 	SP_GAL_0,
 	SP_ARROW_0,
 	PCG_NUM_MAX,
 };
 
+/* スプライト１つごとのデータ */
 typedef struct
 {
 	uint16_t	Plane;			/* プレーン番号の先頭 */
 	uint16_t	x;				/* x座標 */
 	uint16_t	y;				/* y座標 */
+	uint16_t	z;				/* y座標 */
 	int16_t		dx;				/* 移動量x */
 	int16_t		dy;				/* 移動量y */
+	int16_t		dz;				/* 移動量z */
+	int16_t 	angle;			/* 角度 */
 	uint8_t		Anime;			/* 現在のアニメーション */
 	uint8_t		Anime_old;		/* 前回のアニメーション */
+	uint8_t		status;			/* ステータス */
 	uint8_t		update;			/* 更新 */
 	uint8_t		validty;		/* 有効 */
 	uint8_t		Pat_w;			/* 横方向のパターン数 */
@@ -112,15 +137,20 @@ typedef struct
 	uint8_t		Pat_AnimeMax;	/* アニメーションパターン数 */
 	uint8_t		Pat_DataMax;	/* パターンデータ数 */
 	uint16_t	*pPatData;		/* パターンデータ */
-	uint32_t	*pPatCodeTbl;	/* パターンコードテーブル */
+	uint16_t	*pPatCodeTbl;	/* パターンコードテーブル */
 }	ST_PCG;
 
+/* スプライトリストごとのデータ */
 typedef struct
 {
 	uint8_t		Pal;			/* パレット番号 */
 	uint8_t		Pat_w;			/* 横方向のパターン数 */
 	uint8_t		Pat_h;			/* 縦方向のパターン数 */
 	uint8_t		Pat_AnimeMax;	/* アニメーションパターン数 */
+	int16_t		hit_x;			/* 当たり判定の始点x */
+	int16_t		hit_y;			/* 当たり判定の始点y */
+	int16_t		hit_width;		/* 当たり判定の幅 */
+	int16_t		hit_height;		/* 当たり判定の高さ */
 }	ST_PCG_LIST;
 
 extern ST_PCG	g_stPCG_DATA[PCG_MAX];

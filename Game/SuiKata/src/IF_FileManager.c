@@ -116,13 +116,17 @@ int16_t Init_FileList_Load(void)
 	printf("PIC File Max %d\n", g_CG_List_Max);
 
 	/* 動画(MACS) */
-	sprintf(sListFilePath, "%s\\%s\\", Get_DataList_Path(), "mov");
+#if CNF_MACS	
+ #ifdef 	MACS_MOON
+ 	sprintf(sListFilePath, "%s\\%s\\", Get_DataList_Path(), "mov");
 	Load_MACS_List(sListFilePath, "mov_list.txt", g_mov_list, &g_mov_list_max);	/* 動画(MACS)リストの読み込み */
 	for(i = 0; i < g_mov_list_max; i++)
 	{
 		printf("MACS File %2d = %s\n", i, g_mov_list[i]);
 	}
 	printf("MACS File Max %d\n", g_mov_list_max);
+ #endif
+#endif
 
 	/* BGM */
 #if		ZM_V2 == 1
@@ -754,6 +758,7 @@ int16_t Load_SP_List(int8_t *fpath, int8_t *fname, int8_t (*list)[256], uint32_t
 	int8_t z_name[256];
 	uint32_t i=0, num=0;
 	uint16_t pal, width, height, anime;
+	int16_t hit_x, hit_y, hit_width, hit_height;
 
 	sprintf(z_name, "%s%s", fpath, fname);
 	
@@ -790,8 +795,16 @@ int16_t Load_SP_List(int8_t *fpath, int8_t *fname, int8_t (*list)[256], uint32_t
 				width 	= 0;
 				height 	= 0;
 				anime 	= 0;
+				hit_x	= 0;
+				hit_y	= 0;
+				hit_width	= 0;
+				hit_height	= 0;
 
-				sscanf(p,"%d = %s %hd %hd %hd %hd", &num, z_name, &pal, &width, &height, &anime);
+				sscanf(p,"%d = %s %hd %hd %hd %hd %hd %hd %hd %hd", &num, z_name, &pal, &width, &height, &anime, &hit_x, &hit_y, &hit_width, &hit_height);
+#ifdef DEBUG
+//				printf("%d = %s %hd %hd %hd %hd %d %d %d %d\n", num, z_name, pal, width, height, anime, hit_x, hit_y, hit_width, hit_height);
+//				KeyHitESC();	/* デバッグ用 */
+#endif
 				if(i == num)
 				{
 					sprintf(list[i], "%s%s", fpath, z_name);
@@ -829,6 +842,54 @@ int16_t Load_SP_List(int8_t *fpath, int8_t *fname, int8_t (*list)[256], uint32_t
 					{
 						g_stST_PCG_LIST[i].Pat_AnimeMax = 1;
 					}
+					/*------------------------------------------------------------------------------*/
+					if(hit_x != 0)
+					{
+						g_stST_PCG_LIST[i].hit_x = hit_x;
+					}
+					else
+					{
+						g_stST_PCG_LIST[i].hit_x = 0;
+					}
+
+					if(hit_y != 0)
+					{
+						g_stST_PCG_LIST[i].hit_y = hit_y;
+					}
+					else
+					{
+						g_stST_PCG_LIST[i].hit_y = 0;
+					}
+
+					if(hit_width != 0)
+					{
+						g_stST_PCG_LIST[i].hit_width = hit_width;
+					}
+					else
+					{
+						g_stST_PCG_LIST[i].hit_width = width * SP_W;
+					}
+
+					if(hit_height != 0)
+					{
+						g_stST_PCG_LIST[i].hit_height = hit_height;
+					}
+					else
+					{
+						g_stST_PCG_LIST[i].hit_height = height * SP_H;
+					}
+#ifdef DEBUG
+//					printf("%d = %s %hd %hd %hd %hd %hd %hd %hd %hd\n", num, z_name,
+//					 g_stST_PCG_LIST[i].Pal, 
+//					 g_stST_PCG_LIST[i].Pat_w, 
+//					 g_stST_PCG_LIST[i].Pat_h, 
+//					 g_stST_PCG_LIST[i].Pat_AnimeMax, 
+//					 g_stST_PCG_LIST[i].hit_x, 
+//					 g_stST_PCG_LIST[i].hit_y, 
+//					 g_stST_PCG_LIST[i].hit_width, 
+//					 g_stST_PCG_LIST[i].hit_height);
+//					KeyHitESC();	/* デバッグ用 */
+#endif
 				}
 				i++;
 			}

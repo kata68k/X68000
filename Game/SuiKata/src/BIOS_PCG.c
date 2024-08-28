@@ -353,6 +353,7 @@ int16_t PCG_Main(void)
 		/* スプライト設定 */
 		count = 0;
 		uHeight = 0;
+
 		for( y = 0; y < g_stPCG_DATA[uPCG_num].Pat_h; y++ )
 		{
 			uWidth = 0;
@@ -419,10 +420,10 @@ int16_t PCG_Main(void)
 					uPCG_prw = 0;
 #endif
 				}
-				
+							
 #if  CNF_XSP
-				ret = xsp_set(	g_stPCG_DATA[uPCG_num].x + uWidth + SP_X_OFFSET,
-								g_stPCG_DATA[uPCG_num].y + uHeight + SP_Y_OFFSET,
+				ret = xsp_set(	(g_stPCG_DATA[uPCG_num].x >> PCG_LSB) + uWidth + SP_X_OFFSET,
+								(g_stPCG_DATA[uPCG_num].y >> PCG_LSB) + uHeight + SP_Y_OFFSET,
 								(Plane_num + pat_data) & 0x7FFFu,
 								uPCG_prw);
 	#ifdef DEBUG
@@ -437,17 +438,19 @@ int16_t PCG_Main(void)
 				}
 	#endif
 #else
-				/* 移動量 */
-				g_stPCG_DATA[uPCG_num].x += g_stPCG_DATA[uPCG_num].dx;
-				g_stPCG_DATA[uPCG_num].y += g_stPCG_DATA[uPCG_num].dy;
-				
 				/* スプライトレジスタの設定 */
 				_iocs_sp_regst( (Plane_num + count) & (SP_PLN_MAX-1),
 								-1,	/* mode:最上位ビット 1=垂直同期検出 0=垂直同期検出しない */
-								g_stPCG_DATA[uPCG_num].x + uWidth + SP_X_OFFSET,
-								g_stPCG_DATA[uPCG_num].y + uHeight + SP_Y_OFFSET,
+								(g_stPCG_DATA[uPCG_num].x >> PCG_LSB) + uWidth + SP_X_OFFSET,
+								(g_stPCG_DATA[uPCG_num].y >> PCG_LSB) + uHeight + SP_Y_OFFSET,
 								*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + pat_data),
 								uPCG_prw);
+#endif
+
+#if	CNF_PCG_AUTO_ACCELERATION
+				/* 移動量 */
+				g_stPCG_DATA[uPCG_num].x += g_stPCG_DATA[uPCG_num].dx;
+				g_stPCG_DATA[uPCG_num].y += g_stPCG_DATA[uPCG_num].dy;
 #endif
 				uWidth += SP_W;
 				count++;
@@ -457,7 +460,9 @@ int16_t PCG_Main(void)
 		
 		g_stPCG_DATA[uPCG_num].Plane = Plane_num;
 		g_stPCG_DATA[uPCG_num].Anime_old = Anime_num;
-//		g_stPCG_DATA[uPCG_num].update = FALSE;	/* 更新済みにする */
+#if	CNF_PCG_AUTO_UPDATE_OFF		
+		g_stPCG_DATA[uPCG_num].update = FALSE;	/* 更新済みにする */
+#endif
 	}
 
 #ifdef DEBUG
@@ -520,11 +525,15 @@ int16_t PCG_Load_Data(int8_t *sFileName, uint16_t uPCG_data_ofst,
 	uBufSize = stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
 	
 	/* スプライト定義設定 */
-	g_stPCG_DATA[uPCG_num].pPatCodeTbl	= (uint32_t*)MyMalloc((sizeof(uint32_t) * uBufSize) + sizeof(uint8_t));	/* 4byte × サイズ分 + 1byte */
+	g_stPCG_DATA[uPCG_num].pPatCodeTbl	= (uint16_t*)MyMalloc((sizeof(uint16_t) * uBufSize) + sizeof(uint8_t));	/* 4byte × サイズ分 + 1byte */
 	
 	for(j=0; j < uBufSize; j++)
 	{
+#if  CNF_XSP
+		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetXSPinfo(0, 0, 0x00, 0x00);	/* パターンコードテーブル */
+#else
 		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, 0x00, 0xFF);	/* パターンコードテーブル */
+#endif
 	}
 	
 	if(uPCG_Type == 3)	/* XSPモードはパターン不要 */

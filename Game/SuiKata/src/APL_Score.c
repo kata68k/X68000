@@ -725,7 +725,7 @@ int16_t S_Score_Name_Main(int16_t nInput, int16_t rank)
 		bFlagInput = FALSE;
 	}
 
-	if(nInput == KEY_A)			/* Aボタン */
+	if(nInput == KEY_b_Z)		/* Aボタン(z Key) */
 	{
 		if(bFlagInputAB == FALSE)
 		{
@@ -734,7 +734,7 @@ int16_t S_Score_Name_Main(int16_t nInput, int16_t rank)
 			bInput_c++;
 		}
 	}
-	else if(nInput == KEY_B)	/* Bボタン */
+	else if(nInput == KEY_b_X)	/* Bボタン(x Key) */
 	{
 		if(bFlagInputAB == FALSE)
 		{

@@ -38,13 +38,13 @@
 //#define 	W_BUFFER	/* ダブルバッファリングモード */ 
 enum
 {
-	ball_lost,
-	ball_now,
-	ball_next,
-	ball_exist,
+	ball_lost,	/* 消えたボール */
+	ball_now,	/* 発射ボール */
+	ball_next,	/* 次の発射ボール */
+	ball_exist,	/* 存在するボール */
 };
 
-#define		BALL_MAX	(60)
+#define		BALL_MAX	(74)
 #define 	X_POS_MIN	( 64+16+2)
 #define 	X_POS_MAX	(192-16-2)
 #define 	X_POS_W		(X_POS_MAX - X_POS_MIN)
@@ -52,9 +52,12 @@ enum
 #define 	Y_POS_BD	(48)
 #define 	Y_POS_MAX	(192)
 #define 	Y_POS_H		(Y_POS_MAX - Y_POS_MIN)
-#define 	X_ACC		(256)
-#define 	Y_ACC		(256)
-#define 	Y_ACC2		(512)
+
+#define 	X_ACC		(0x100)
+#define 	X_ACC2		(0x200)
+#define 	X_DEC		(0x001)
+#define 	Y_ACC		(0x100)
+#define 	Y_ACC2		(0x200)
 
 #define 	FONT24H		(24)
 #define 	FONT12W		(12)
@@ -121,6 +124,8 @@ static uint32_t s_DemoTime;
 
 /* グローバル構造体 */
 ST_BALL		g_stBall[BALL_MAX];
+
+/* グローバル変数 */
 int16_t		g_Ball_Color[5] = {0, 1, 2, 3, 4};
 int16_t		g_Ball_Table[5] = {SP_BALL_S_1, SP_BALL_M_1, SP_BALL_L_1, SP_BALL_XL_1, PCG_NUM_MAX};
 int16_t		g_Boder_line = 0xFF;
@@ -133,12 +138,20 @@ int8_t		g_bShot_OK = TRUE;
 uint8_t		g_ubDemoPlay = FALSE;
 uint8_t		g_ubGameClear = FALSE;
 int16_t		g_nGameClearCount = 0;
+uint8_t		g_bAREA[256][256] = {0};
+
+#ifdef DEBUG	/* デバッグコーナー */
+uint16_t	g_uDebugNum = 0;
+#endif
 
 /* 関数のプロトタイプ宣言 */
 static void Boder_line(void);
 static void Level_meter(int8_t);
+static uint8_t Ball_check_collision(uint16_t* , uint16_t* , uint16_t, uint16_t, uint8_t, uint8_t*);
+static void Ball_mark_area(ST_PCG* , uint8_t, uint8_t);
+static void print_area(void);
+static int8_t Ball_Point_Update(ST_PCG* , uint8_t );
 static int16_t Ball_Combine(ST_PCG *, int16_t, ST_PCG *, int16_t);
-static int8_t Ball_Point_Update(ST_PCG*, int8_t);
 static void Ball_Check(int16_t);
 
 int16_t main(int16_t, int8_t**);
@@ -176,16 +189,16 @@ static void Boder_line(void)
 	p_stPCG = PCG_Get_Info(SP_ARROW_0);		/* 矢印 */
 	if(p_stPCG != NULL)
 	{
-		p_stPCG->x = X_POS_MIN - 16 - 2;
-		p_stPCG->y = g_Boder_line - 8;
+		p_stPCG->x = (X_POS_MIN - 16 - 2) << PCG_LSB;
+		p_stPCG->y = (g_Boder_line - 8) << PCG_LSB;
 		p_stPCG->update	= TRUE;
 	}
 
 	p_stPCG  = PCG_Get_Info(SP_GAL_0);		/* ギャル */
 	if(p_stPCG != NULL)
 	{
-		p_stPCG->x = 208;
-		p_stPCG->y = Mmax(Y_POS_BD, g_Boder_count);
+		p_stPCG->x = (208) << PCG_LSB;
+		p_stPCG->y = Mmax(Y_POS_BD, g_Boder_count) << PCG_LSB;
 		p_stPCG->update		= TRUE;
 
 
@@ -277,11 +290,12 @@ static void Level_meter(int8_t bFlag)
 static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other, int16_t other)
 {
 	int16_t ret = 0;
-	int16_t x, y;
-	int16_t x1, y1;
+	uint16_t x, y;
+	uint16_t x1, y1;
 	int16_t i, j, k, m, n, p;
-//	int16_t width, height;
+	int16_t width, height;
 	int16_t pal;
+	int16_t list_num;
 
 	ST_PCG	*p_stPCG_new = NULL;
 
@@ -309,26 +323,8 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 		/* ボール設定 */
 		BallSize = g_stBall[i].bSize;		
 
-		/* 相手 */
-		g_stBall[j].bStatus = (rand() % 3);
-		g_stBall[j].bSize = 0;
-		g_stBall[j].bValidty = ball_lost;
-
-		p_stPCG_other->x = 0;
-		p_stPCG_other->y = 0;
-		p_stPCG_other->update = FALSE;
-
-
 		if( g_stBall[i].bStatus > 2 )	/* 進化の上限を超えた→サイズチェンジ */
 		{
-			/* 自分は一旦、消える */
-			g_stBall[i].bStatus = (rand() % 3);
-			g_stBall[i].bSize = 0;
-			g_stBall[i].bValidty = ball_lost;
-			p_stPCG->x = 0;
-			p_stPCG->y = 0;
-			p_stPCG->update = FALSE;
-
 			if( BallSize >= 3 )	/* 最大サイズの最終系で合体 */
 			{
 				g_ubGameClear = TRUE;	/* ゲームクリア */
@@ -340,13 +336,14 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 			}
 			else
 			{
-				S_GetPos(x, y);	/* スコア表示座標更新 */
+				S_GetPos((x >> PCG_LSB), (y >> PCG_LSB));	/* スコア表示座標更新 */
 
 				ret = S_Add_Score(1000);	/* スコア更新 */
 			}
 
 			BallSize++;	/* サイズアップ */ 
 			m = Mmin(BallSize, 3);	/* 最大値＋１ */
+			list_num = m + 1;
 
 			for(k = g_Ball_Table[m]; k < g_Ball_Table[m + 1]; k++)	/* 新しいテーブルから空きを調査する */
 			{
@@ -362,48 +359,76 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 					p_stPCG_new = PCG_Get_Info(SP_BALL_S_1 + g_stBall[n].bSP_num);	/* Newボール */
 					if(p_stPCG_new != NULL)
 					{
-						pal = Mmul256(g_stST_PCG_LIST[m + 1].Pal);
+						pal = Mmul256(g_stST_PCG_LIST[list_num].Pal);
 						for(p=0; p < p_stPCG_new->Pat_DataMax; p++)
 						{
 							*(p_stPCG_new->pPatCodeTbl + p) &= 0xF0FF;
 							*(p_stPCG_new->pPatCodeTbl + p) |= (pal + Mmul256(g_Ball_Color[g_stBall[n].bStatus]));	/* カラーセット */
 						}
 						p_stPCG_new->update = TRUE;
-#if 0
+						p_stPCG_new->status = FALSE;
+#if 1
 						width	= Mmul16(p_stPCG_new->Pat_w);
 						height	= Mmul16(p_stPCG_new->Pat_h);
 
 						/* ビン */
-						if(y > g_TB_GameLevel[g_nGameLevel] - height)	/* ビン底 */
+						if( (y1 >> PCG_LSB) > (g_TB_GameLevel[g_nGameLevel] - height) )	/* ビン底 */
 						{
-							p_stPCG_new->dy = 0;
-							y = g_TB_GameLevel[g_nGameLevel] - height;
+							y1 = (g_TB_GameLevel[g_nGameLevel] - height) << PCG_LSB;
 						}
 						else
 						{
-							p_stPCG_new->dy = Y_ACC;
 						}
 
-						if(x <= X_POS_MIN)			/* ビン左 */
+						if((x1 >> PCG_LSB) <= X_POS_MIN)			/* ビン左 */
 						{
-							p_stPCG_new->dx = 0;
-							x = X_POS_MIN;
+							x1 = X_POS_MIN << PCG_LSB;
 						}
-						else if(x > X_POS_MAX - width)	/* ビン右 */
+						else if((x1 >> PCG_LSB) > (X_POS_MAX - width))	/* ビン右 */
 						{
-							p_stPCG_new->dx = 0;
-							x = X_POS_MAX - width;
+							x1 = (X_POS_MAX - width) << PCG_LSB;
 						}
+
+						p_stPCG_new->dx = 0;
+						p_stPCG_new->dy = 0;
+						p_stPCG_new->x = x1;
+						p_stPCG_new->y = y1;
 #else
 						p_stPCG_new->x = x1;
 						p_stPCG_new->y = y1;
 						p_stPCG_new->dy = 0;
 						p_stPCG_new->dx = 0;
 #endif						
+					    Ball_mark_area(p_stPCG_new, 1, list_num); // 新しい位置をセット
+
+						/* 消す */
+						list_num = g_stBall[i].bSize + 1;
+						g_stBall[i].bStatus = (rand() % 3);	
+						g_stBall[i].bSize = 0;
+						g_stBall[i].bValidty = ball_lost;
+						Ball_mark_area(p_stPCG, 0, list_num); // 古い位置をクリア
+						p_stPCG->x = 0;
+						p_stPCG->y = 0;
+						p_stPCG->update = FALSE;
+						p_stPCG->status = FALSE;
+
+						/* 相手 */
+						list_num = g_stBall[j].bSize + 1;
+						g_stBall[j].bStatus = (rand() % 3);
+						g_stBall[j].bSize = 0;
+						g_stBall[j].bValidty = ball_lost;
+						Ball_mark_area(p_stPCG_other, 0, list_num); // 古い位置をクリア
+						p_stPCG_other->x = 0;
+						p_stPCG_other->y = 0;
+						p_stPCG_other->update = FALSE;
+						p_stPCG_other->status = FALSE;
+
+//						Ball_Point_Update(p_stPCG_new, FALSE);	/* 位置を修正 */
 						break;
 					}
 				}
 			}
+
 		}
 		else	/* カラーチェンジ */
 		{
@@ -416,6 +441,7 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 				p_stPCG->x = 0;
 				p_stPCG->y = 0;
 				p_stPCG->update = FALSE;
+				p_stPCG->status = FALSE;
 
 				g_ubGameClear = TRUE;	/* ゲームクリア */
 
@@ -424,16 +450,18 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 			}
 			else
 			{
-				S_GetPos(x, y);	/* スコア表示座標更新 */
+				S_GetPos((x >> PCG_LSB), (y >> PCG_LSB));	/* スコア表示座標更新 */
 
 				ret = S_Add_Score(100);	/* スコア更新 */
 
-				pal = Mmul256(g_stST_PCG_LIST[g_stBall[i].bSize + 1].Pal);
+				list_num = g_stBall[i].bSize + 1;
+				pal = Mmul256(g_stST_PCG_LIST[list_num].Pal);
 				for(k=0; k < p_stPCG->Pat_DataMax; k++)
 				{
 					*(p_stPCG->pPatCodeTbl + k) &= 0xF0FF;
 					*(p_stPCG->pPatCodeTbl + k) |= (pal + Mmul256(g_Ball_Color[g_stBall[i].bStatus]));	/* カラーセット */
 				}
+				Ball_mark_area(p_stPCG, 0, list_num); // 古い位置をクリア
 #if 0
 				height	= Mmul16(p_stPCG->Pat_h);
 				/* ビン */
@@ -452,6 +480,20 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 				p_stPCG->dy = 0;
 				p_stPCG->dx = 0;
 #endif						
+			    Ball_mark_area(p_stPCG, 1, list_num); // 新しい位置をセット
+
+				/* 相手 */
+				list_num = g_stBall[j].bSize + 1;
+				g_stBall[j].bStatus = (rand() % 3);
+				g_stBall[j].bSize = 0;
+				g_stBall[j].bValidty = ball_lost;
+				Ball_mark_area(p_stPCG_other, 0, list_num); // 古い位置をクリア
+				p_stPCG_other->x = 0;
+				p_stPCG_other->y = 0;
+				p_stPCG_other->update = FALSE;
+				p_stPCG_other->status = FALSE;
+
+//				Ball_Point_Update(p_stPCG, FALSE);	/* 位置を修正 */
 			}
 		}
 	}
@@ -474,118 +516,418 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-static int8_t Ball_Point_Update(ST_PCG* p_stPCG, int8_t hitFlag)
+static uint8_t Ball_check_collision(uint16_t* new_x, uint16_t* new_y, uint16_t width, uint16_t height, uint8_t bListNum, uint8_t* pbStat)
 {
-	int8_t	ret = FALSE;
- 	int16_t x, y, dx, dy, sx, sy;
-	int16_t width, height;
+	uint8_t ret = FALSE;
+	uint16_t x, y;
+	uint16_t x_OK, y_OK;
+	uint16_t x_Ofst_s, x_Ofst_e;
+	uint16_t y_Ofst_s, y_Ofst_e;
 
-	x = p_stPCG->x;
-	y = p_stPCG->y;
-	dx = p_stPCG->dx;
-	dy = p_stPCG->dy;
+    uint16_t left;
+    uint16_t right;
+    uint16_t top;
+    uint16_t bottom;
+
+    if ( *new_x < X_POS_MIN )
+	{
+		*new_x = X_POS_MIN;
+		*pbStat = Mbset(*pbStat, 0xFF, Bit_0);	/* X方向 */
+    }
+    if ((*new_x + width) > X_POS_MAX )
+	{
+		*new_x = X_POS_MAX - width;
+		*pbStat = Mbset(*pbStat, 0xFF, Bit_1);	/* X方向 */
+    }
+    if (*new_y <= 0)
+	{
+		*new_y = 0;
+		*pbStat = Mbset(*pbStat, 0xFF, Bit_3);	/* Y方向 */
+    }
+    if ((*new_y + height) >= g_TB_GameLevel[g_nGameLevel]) 
+	{
+		*new_y = g_TB_GameLevel[g_nGameLevel] - height;
+		*pbStat = Mbset(*pbStat, 0xFF, Bit_2);	/* Y方向 */
+		ret = TRUE;
+    }
+
+#if 1
+    left	= *new_x;
+	top		= *new_y;
+	left	+= g_stST_PCG_LIST[bListNum].hit_x;
+	top		+= g_stST_PCG_LIST[bListNum].hit_y;
+
+	width	= g_stST_PCG_LIST[bListNum].hit_width;
+	height	= g_stST_PCG_LIST[bListNum].hit_height;
+    right	= left + width;
+    bottom	= top + height;
+#else
+    left = *new_x;
+	top = *new_y;
+    right = *new_x + width;
+    bottom = *new_y + height;
+#endif
+	if(left > 0xFF)return FALSE;
+	if(right > 0xFF)right = 0xFF;
+	if(top > 0xFF)return FALSE;
+	if(bottom > 0xFF)bottom = 0xFF;
+	
+	x_OK = left + Mdiv4(width);
+	x_Ofst_s = x_OK;
+	x_Ofst_e = x_OK + Mdiv2(width);
+	y_OK = bottom - 1;
+
+	y_Ofst_s = bottom - Mdiv2(height);
+	y_Ofst_e = top;
+
+#if 1
+	y = y_OK;
+	for ( x = x_Ofst_s; x < x_Ofst_e; x++ )
+	{
+		if (g_bAREA[y][x] == 1) /* ボールが存在する */
+		{
+			*new_y = 0;	/* 下面に何かあった */
+			*pbStat = Mbset(*pbStat, 0xFF, Bit_2);	/* Y方向 */
+			ret = TRUE;
+			break;
+		}
+	}
+
+	x = left;
+    for (y = y_Ofst_s; y >= y_Ofst_e; y--)
+	{
+		if (g_bAREA[y][x] == 1) /* ボールが存在する */
+		{
+			*pbStat = Mbset(*pbStat, 0xFF, Bit_0);	/* X方向 */
+			break;
+		}
+	}
+
+	x = Mmax(right - 1, left);
+    for (y = y_Ofst_s; y >= y_Ofst_e; y--)
+	{
+		if (g_bAREA[y][x] == 1) /* ボールが存在する */
+		{
+			*pbStat = Mbset(*pbStat, 0xFF, Bit_1);	/* X方向 */
+			break;
+		}
+	}
+
+	y = top;
+	for ( x = left; x < right; x++ )
+	{
+		if (g_bAREA[y][x] == 1) /* ボールが存在する */
+		{
+			*pbStat = Mbset(*pbStat, 0xFF, Bit_3);	/* Y方向 */
+			break;
+		}
+	}
+#else
+    for (y = y_OK; y >= top; y--)
+	{
+		for ( x = left; x < right; x++ )
+		{
+            if (g_bAREA[y][x] == 1) /* ボールが存在する */
+			{
+				if(y == y_OK)
+				{
+					if((x >= x_Ofst_s) && (x < x_Ofst_e))	/* 下面の中央 */
+					{
+						*new_y = 0;	/* 下面に何かあった */
+						*pbStat = Mbset(*pbStat, 0xFF, Bit_2);	/* Y方向 */
+						return TRUE;
+					}
+				}
+				else
+				{
+					*new_y = y;	/* 下面に何かあった */
+					*pbStat = Mbset(*pbStat, 0xFF, Bit_3);	/* Y方向 */
+	                return TRUE;
+				}
+            }
+        }
+    }
+#endif
+
+    return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static void Ball_mark_area(ST_PCG* p_stPCG, uint8_t bValue, uint8_t bListNum)
+{
+	uint16_t x, y;
+	uint16_t width, height;
+    uint16_t left;
+    uint16_t right;
+    uint16_t top;
+    uint16_t bottom;
+
+	x = p_stPCG->x >> PCG_LSB;
+	y = p_stPCG->y >> PCG_LSB;
+#if 1
+	x += g_stST_PCG_LIST[bListNum].hit_x;
+	y += g_stST_PCG_LIST[bListNum].hit_y;
+	width	= g_stST_PCG_LIST[bListNum].hit_width;
+	height	= g_stST_PCG_LIST[bListNum].hit_height;
+#else
 	width	= Mmul16(p_stPCG->Pat_w);
 	height	= Mmul16(p_stPCG->Pat_h);
+#endif
 
-	/* 移動量 */
-	sx = Mdiv256s(dx);
-	sy = Mdiv256s(dy);
-	x = (uint16_t)((int16_t)x + sx);
-	y = (uint16_t)((int16_t)y + sy);
+    left = x;
+    right = x + width;
+    top = y;
+    bottom = y + height;
 
-	/* 横移動 減衰 */
-	if(hitFlag == TRUE)
+	if(left > 0xFF)return;
+	if(right > 0xFF)right = 0xFF;
+	if(top > 0xFF)return;
+	if(bottom > 0xFF)bottom = 0xFF;
+
+    for ( y = top; y < bottom; y++ ) 
 	{
+        for ( x = left; x < right; x++ ) 
+		{
+            g_bAREA[y][x] = bValue;
+        }
+    }
+}
 
-	}
-	else
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static void print_area(void) 
+{
+ 	uint16_t x, y;
+
+    for ( y = 0; y < 256; y += 1)
 	{
-		if(Mabs(dx) <= X_ACC)
+        for ( x = X_POS_MIN; x < X_POS_MAX; x += 1)
 		{
-			dx = 0;
-		}
-		else
-		{
-			if(dx > 0)
+			if(g_bAREA[y][x] != 0)
 			{
-				dx -= (int16_t)X_ACC;
+	            Draw_Pset( x, y, G_INDIGO);	/* 何かある */
 			}
 			else
 			{
-				dx += (int16_t)X_ACC;
+	            Draw_Pset( x, y, G_BG);	/* 何もなし */
 			}
-		}
-	}
+        }
+    }
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
+{
+#ifdef DEBUG	/* デバッグコーナー */
+//	int8_t sBuf[128] = {0};
+#endif
+	int8_t	ret = TRUE;
+ 	uint16_t x, y;
+	int16_t dx, dy;
+	uint16_t width, height;
+	uint16_t h_width, h_height;
+	uint16_t new_x, new_y;
+	uint16_t end_y;
+	uint8_t	bStat = 0;
 
-	/* 縦移動 減衰 */
-	if(hitFlag == TRUE)
-	{
-	}
-	else	/* 縦移動 加速 */
-	{
-		/* 自然落下 */
-		dy += Y_ACC;
-		dy = Mmin(dy, 0x1FFF);
-	}
+	/* 現在の位置 */
+#if 0
+	x += g_stST_PCG_LIST[bListNum].hit_x;
+	y += g_stST_PCG_LIST[bListNum].hit_y;
+#else
+	x = p_stPCG->x >> PCG_LSB;
+	y = p_stPCG->y >> PCG_LSB;
+#endif
+	dx = p_stPCG->dx;
+	dy = p_stPCG->dy;
+	width = Mmul16(p_stPCG->Pat_w);
+	height = Mmul16(p_stPCG->Pat_h);
+	h_width	= g_stST_PCG_LIST[list_num].hit_width;
+	h_height	= g_stST_PCG_LIST[list_num].hit_height;
 
-	/* ビン */
-	if(y > g_TB_GameLevel[g_nGameLevel] - height)	/* ビン底 */
-	{
-		y = g_TB_GameLevel[g_nGameLevel] - height;
-		hitFlag = TRUE;	/* 衝突 */
-	}
-	else
-	{
-	}
+	end_y = g_TB_GameLevel[g_nGameLevel] - height;
 
-	if(x < X_POS_MIN)			/* ビン左 */
-	{
-		if(Mabs(dx) <= X_ACC)
-		{
-			dx = 0;
-		}
-		else
-		{
-			if(dx > 0)
-			{
-				dx -= (int16_t)X_ACC;
-			}
-			else
-			{
-				dx += (int16_t)X_ACC;
-			}
-		}
-		x = X_POS_MIN;
-	}
-	else if(x > X_POS_MAX - width)	/* ビン右 */
-	{
-		if(Mabs(dx) <= X_ACC)
-		{
-			dx = 0;
-		}
-		else
-		{
-			if(dx > 0)
-			{
-				dx -= (int16_t)X_ACC;
-			}
-			else
-			{
-				dx += (int16_t)X_ACC;
-			}
-		}
-		x = X_POS_MAX - width;
-	}
+	/* 新しい位置 */
+    p_stPCG->dy += Y_ACC;
+    new_x = x + (p_stPCG->dx >> PCG_LSB);
+    new_y = y + (p_stPCG->dy >> PCG_LSB);
 	
-	/* 加速度の更新 */
-	p_stPCG->dx = dx;
-	p_stPCG->dy = dy;
+	/* 当たり判定その１ */
+    if (Ball_check_collision(&new_x, &new_y, width, height, list_num, &bStat))	/* 枠外もしくはヒット */
+	{
+#if 1
+		if((bStat & (Bit_0 | Bit_1)) == (Bit_0 | Bit_1))	/* 左右に障害物があった */
+		{
+			p_stPCG->dx = 0; // 止める
+		}
+		else if((bStat & (Bit_0 | Bit_1)) == 0u)	/* 左右に障害物がなかった */
+		{
+			/* 何もしない */
+		}
+		else	/* どちらかに障害物があった */
+		{
+			p_stPCG->dx = -p_stPCG->dx; // 反発する
+		}
 
-	/* 最終位置 */
-	p_stPCG->x = x;
-	p_stPCG->y = y;
+		if((bStat & (Bit_2 | Bit_3)) == (Bit_2 | Bit_3))	/* 上下に障害物があった */
+		{
+			p_stPCG->dy = 0; // 止める
+		}
+		else if((bStat & (Bit_0 | Bit_1)) == 0u)	/* 上下に障害物がなかった */
+		{
+			/* 何もしない */
+		}
+		else	/* どちらかに障害物があった */
+		{
+			if(p_stPCG->dy > 0)
+			{
+				p_stPCG->dy = 0;
+			}
+			p_stPCG->dy -= Y_ACC;	/* 上方向へ */
+		}
+#else
+		if(new_y == 0)		/* 下面に何かがあった */
+		{
+			if(p_stPCG->dy > 0)
+			{
+				p_stPCG->dy = 0;
+			}
+			p_stPCG->dy -= Y_ACC;	/* 上方向へ */
+		}
+		else
+		{
+			p_stPCG->dy = 0;	/* 縦移動停止 */
+		}
+#endif		
+		new_x = x + (p_stPCG->dx >> PCG_LSB);
+		new_y = y + (p_stPCG->dy >> PCG_LSB);
 
-	ret = hitFlag;
+#ifdef DEBUG	/* デバッグコーナー */
+//		memset(sBuf, 0, sizeof(sBuf));
+//		sprintf(sBuf, "(%d,%d)", new_x, new_y);
+//		BG_TextPut(sBuf, x, y);	/* デバッグ表示 */
+#endif
+
+#if 1
+		/* 当たり判定その２ */
+		if (Ball_check_collision(&new_x, &new_y, width, height, list_num, &bStat))	/* 枠外もしくはヒット */
+		{
+            p_stPCG->dx = 0;	/* 横移動停止 */
+			if(new_y == 0)		/* 下面に何かがあった */
+			{
+				if(p_stPCG->dy > 0)
+				{
+					p_stPCG->dy = 0;
+				}
+				p_stPCG->dy -= Y_ACC;	/* 上方向へ */
+//				p_stPCG->dy = 0;
+//				y = new_y - h_height;
+			}
+			else
+			{
+				p_stPCG->dy = 0;
+			}
+
+			new_x = x + (p_stPCG->dx >> PCG_LSB);
+			new_y = y + (p_stPCG->dy >> PCG_LSB);
+
+			p_stPCG->status = FALSE;	/* 移動停止 */
+        }
+		else
+		{
+		}
+#else
+		p_stPCG->status = FALSE;	/* 移動停止 */
+#endif
+    }
+	else
+	{
+		if((bStat & (Bit_0 | Bit_1)) == (Bit_0 | Bit_1))	/* 左右に障害物があった */
+		{
+			p_stPCG->dx = 0; // 止める
+		}
+		else if((bStat & (Bit_0 | Bit_1)) == 0u)	/* 左右に障害物がなかった */
+		{
+			/* 何もしない */
+		}
+		else	/* どちらかに障害物があった */
+		{
+			if(bStat & (Bit_0) != 0u)
+			{
+				p_stPCG->dx += X_ACC;	/* 左にあった */
+			}
+			else
+			{
+				p_stPCG->dx -= X_ACC;	/* 右にあった */
+			}
+		}
+		new_x = x + (p_stPCG->dx >> PCG_LSB);
+		new_y = y + (p_stPCG->dy >> PCG_LSB);
+	}
+
+#if 0
+	if(p_stPCG->dx != 0)
+	{
+		if(p_stPCG->dx > 0)	/* ０になるまで原則 */
+		{
+			p_stPCG->dx -= X_DEC;
+		}
+		else
+		{
+			p_stPCG->dx += X_DEC;
+		}
+	}
+#endif
+
+	p_stPCG->x = new_x << PCG_LSB;	/* 横 更新 */
+	p_stPCG->y = new_y << PCG_LSB;	/* 縦 更新 */
+
+	if(p_stPCG->status == FALSE)
+	{
+		ret = FALSE;
+	}
+	else if( (new_y <= y ) || (new_y >= end_y) )	/* クリップ処理 */
+	{
+        new_y = end_y;
+
+        p_stPCG->dy = 0;			/* 縦移動停止 */
+        p_stPCG->status = FALSE;	/* 移動停止 */
+
+#ifdef DEBUG	/* デバッグコーナー */
+//		x = p_stPCG->x >> PCG_LSB;
+//		y = p_stPCG->y >> PCG_LSB;
+//		memset(sBuf, 0, sizeof(sBuf));
+//		sprintf(sBuf, "(%d,%d)(%d,%d)", x, y, p_stPCG->dx, p_stPCG->dy);
+//		BG_TextPut(sBuf, x, y);	/* デバッグ表示 */
+#endif
+		ret = FALSE;
+    }
+	else
+	{
+#ifdef DEBUG	/* デバッグコーナー */
+//		x = p_stPCG->x >> PCG_LSB;
+//		y = p_stPCG->y >> PCG_LSB;
+//		memset(sBuf, 0, sizeof(sBuf));
+//		sprintf(sBuf, "(%d,%d)(%d,%d)", x, y, p_stPCG->dx, p_stPCG->dy);
+//		BG_TextPut(sBuf, x, y);	/* デバッグ表示 */
+#endif
+	}
 
 	return ret;
 }
@@ -600,41 +942,42 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, int8_t hitFlag)
 static void Ball_Check(int16_t nBallCount)
 {
 #ifdef DEBUG	/* デバッグコーナー */
-	//int8_t sBuf[128];
+	int8_t sBuf[128] = {0};
 #endif
-	int16_t	i, j, k, l;
-	int16_t x, y;
-	int16_t w, h;
-	int16_t dw, dh;
-	int16_t cx, cy;
+	int16_t	i, j;
+
+	uint16_t x, y;
+	uint16_t w, h;
+	uint16_t dw, dh;
+	uint16_t cx, cy;
 	int16_t dx, dy;
-	int16_t xs, ys, xe, ye;
-	int16_t width, height;
-	int16_t line = 0xFF;
-	int8_t bValid;
+	uint16_t width, height;
+	uint16_t xs, ys, xe, ye;
+	int16_t list_num;
 
-	int16_t x1, y1;
-	int16_t w1, h1;
-	int16_t dw1, dh1;
-	int16_t cx1, cy1;
+	uint16_t x1, y1;
+	uint16_t w1, h1;
+	uint16_t dw1, dh1;
+	uint16_t cx1, cy1;
 	int16_t dx1, dy1;
-	int16_t width1, height1;
-	int16_t xs1, ys1, xe1, ye1;
+	uint16_t width1, height1;
+	uint16_t xs1, ys1, xe1, ye1;
+#if 0
+	int16_t list_num1;
+#endif
+	int16_t line = 0xFF;
+	int8_t bValid, bValid1;
 
-	uint32_t distance,  distance_src, distance_min;
-
-	int8_t overlapping_pairs[BALL_MAX][2];
+	int8_t overlapping_pairs[BALL_MAX][2] = {0};
 	int16_t num_pairs = 0;
-	int8_t overlapped = FALSE;
-	int8_t non_overlapping[BALL_MAX];
-	int16_t num_non_overlapping = 0;
+ 	int16_t touching[BALL_MAX] = {FALSE};
 
-	int16_t	sound = 0;
+	uint8_t bNoMoreMove = TRUE;
+
 	static uint32_t s_WaitTime = PASSTIME_INIT;
 	static uint8_t s_bErase = FALSE;
-	uint8_t bEraseTmp = FALSE;
 
-	uint8_t allRectanglesNonOverlapping;
+//	uint8_t allRectanglesNonOverlapping;
 #if 0
 	uint32_t time_st;
 #endif
@@ -654,34 +997,43 @@ static void Ball_Check(int16_t nBallCount)
 #endif
 #ifdef DEBUG	/* デバッグコーナー */
 //	printf("Ball_Check st(%d)\n", count);
+	if( g_uDebugNum != 0u )		/* デバッグ中 */
+	{
+		memset(sBuf, 0, sizeof(sBuf));
+		sprintf(sBuf, "%3d", g_uDebugNum);
+		BG_TextPut(sBuf, 178, 239);	/* デバッグ表示 */
+		memset(sBuf, 0, sizeof(sBuf));
+		sprintf(sBuf, "%08b  ", g_uDebugNum);
+		BG_TextPut(sBuf, 178, 247);	/* デバッグ表示 */
+
+		Draw_Fill(X_POS_MIN, Y_MIN_DRAW, X_POS_MAX, Y_MAX_DRAW-1, G_BG);		/* ビンの中は塗りつぶし */
+	}
 #endif
 
-	memset(overlapping_pairs, 0, sizeof(overlapping_pairs));
-	memset(non_overlapping, 0, sizeof(non_overlapping));
+	if(s_bErase == TRUE)
+	{
+		if(	GetPassTime(COMBO_INTERVAL_SE_TIME, &s_WaitTime) != 0u  )	/* 500ms経過 */
+		{
+			s_bErase = FALSE;
+			g_bShot_OK = TRUE;	/* 次の発射許可 */
+		}
+		else
+		{
+			return;
+		}
+	}
 
 	/* 重なり抽出 */
 	for(i = 0; i < BALL_MAX - 1; i++)
 	{
+		uint8_t bEraseTmp = FALSE;
+
 #ifdef DEBUG	/* デバッグコーナー */
 //		Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 		bValid = g_stBall[i].bValidty;
-		if(	(bValid == ball_lost )	||	/* 無効データ */
-			(bValid == ball_now )	||	/* 発射予定ボール */
-			(bValid == ball_next )	)	/* 次のボール */
+		if( bValid != ball_exist )		/* 存在するボール以外 */
 		{
-			if(i == g_index_next)		/* 次のボール */
-			{
-				/* 何もしない */
-			}
-			else if(i == g_index_now)	/* 発射予定ボール */
-			{
-				/* 何もしない */
-			}
-			else
-			{
-				p_stPCG->update	= FALSE;
-			}
 			continue;
 		}
 
@@ -690,15 +1042,22 @@ static void Ball_Check(int16_t nBallCount)
 		{
 			continue;
 		}
-
-		overlapped = FALSE;	/* 初期化 */
 		
-		x = p_stPCG->x;
-		y = p_stPCG->y;
-		p_stPCG->update	= TRUE;	/* 描画 */
+		x = p_stPCG->x >> PCG_LSB;
+		y = p_stPCG->y >> PCG_LSB;
+		dx = p_stPCG->dx;
+		dy = p_stPCG->dy;
 
-		width	= Mmul16(p_stPCG->Pat_w);
-		height	= Mmul16(p_stPCG->Pat_h);
+		list_num = g_stBall[i].bSize + 1;
+#if 0
+		x += g_stST_PCG_LIST[list_num].hit_x;
+		y += g_stST_PCG_LIST[list_num].hit_y;
+		width	= g_stST_PCG_LIST[list_num].hit_width;
+		height	= g_stST_PCG_LIST[list_num].hit_height;
+#else
+		width	= p_stPCG->Pat_w * SP_W;
+		height	= p_stPCG->Pat_h * SP_H;
+#endif
 		w = Mdiv2(width);
 		h = Mdiv2(height);
 		dw = Mdiv16(width);
@@ -706,25 +1065,13 @@ static void Ball_Check(int16_t nBallCount)
 		cx = x + w; 
 		cy = y + h;
 
+		p_stPCG->update = TRUE;
+
 		for(j = i + 1; j < BALL_MAX; j++)
 		{
-			bValid = g_stBall[j].bValidty;
-			if(	(bValid == ball_lost )	||	/* 無効データ */
-				(bValid == ball_now )	||	/* 発射予定ボール */
-				(bValid == ball_next )	)	/* 次のボール */
+			bValid1 = g_stBall[j].bValidty;
+			if( bValid1 != ball_exist )		/* 存在するボール以外 */
 			{
-				if(j == g_index_next)		/* 次のボール */
-				{
-					/* 何もしない */
-				}
-				else if(j == g_index_now)	/* 発射予定ボール */
-				{
-					/* 何もしない */
-				}
-				else
-				{
-					p_stPCG_other->update = FALSE;
-				}
 				continue;
 			}
 
@@ -733,13 +1080,23 @@ static void Ball_Check(int16_t nBallCount)
 			{
 				continue;
 			}
+			p_stPCG_other->update = TRUE;
 			
-			x1 = p_stPCG_other->x;
-			y1 = p_stPCG_other->y;
-			p_stPCG_other->update	= TRUE;	/* 描画 */
+			x1 = p_stPCG_other->x >> PCG_LSB;
+			y1 = p_stPCG_other->y >> PCG_LSB;
+			dx1 = p_stPCG_other->dx;
+			dy1 = p_stPCG_other->dy;
 
-			width1	= Mmul16(p_stPCG_other->Pat_w);
-			height1	= Mmul16(p_stPCG_other->Pat_h);
+#if 0
+			list_num1 = g_stBall[j].bSize + 1;
+			x1 += g_stST_PCG_LIST[list_num1].hit_x;
+			y1 += g_stST_PCG_LIST[list_num1].hit_y;
+			width1	= g_stST_PCG_LIST[list_num1].hit_width;
+			height1	= g_stST_PCG_LIST[list_num1].hit_height;
+#else
+			width1	= p_stPCG_other->Pat_w * SP_W;
+			height1	= p_stPCG_other->Pat_h * SP_H;
+#endif
 			w1 = Mdiv2(width1); 
 			h1 = Mdiv2(height1);
 			dw1 = Mdiv16(width1); 
@@ -747,35 +1104,6 @@ static void Ball_Check(int16_t nBallCount)
 			cx1 = x1 + w1; 
 			cy1 = y1 + h1;
 
-			line = Mmin(y, line);	/* 更新 */
-			line = Mmin(y1, line);	/* 更新 */
-
-			distance = APL_distance(cx, cy , cx1, cy1);
-			distance_src = Mmin((w + w1), (h + h1));
-			distance_src = distance_src * distance_src;
-
-			if(distance < (Mmul2(distance_src) + distance_src))		/* 距離が近い */
-			{
-				if(p_stPCG->dy != 0)	/* 減速し貫通しないようにする */
-				{
-					p_stPCG->dy = Y_ACC2;
-				}
-				if(p_stPCG_other->dy != 0)	/* 減速し貫通しないようにする */
-				{
-					p_stPCG_other->dy = Y_ACC2;
-				}
-			}			
-#if 1
-			xs = x + dw;
-			ys = y + dh;
-			xe = x + width - dw;
-			ye = y + height - dh;
-
-			xs1 = x1 + dw1;
-			ys1 = y1 + dh1;
-			xe1 = x1 + width1 - dw1;
-			ye1 = y1 + height1 - dh1;
-#else
 			xs = x;
 			ys = y;
 			xe = x + width;
@@ -785,33 +1113,205 @@ static void Ball_Check(int16_t nBallCount)
 			ys1 = y1;
 			xe1 = x1 + width1;
 			ye1 = y1 + height1;
-#endif
-			if( (xs < xe1) && (xe > xs1) && (ys < ye1) && (ye > ys1) )
-//			if(distance < distance_src)		/* 距離がさらに近い */
+
+			if( (xs <= xe1) && (xe >= xs1) && (ys <= ye1) && (ye >= ys1) )
 			{
-				if(p_stPCG->dy != 0)		/* 停止 */
-				{
-					p_stPCG->dy = 0;
-				}
-				if(p_stPCG_other->dy != 0)	/* 停止 */
-				{
-					p_stPCG_other->dy = 0;
-				}
+#ifdef DEBUG	/* デバッグコーナー */
+//				T_Box(xs, ys, xe, ye, 0xFFFF, T_RED2);
+//				T_Box(xs1, ys1, xe1, ye1, 0xFFFF, T_YELLOW);
+//				Draw_Box(xs, ys, xe, ye, G_D_RED, 0xFFFF);
+//				Draw_Box(xs1, ys1, xe1, ye1, G_YELLOW, 0xFFFF);
+#endif
 				overlapping_pairs[num_pairs][0] = i;
 				overlapping_pairs[num_pairs][1] = j;
+				touching[i] = TRUE;
+				touching[j] = TRUE;
 				num_pairs++;
+
 				if((i == nBallCount) || (j == nBallCount))		/* 有効化したボール */
 				{
 					g_bShot_OK = TRUE;	/* 次の発射許可 */
 				}
-				overlapped = TRUE;	/* 重なった */
+
+				if( Ball_Combine(p_stPCG, i, p_stPCG_other, j) != 0 )	/* 合体成立 */
+				{
+					ADPCM_Play(Mmin(S_Get_Combo() + 7 - 1, p_list_max - 1));	/* 連鎖音 */
+					s_bErase = TRUE;
+					bEraseTmp = TRUE;
+					break;
+				}
+				else
+				{
+#if 1
+					if(i == nBallCount)		/* 有効化したボール */
+					{
+						if(p_stPCG->dx == 0)
+						{
+							if(cx < cx1)
+							{
+								dx  = -X_ACC;
+							}
+							else
+							{
+								dx  =  X_ACC;
+							}
+							p_stPCG->dx = dx;
+						}
+
+						if(p_stPCG_other->dx == 0)
+						{
+							if(cx < cx1)
+							{
+								dx1 =  X_ACC;
+							}
+							else
+							{
+								dx1 = -X_ACC;
+							}
+							p_stPCG_other->dx = dx1;
+						}
+					}
+#endif
+				}
+			}
+			else
+			{
+				/* 何もしない */
 			}
 		}
 
-		if(overlapped == FALSE)
+#ifdef DEBUG	/* デバッグコーナー */
+//		memset(sBuf, 0, sizeof(sBuf));
+//		sprintf(sBuf, "(%d,%d)(%d,%d)", x, y, p_stPCG->dx, p_stPCG->dy);
+//		BG_TextPut(sBuf, x, y);	/* デバッグ表示 */
+#endif
+
+		bValid = g_stBall[i].bValidty;
+		if( bValid != ball_exist )		/* 存在するボール以外 */
 		{
-			non_overlapping[num_non_overlapping++] = i;	/* 重ならなかった */
+			continue;
 		}
+
+		if (p_stPCG->status == FALSE)	/* 移動停止 */
+		{
+#ifdef DEBUG	/* デバッグコーナー */
+			if( (g_uDebugNum & Bit_3) != 0u )	/* 移動完了済みSP */
+			{
+				x = p_stPCG->x >> PCG_LSB;
+				y = p_stPCG->y >> PCG_LSB;
+				width	= p_stPCG->Pat_w * SP_W;
+				height	= p_stPCG->Pat_h * SP_H;
+				Draw_Box(x, y, x + width, y + height, G_L_PINK, 0xFFFF);
+			}
+#endif
+		}
+		else
+		{
+		    Ball_mark_area(p_stPCG, 0, list_num); // 古い位置をクリア
+
+			if(Ball_Point_Update(p_stPCG, list_num) == FALSE)	/* 移動済み、２回ヒット、底 */
+			{
+				if((nBallCount == i) || (nBallCount == -1))		/* 有効化したボール */
+				{
+					g_bShot_OK = TRUE;	/* 次の発射許可 */
+				}
+			}
+			else
+			{
+			}
+			
+			Ball_mark_area(p_stPCG, 1, list_num); // 新しい位置をマーク
+
+#ifdef DEBUG	/* デバッグコーナー */
+			if( (g_uDebugNum & Bit_1) != 0u )	/* 移動中SP */
+			{
+				if( (g_uDebugNum & Bit_2) != 0u )	/* 当たり判定 */
+				{
+					x += g_stST_PCG_LIST[list_num].hit_x;
+					y += g_stST_PCG_LIST[list_num].hit_y;
+					width	= g_stST_PCG_LIST[list_num].hit_width;
+					height	= g_stST_PCG_LIST[list_num].hit_height;
+					Draw_Box(x, y, x + width, y + height, G_PURPLE, 0xFFFF);
+				}
+				else	/* Bit_1 SPのサイズ範囲 */
+				{
+					x = p_stPCG->x >> PCG_LSB;
+					y = p_stPCG->y >> PCG_LSB;
+					width	= p_stPCG->Pat_w * SP_W;
+					height	= p_stPCG->Pat_h * SP_H;
+					Draw_Box(x, y, x + width, y + height, G_YELLOW, 0xFFFF);
+				}
+			}
+			if( (g_uDebugNum & Bit_4) != 0u )	/* 加速度表示 */
+			{
+				x = p_stPCG->x >> PCG_LSB;
+				y = p_stPCG->y >> PCG_LSB;
+				memset(sBuf, 0, sizeof(sBuf));
+				sprintf(sBuf, "%d,%d", p_stPCG->dx >> PCG_LSB, (int8_t)p_stPCG->dy >> PCG_LSB);
+				PutGraphic_To_Symbol12(sBuf, x, y, F_MOJI );	
+			}
+#endif
+		}
+
+		line = Mmin(y , line);	/* 更新 */
+
+		if(p_stPCG->status == TRUE)	/* 移動中 */
+		{
+			bNoMoreMove = FALSE;	/* 移動完了していない */
+		}
+		if(bEraseTmp == TRUE)
+		{
+			break;	/* 連鎖感を出す */
+		}
+	}
+
+	if(bNoMoreMove == TRUE)
+	{
+#ifdef DEBUG	/* デバッグコーナー */
+		if( (g_uDebugNum & Bit_0) != 0u )	/* ステータス */
+		{
+			memset(sBuf, 0, sizeof(sBuf));
+			sprintf(sBuf, "NMMOVE(%3d.%3d)", nBallCount, g_Boder_line);
+			BG_TextPut(sBuf, 0, 48);	/* デバッグ表示 */
+		}
+#endif
+		for (i = 0; i < BALL_MAX; i++)
+		{
+			p_stPCG = PCG_Get_Info(SP_BALL_S_1 + g_stBall[i].bSP_num);	/* ボール */
+			if(p_stPCG == NULL)
+			{
+				continue;
+			}
+			
+			bValid = g_stBall[i].bValidty;
+			if( bValid == ball_lost )		/* 存在しないボール */
+			{
+				p_stPCG->update = FALSE;
+				continue;
+			}
+
+			if(p_stPCG->status == FALSE)
+			{
+				p_stPCG->status = TRUE;		/* 移動再開 */
+			}
+		}
+#ifdef DEBUG	/* デバッグコーナー */
+		if( (g_uDebugNum & Bit_5) != 0u )	/* 当たり判定 */
+		{
+			print_area();	/* 塗りつぶし */
+		}
+#endif
+	}
+	else
+	{
+#ifdef DEBUG	/* デバッグコーナー */
+		if( (g_uDebugNum & Bit_0) != 0u )	/* ステータス */
+		{
+			memset(sBuf, 0, sizeof(sBuf));
+			sprintf(sBuf, "  MOVE(%3d.%3d)", nBallCount, g_Boder_line);
+			BG_TextPut(sBuf, 0, 48);	/* デバッグ表示 */
+		}
+#endif
 	}
 
 	if(line != g_TB_GameLevel[g_nGameLevel])
@@ -822,324 +1322,6 @@ static void Ball_Check(int16_t nBallCount)
 #ifdef DEBUG	/* デバッグコーナー */
 //	printf("Ball_Check st2(%d)\n", count);
 #endif
-
-	if(s_bErase == TRUE)
-	{
-		if(	GetPassTime(COMBO_INTERVAL_SE_TIME, &s_WaitTime) != 0u  )	/* 500ms経過 */
-		{
-			s_bErase = FALSE;
-		}
-		else
-		{
-			//return;
-		}
-	}
-
-    allRectanglesNonOverlapping = FALSE;
-
-//	while (!allRectanglesNonOverlapping)
-	{
-        allRectanglesNonOverlapping = TRUE; // 一旦重なっていないと仮定
-
-		sound = 0;
-
-		/* 重なりデータのみ判定 */	
-		for(k = 0; k < num_pairs; k++)
-		{
-			int16_t Prex, Prey;
-
-			i = overlapping_pairs[k][0];
-			j = overlapping_pairs[k][1];
-
-			bValid = g_stBall[i].bValidty;
-			if(	(bValid == ball_lost )	||	/* 無効データ */
-				(bValid == ball_now )	||	/* 発射予定ボール */
-				(bValid == ball_next )	)	/* 次のボール */
-			{
-				continue;
-			}
-			
-			bValid = g_stBall[j].bValidty;
-			if(	(bValid == ball_lost )	||	/* 無効データ */
-				(bValid == ball_now )	||	/* 発射予定ボール */
-				(bValid == ball_next )	)	/* 次のボール */
-			{
-				continue;
-			}
-
-			p_stPCG = PCG_Get_Info(SP_BALL_S_1 + g_stBall[i].bSP_num);	/* ボール */
-			if(p_stPCG == NULL)
-			{
-				continue;
-			}
-			p_stPCG_other = PCG_Get_Info(SP_BALL_S_1 + g_stBall[j].bSP_num);	/* 他のボール */
-			if(p_stPCG_other == NULL)
-			{
-				continue;
-			}
-			// ----------------------------------
-			x = p_stPCG->x;
-			y = p_stPCG->y;
-
-			dx = p_stPCG->dx;
-			dy = p_stPCG->dy;
-			width	= Mmul16(p_stPCG->Pat_w);
-			height	= Mmul16(p_stPCG->Pat_h);
-
-			w = Mdiv2(width);
-			h = Mdiv2(height);
-			cx = x + w; 
-			cy = y + h;
-
-			xs = x;// + w;
-			ys = y;// + h;
-			xe = x + width;// - w;
-			ye = y + height;// - h;
-
-			// ----------------------------------
-			x1 = p_stPCG_other->x;
-			y1 = p_stPCG_other->y;
-
-			dx1 = p_stPCG_other->dx;
-			dy1 = p_stPCG_other->dy;
-			width1	= Mmul16(p_stPCG_other->Pat_w);
-			height1	= Mmul16(p_stPCG_other->Pat_h);
-
-			w1 = Mdiv2(width1);
-			h1 = Mdiv2(height1);
-			cx1 = x1 + w1; 
-			cy1 = y1 + h1;
-
-			xs1 = x1;// + w1;
-			ys1 = y1;// + h1;
-			xe1 = x1 + width1;// - w1;
-			ye1 = y1 + height1;// - h1;
-
-			Prex = x;
-			Prey = y;
-
-			if(s_bErase == FALSE)
-			{
-				if( Ball_Combine(p_stPCG, i, p_stPCG_other, j) != 0 )	/* 合体成立 */
-				{
-					ADPCM_Play(Mmin(S_Get_Combo() + 7 - 1, p_list_max - 1));	/* 連鎖音 */
-					s_bErase = TRUE;
-					bEraseTmp = TRUE;
-				}
-				else
-				{
-					bEraseTmp = FALSE;
-				}
-			}
-			else
-			{
-				bEraseTmp = FALSE;
-			}
-
-			if(bEraseTmp == FALSE)
-			{
-#if 0
-				distance = APL_distance(cx, cy, cx1, cy1);
-				distance_src = Mmin((w + w1), (h + h1));
-
-				if(distance < distance_src)		/* 距離が近い */
-				{
-					dy  =   0;
-					dy1  =  0;
-				}
-				else
-#endif
-				{
-					int16_t *pmx, *pmy;
-					// 移動先の候補の位置
-					int16_t mx[] = {  0, 4,-4, 0, 0 };	// 右、左、上、下、０
-					int16_t my[] = {  4, 0, 0, 4, 0 };	// 右、左、上、下、０
-
-					pmx = &mx[0];	/* 右優先 */
-					pmy = &my[0];	/* 右優先 */
-
-					distance_min = 0xFFFFFFFF;
-
-					// 移動先の候補を試す
-					for(l = 0; l < 5; l++)
-					{
-						x += *(pmx + l) * w;
-						y += *(pmy + l) * h;
-
-						// 移動先が他の矩形と重なっていないかチェック
-						distance = APL_distance(x + Mdiv2(width), y + Mdiv2(height), cx1, cy1);
-						distance_src = Mmin((w + w1), (h + h1));
-						distance_src *= distance_src;
-						distance_src = (Mdiv2(distance_src) - Mdiv4(distance_src)); 
-
-						if(distance > distance_src)		/* 距離が離れた */
-						{
-							allRectanglesNonOverlapping = FALSE;	/* オーバーラップ回避 */
-
-							if(distance < distance_min)
-							{
-								distance_min = distance;
-
-								if( (g_stBall[i].bSize) == (g_stBall[j].bSize) )	/* 同じサイズ */
-								{
-									if(cy < cy1)
-									{
-										dy   = -Y_ACC;
-										dy1  =  Y_ACC;
-									}
-									else
-									{
-										dy  =   Y_ACC;
-										dy1  = -Y_ACC;
-									}
-
-									if(cx < cx1)
-									{
-										dx   = -X_ACC;
-										dx1  =  X_ACC;
-									}
-									else
-									{
-										dx   =  X_ACC;
-										dx1  = -X_ACC;
-									}
-								}
-								else if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )	/* サイズが異なる */
-								{
-									if(cy < cy1)
-									{
-										dy   = -Y_ACC;
-										dy1  =  0;
-									}
-									else
-									{
-										dy  =   Y_ACC;
-										dy1  =  0;
-									}
-
-									if(cx < cx1)
-									{
-										dx   = -X_ACC;
-										dx1  =  0;
-									}
-									else
-									{
-										dx   =  X_ACC;
-										dx1  =  0;
-									}
-								}
-								else	/* j側が小さい */
-								{
-									if(cy < cy1)
-									{
-										dy   =  0;
-										dy1  =  Y_ACC;
-									}
-									else
-									{
-										dy   =  0;
-										dy1  =  -Y_ACC;
-									}
-
-									if(cx < cx1)
-									{
-										dx   = 0;
-										dx1  = X_ACC;
-									}
-									else
-									{
-										dx   = 0;
-										dx1  = -X_ACC;
-									}
-								}
-							}
-						}
-						else
-						{
-							/* 動けない */
-							if( (g_stBall[i].bSize) < (g_stBall[j].bSize) )	/* サイズが異なる */
-							{
-								if(cy < cy1)
-								{
-									dy   = -Y_ACC;
-									dy1  =  Y_ACC;
-								}
-								else
-								{
-									dy  =  -Y_ACC;
-									dy1  =  0;
-								}
-							}
-							else
-							{
-								if(cy < cy1)
-								{
-									dy1  = Y_ACC;
-								}
-								else
-								{
-									dy  = Y_ACC;
-								}
-							}
-						}
-						// 位置を戻す
-						x = Prex;
-						y = Prey;
-					}
-				}
-
-				p_stPCG->x = x;
-				p_stPCG->y = y;
-				p_stPCG->dx = dx;
-				p_stPCG->dy = dy;
-				p_stPCG->update	= TRUE;	/* 描画 */
-				Ball_Point_Update(p_stPCG, TRUE);	/* ヒット */
-
-				p_stPCG_other->x = x1;
-				p_stPCG_other->y = y1;
-				p_stPCG_other->dx = dx1;
-				p_stPCG_other->dy = dy1;
-				p_stPCG_other->update	= TRUE;	/* 描画 */
-				Ball_Point_Update(p_stPCG_other, TRUE);	/* ヒット */
-			}
-
-			if(g_ubGameClear == TRUE)
-			{
-				break;
-			}
-		}
-	}
-
-	for(k = 0; k < num_non_overlapping; k++)
-	{
-		i = non_overlapping[k];
-		
-		bValid = g_stBall[i].bValidty;
-		if(	(bValid == ball_lost )	||	/* 無効データ */
-			(bValid == ball_now )	||	/* 発射予定ボール */
-			(bValid == ball_next )	)	/* 次のボール */
-		{
-			continue;
-		}
-
-		p_stPCG = PCG_Get_Info(SP_BALL_S_1 + g_stBall[i].bSP_num);	/* ボール */
-		if(p_stPCG == NULL)
-		{
-			continue;
-		}
-		else
-		{
-			p_stPCG->update	= TRUE;	/* 描画 */
-
-			if(Ball_Point_Update(p_stPCG, FALSE) != 0)	/* ヒットしない */
-			{
-				if((nBallCount == i) || (nBallCount == -1))		/* 有効化したボール */
-				{
-					g_bShot_OK = TRUE;	/* 次の発射許可 */
-				}
-			}
-		}
-	}
 
 #ifdef DEBUG	/* デバッグコーナー */
 //	printf("Ball_Check st3(%d)\n", count);
@@ -1178,7 +1360,7 @@ static void Ball_Move(int16_t *nNum)
 	ST_PCG	*p_stPCG_next = {NULL};
 
 #ifdef DEBUG	/* デバッグコーナー */
-//	int8_t sBuf[128];
+//	int8_t sBuf[128] = {0};
 #endif	/* DEBUG */
 	for(i = 0; i < g_Ball_Table[1]; i++)
 	{
@@ -1208,6 +1390,7 @@ static void Ball_Move(int16_t *nNum)
 		p_stPCG_ball = PCG_Get_Info(SP_BALL_S_1 + g_stBall[i].bSP_num );		/* ボール */
 	}
 	g_index_now = i;	/* 発射予定ボール */
+	g_stBall[i].bValidty = ball_now;
 
 	for(j = 0; j < g_Ball_Table[1]; j++)
 	{
@@ -1227,7 +1410,7 @@ static void Ball_Move(int16_t *nNum)
 		p_stPCG_next = PCG_Get_Info(SP_BALL_S_1 + g_stBall[j].bSP_num );		/* ボール */
 		if(p_stPCG_next != NULL)
 		{
-			pal = Mmul256(g_stST_PCG_LIST[g_stBall[i].bSize + 1].Pal);
+			pal = Mmul256(g_stST_PCG_LIST[g_stBall[j].bSize + 1].Pal);
 			for(k=0; k < p_stPCG_next->Pat_DataMax; k++)
 			{
 				*(p_stPCG_next->pPatCodeTbl + k) &= 0xF0FF;
@@ -1241,10 +1424,12 @@ static void Ball_Move(int16_t *nNum)
 		p_stPCG_next = PCG_Get_Info(SP_BALL_S_1 + g_stBall[j].bSP_num );		/* ボール */
 	}
 	g_index_next = j;	/* 次のボールの番号設定 */
+	g_stBall[j].bValidty = ball_next;	/* 次 */
+
 	if(p_stPCG_next != NULL)
 	{
-		p_stPCG_next->x = 224;
-		p_stPCG_next->y = 16;
+		p_stPCG_next->x = 224 << PCG_LSB;
+		p_stPCG_next->y = 16 << PCG_LSB;
 		p_stPCG_next->update	= TRUE;
 	}
 
@@ -1261,7 +1446,7 @@ static void Ball_Move(int16_t *nNum)
 #endif
 
 	if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-		((g_Input & KEY_A) != 0u)		||		/* A */
+		((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
 		((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
 	{
 		if(s_bFlag == FALSE)
@@ -1276,17 +1461,23 @@ static void Ball_Move(int16_t *nNum)
 
 					if(	g_stBall[i].bValidty == ball_now )	/* 発射予定ボール */
 					{
-						g_stBall[j].bValidty = ball_now;
-						g_stBall[i].bValidty = ball_exist;
+						g_stBall[i].bValidty = ball_exist;	/* 存在するボール */
+
+						g_stBall[j].bValidty = ball_now;	/* 発射ボール */
 
 						*nNum = i;			/* 現在のボール番号設定 */
-						s_nNum_old = s_nNext_old;
 
 						if(p_stPCG_ball != NULL)
 						{
 							p_stPCG_ball->dx = 0;
 							p_stPCG_ball->dy = Y_ACC;
+							p_stPCG_ball->status = TRUE;
 							p_stPCG_ball->update = TRUE;
+#ifdef DEBUG	/* デバッグコーナー */
+//							memset(sBuf, 0, sizeof(sBuf));
+//							sprintf(sBuf, "i(%2d)j(%2d)in(%2d)", s_nNum_old, s_nNext_old, *nNum);
+//							Draw_Message_To_Graphic(sBuf, 0, 112, F_MOJI, F_MOJI_BAK);	/* スコア表示 */
+#endif
 						}
 						ADPCM_Play(6);	/* shot */
 					}
@@ -1310,13 +1501,13 @@ static void Ball_Move(int16_t *nNum)
 			((g_Input & KEY_LEFT) != 0 )		)	/* 左 */
 		{
 			if(	((g_Input_P[0] & JOY_B ) != 0u)	||		/* B */
-				((g_Input & KEY_B) != 0u)		)		/* B */
+				((g_Input & KEY_b_X) != 0u)		)		/* B(x) */
 			{
-				p_stPCG_ship->dx = -2;
+				p_stPCG_ship->dx = (-2) << PCG_LSB;
 			}
 			else
 			{
-				p_stPCG_ship->dx = -1;
+				p_stPCG_ship->dx = (-1) << PCG_LSB;
 			}
 			/* アニメーション */
 			p_stPCG_ship->Anime++;
@@ -1329,13 +1520,13 @@ static void Ball_Move(int16_t *nNum)
 				((g_Input & KEY_RIGHT) != 0 )			)	/* 右 */
 		{
 			if(	((g_Input_P[0] & JOY_B ) != 0u)	||		/* B */
-				((g_Input & KEY_B) != 0u)		)		/* B */
+				((g_Input & KEY_b_X) != 0u)		)		/* B(x) */
 			{
-				p_stPCG_ship->dx = 2;
+				p_stPCG_ship->dx = (2) << PCG_LSB;
 			}
 			else
 			{
-				p_stPCG_ship->dx = 1;
+				p_stPCG_ship->dx = (1) << PCG_LSB;
 			}
 			/* アニメーション */
 			p_stPCG_ship->Anime++;
@@ -1352,22 +1543,30 @@ static void Ball_Move(int16_t *nNum)
 		}
 		p_stPCG_ship->dy = 0;
 
+		if(p_stPCG_ship->x < ((X_POS_MIN) << PCG_LSB))
+		{
+			p_stPCG_ship->x = (X_POS_MIN) << PCG_LSB;
+			p_stPCG_ship->dx = 0;
+		}
+		else if(p_stPCG_ship->x > ((X_POS_MAX - 16) << PCG_LSB))
+		{
+			p_stPCG_ship->x = (X_POS_MAX - 16) << PCG_LSB;
+			p_stPCG_ship->dx = 0;
+		}
+		else
+		{
+
+		}
 		p_stPCG_ship->x += p_stPCG_ship->dx;
 		p_stPCG_ship->y += p_stPCG_ship->dy;
-		if(p_stPCG_ship->x < X_POS_MIN)
-		{
-			p_stPCG_ship->x = X_POS_MIN;
-		}
-		if(p_stPCG_ship->x > X_POS_MAX - 16)
-		{
-			p_stPCG_ship->x = X_POS_MAX - 16;
-		}
 		p_stPCG_ship->update	= TRUE;
 
 		if(p_stPCG_ball != NULL)
 		{
+//			p_stPCG_ball->dx = 0;
+//			p_stPCG_ball->dy = 0;
 			p_stPCG_ball->x = p_stPCG_ship->x;
-			p_stPCG_ball->y = p_stPCG_ship->y + Mmul16(p_stPCG_ship->Pat_h);
+			p_stPCG_ball->y = p_stPCG_ship->y + (Mmul16(p_stPCG_ship->Pat_h) << PCG_LSB);
 			p_stPCG_ball->update	= TRUE;
 		}
 	}
@@ -1403,6 +1602,7 @@ static void Ball_InitALL(void)
 			p_stPCG->y = 0;
 			p_stPCG->dx = 0;
 			p_stPCG->dy = 0;
+			p_stPCG->status = TRUE;
 			p_stPCG->update	= FALSE;
 		}
 	}
@@ -1421,6 +1621,8 @@ static void Ball_Init(void)
 	
 	ST_PCG	*p_stPCG = NULL;
 
+	g_index = 0;
+
 	for (i = 0; i < BALL_MAX; i++) {
 		g_stBall[i].bSize = 0;
 		g_stBall[i].bSP_num = i;
@@ -1433,15 +1635,11 @@ static void Ball_Init(void)
 	}
 	else
 	{
-		for (i = 0; i < (SP_BALL_S_24 - SP_BALL_S_1); i++) {
+		for (i = 0; i < (SP_BALL_S_40 - SP_BALL_S_1); i++) {
 			g_stBall[i].bValidty = ball_exist;
+			g_index++;
 		}
 	}
-	g_stBall[1].bValidty = ball_next;	/* 次 */
-	g_stBall[0].bValidty = ball_now;	/* 現在 */
-
-	g_index = 0;
-	g_index_next = 1;
 
 	for(i = 0; i < PCG_NUM_MAX; i++)
 	{
@@ -1451,30 +1649,37 @@ static void Ball_Init(void)
 		{
 			switch(i)
 			{
+				case BG_DATA:
+				{
+					break;
+				}
 				case SP_SHIP_0:
 				{
-					p_stPCG->x = 128;
-					p_stPCG->y = 16;
+					p_stPCG->x = (128) << PCG_LSB;
+					p_stPCG->y = (16) << PCG_LSB;
 					p_stPCG->dx = 0;
 					p_stPCG->dy = 0;
+					p_stPCG->status = TRUE;
 					p_stPCG->update	= TRUE;
 					break;
 				}
 				case SP_GAL_0:
 				{
-					p_stPCG->x = 208;
-					p_stPCG->y = Y_POS_BD;
+					p_stPCG->x = (208) << PCG_LSB;
+					p_stPCG->y = (Y_POS_BD) << PCG_LSB;
 					p_stPCG->dx = 0;
 					p_stPCG->dy = 0;
+					p_stPCG->status = TRUE;
 					p_stPCG->update	= TRUE;
 					break;
 				}
 				case SP_ARROW_0:
 				{
-					p_stPCG->x = X_POS_MIN - 16;
-					p_stPCG->y = g_Boder_line - 8;
+					p_stPCG->x = (X_POS_MIN - 16) << PCG_LSB;
+					p_stPCG->y = (g_Boder_line - 8) << PCG_LSB;
 					p_stPCG->dx = 0;
 					p_stPCG->dy = 0;
+					p_stPCG->status = TRUE;
 					p_stPCG->update	= TRUE;
 					break;
 				}
@@ -1482,45 +1687,38 @@ static void Ball_Init(void)
 				{
 					if(g_nGameDifflevel == 0)
 					{
-						p_stPCG->x = 128;
-						p_stPCG->y = Y_POS_BD;
+						p_stPCG->x = (128) << PCG_LSB;
+						p_stPCG->y = (Y_POS_BD) << PCG_LSB;
 						p_stPCG->dx = 0;
 						p_stPCG->dy = 0;
+						p_stPCG->update	= FALSE;
 					}
 					else
 					{
 						if(g_stBall[i].bValidty == ball_exist)
 						{
-							p_stPCG->x = X_POS_MIN + (rand() % 64);
-							p_stPCG->y = Y_POS_BD + 64 + (rand() % 64);
+							p_stPCG->x = (X_POS_MIN + (rand() % 64)) << PCG_LSB;
+							p_stPCG->y = (Y_POS_BD + 64 + (rand() % 64)) << PCG_LSB;
 							p_stPCG->dx = 0;
-							p_stPCG->dy = Y_ACC2;
-
-							g_index++;
-							g_index_next++;
+							p_stPCG->dy = Y_ACC;
+							p_stPCG->update	= TRUE;
 						}
 						else
 						{
-							p_stPCG->x = 128;
-							p_stPCG->y = Y_POS_BD;
+							p_stPCG->x = (128) << PCG_LSB;
+							p_stPCG->y = (Y_POS_BD) << PCG_LSB;
 							p_stPCG->dx = 0;
 							p_stPCG->dy = 0;
+							p_stPCG->update	= FALSE;
 						}
 					}
+					p_stPCG->status = TRUE;
 
 					pal = Mmul256(g_stST_PCG_LIST[g_stBall[i].bSize + 1].Pal);
 					for(j=0; j < p_stPCG->Pat_DataMax; j++)
 					{
 						*(p_stPCG->pPatCodeTbl + j) &= 0xF0FF;
 						*(p_stPCG->pPatCodeTbl + j) |= (pal + Mmul256(g_Ball_Color[g_stBall[i].bStatus]));	/* カラーテーブルをリセット */
-					}
-					if(g_stBall[i].bValidty != ball_lost)
-					{
-						p_stPCG->update	= TRUE;
-					}
-					else
-					{
-						p_stPCG->update	= FALSE;
 					}
 					break;
 				}
@@ -1538,7 +1736,11 @@ static void Ball_Init(void)
 #endif			
 		}
 	}
+
+	g_index_next = g_index + 1;
+	g_stBall[g_index_next].bValidty = ball_next;	/* 次 */
 	g_index_now = g_index;
+	g_stBall[g_index_now].bValidty 	= ball_now;		/* 現在 */
 }
 
 /*===========================================================================================*/
@@ -1548,7 +1750,7 @@ static void Ball_Init(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t main(int16_t argc, int8_t** argv)
+int16_t main_Task(void)
 {
 	int16_t	ret = 0;
 
@@ -1573,22 +1775,6 @@ int16_t main(int16_t argc, int8_t** argv)
 #else
 	SetGameMode(0);
 #endif	
-	/* COPYキー無効化 */
-	init_trap12();
-	/* 例外ハンドリング処理 */
-	usr_abort = App_exit;	/* 例外発生で終了処理を実施する */
-	init_trap14();			/* デバッグ用致命的エラーハンドリング */
-#if 0	/* アドレスエラー発生 */
-	{
-		char buf[10];
-		int *A = (int *)&buf[1];
-		int B = *A;
-		return B;
-	}
-#endif
-
-	App_Init();	/* 初期化 */
-	
 	loop = 1;
 	
 	/* 乱数 */
@@ -1603,12 +1789,6 @@ int16_t main(int16_t argc, int8_t** argv)
 #ifdef DEBUG	/* デバッグコーナー */
 		uint32_t time_now;
 		GetNowTime(&time_now);
-#endif
-
-#ifdef W_BUFFER	/* デバッグコーナー */
-		/* 部分クリア */
-		G_CLR_AREA(	stCRT.hide_offset_x + X_POS_MIN, X_POS_W,
-					stCRT.hide_offset_y + Y_POS_BD, Y_POS_H, 0);
 #endif
 
 #ifdef DEBUG
@@ -1647,12 +1827,17 @@ int16_t main(int16_t argc, int8_t** argv)
 			}
 		}
 		
+#ifdef DEBUG	/* デバッグコーナー */
+		DirectInputKeyNum(&g_uDebugNum, 3);	/* キーボードから数字を入力 */
+#endif
+
 		if((g_Input & KEY_b_ESC ) != 0u)	/* ＥＳＣキー */
 		{
 			/* 終了 */
 			pushCount = Minc(pushCount, 1);
 			if(pushCount >= 5)
 			{
+				pushCount = 0;
 				ADPCM_Play(1);	/* 終了音 */
 
 				Music_Stop();	/* Stop */
@@ -1668,6 +1853,8 @@ int16_t main(int16_t argc, int8_t** argv)
 				pushCount = Minc(pushCount, 1);
 				if(pushCount >= 5)
 				{
+					pushCount = 0;
+
 					ADPCM_Play(1);	/* 終了音 */
 
 					Music_Stop();	/* Stop */
@@ -1747,6 +1934,8 @@ int16_t main(int16_t argc, int8_t** argv)
 			}
 			case SCENE_TITLE_S:
 			{
+				int8_t sStr[12] = {0};
+
 				Music_Play(3);	/* Title */
 
 				G_VIDEO_PRI(2);	/* TX>GR>SP */
@@ -1762,7 +1951,8 @@ int16_t main(int16_t argc, int8_t** argv)
 //				PutGraphic_To_Symbol12("PUSH A BUTTON TO START!", X_POS_MIN, 192, F_MOJI );			/* title画面入力待ち */
 				BG_TextPut("PUSH A BUTTON TO START!", 36, 224);
 //				PutGraphic_To_Symbol12("VERSION 0.0.4", X_POS_MAX, 244, F_MOJI );	/* Ver */
-				BG_TextPut("VER0.0.6", 192, 244);
+				sprintf(sStr, "VER%d.%d.%d", MAJOR_VER, MINOR_VER, PATCH_VER);
+				BG_TextPut(sStr, 192, 244);
 
 				GetNowTime(&s_PassTime);	/* タイムアウトカウンタリセット */
 				GetNowTime(&s_DemoTime);	/* デモ開始カウンタリセット */
@@ -1780,7 +1970,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				static int8_t s_bFlip = FALSE;
 #endif
 				if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-					((g_Input & KEY_A) != 0u)		||		/* A */
+					((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
 					((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
 				{
 					if(s_bFlagInputAB == FALSE)
@@ -1992,7 +2182,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				}
 
 				if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-					((g_Input & KEY_A) != 0u)		||		/* A */
+					((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
 					((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
 				{
 					if(s_bFlagInputAB == FALSE)
@@ -2058,6 +2248,8 @@ int16_t main(int16_t argc, int8_t** argv)
 				g_Boder_count = 0;
 				g_ubGameClear = FALSE;
 				g_nGameClearCount = 0;
+				
+				memset(g_bAREA, 0, sizeof(g_bAREA));
 
 				Ball_Init();	/* ボールの初期化 */
 
@@ -2308,7 +2500,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				CRTC_G1_Scroll_8(0, s_G1_sc_y++);
 
 				if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-					((g_Input & KEY_A) != 0u)		||		/* A */
+					((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
 					((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
 				{
 					if(s_bFlagInputAB == FALSE)
@@ -2379,7 +2571,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				else
 				{
 					if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-						((g_Input & KEY_A) != 0u)		||		/* A */
+						((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
 						((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
 					{
 						ADPCM_Play(4);	/* 決定音 */
@@ -2438,7 +2630,7 @@ int16_t main(int16_t argc, int8_t** argv)
 				if(g_ubDemoPlay == FALSE)	/* デモ以外 */
 				{
 					if(	((g_Input_P[0] & JOY_A ) != 0u)	||	/* Aボタン */
-						((g_Input & KEY_A) != 0u)		||	/* KEY A */
+						((g_Input & KEY_b_Z) != 0u)		||	/* KEY A(z) */
 						((g_Input & KEY_b_SP ) != 0u)	)	/* スペースキー */
 					{
 						ADPCM_Play(4);	/* 決定音 */
@@ -2493,8 +2685,7 @@ int16_t main(int16_t argc, int8_t** argv)
 	while( loop );
 
 	g_bExit = FALSE;
-	App_exit();	/* 終了処理 */
-	
+
 	return ret;
 }
 
@@ -2592,6 +2783,10 @@ static void App_Init(void)
 #ifdef DEBUG	/* デバッグコーナー */
 	printf("App_Init MFP(%d)\n", Get_CPU_Time());
 #endif
+	if(SetNowTime(0) == FALSE)
+	{
+		/*  */
+	}
 	g_GameSpeed = Mmin(Get_CPU_Time() / 300, 7);	/* 300 = 10MHz基準 */
 	g_Vwait = 1;
 
@@ -2774,6 +2969,10 @@ int16_t	App_FlipProc(void)
 	}
 	else
 	{
+#ifdef W_BUFFER
+		ST_CRT		stCRT;
+		GetCRT(&stCRT, g_mode);	/* 画面座標取得 */
+#endif
 		SetFlip(FALSE);			/* フリップ禁止 */
 					
 #ifdef W_BUFFER
@@ -2793,8 +2992,12 @@ int16_t	App_FlipProc(void)
 
 		/* 非表示画面を表示画面へ切り替え */
 		G_HOME(g_mode);
+
+		/* 部分クリア */
+		G_CLR_AREA(	stCRT.hide_offset_x, WIDTH,
+					stCRT.hide_offset_y, HEIGHT, 0);
 #endif
-				
+		
 		bFPS++;
 
 		ret = 1;
@@ -2901,7 +3104,8 @@ void App_VsyncProc( void )
 {
 //	puts("App_VsyncProc");
 #if CNF_VDISP
-	
+	Timer_D_Less_NowTime();
+
 	if(Input_Main(g_ubDemoPlay) != 0u) 	/* 入力処理 */
 	{
 		g_ubDemoPlay = FALSE;	/* デモ解除 */
@@ -2950,6 +3154,40 @@ int16_t	SetGameMode(uint8_t bMode)
 	{
 		g_mode_rev = 1;
 	}
+	
+	return ret;
+}
+
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t main(int16_t argc, int8_t** argv)
+{
+	int16_t	ret = 0;
+
+	/* COPYキー無効化 */
+	init_trap12();
+	/* 例外ハンドリング処理 */
+	usr_abort = App_exit;	/* 例外発生で終了処理を実施する */
+	init_trap14();			/* デバッグ用致命的エラーハンドリング */
+#if 0	/* アドレスエラー発生 */
+	{
+		char buf[10];
+		int *A = (int *)&buf[1];
+		int B = *A;
+		return B;
+	}
+#endif
+
+	App_Init();		/* 初期化 */
+	
+	main_Task();	/* メイン処理 */
+
+	App_exit();		/* 終了処理 */
 	
 	return ret;
 }

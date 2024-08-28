@@ -33,102 +33,15 @@ void PCG_DATA_LOAD(void);
 void PCG_INIT_CHAR(void)
 {
 	uint32_t	i, j;
+	uint32_t	uPCG_list;
 	uint32_t	uPCG_num;
-	uint16_t	uPCG_SP_offset = 0x30;	/* 0~0x2FはBG */
-	uint16_t	uPCG_SP_next = 0x00;	/* 0 */
+	uint16_t	uPCG_SP_offset = PCG_16x16_AREA;	/* 0~0x2FはBG */
+	uint16_t	uPCG_SP_next = 0x00;	/* 0はBG */
 	uint8_t		ubOK;
-	uint8_t		ubPri;
-	uint8_t		ubPal;
+	uint8_t		ubPri = 0x00;
+	uint8_t		ubPal = 0x00;
 
 	printf("SP PCG_INIT_CHAR");
-#if 0
-	PCG_SP_dataload("data/sp/BG.SP");	/* スプライトのデータ読み込み */
-	PCG_PAL_dataload("data/sp/BG.PAL");	/* スプライトのパレットデータ読み込み */
-	BG_TEXT_SET("data/map/map.csv");	/* マップデータによるＢＧの配置 */
-#endif
-#if 0
-	for(uPCG_num = 0; uPCG_num < PCG_MAX; uPCG_num++)
-	{
-		g_stPCG_DATA[uPCG_num].x				= (uPCG_num * 16) & 0xFF;	/* x座標 */
-		g_stPCG_DATA[uPCG_num].y				= (uPCG_num * 16) & 0xFF;	/* y座標 */
-		g_stPCG_DATA[uPCG_num].ratio			= 0;			/* 比率 */
-		g_stPCG_DATA[uPCG_num].rad			= 0;			/* 回転 */
-		g_stPCG_DATA[uPCG_num].Pat_w			= 1;			/* 横方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].Pat_h			= 1;			/* 縦方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= MyMalloc(sizeof(uint32_t));
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl)	= SetBGcode(0, 0, 0x0C, uPCG_num);	/* パターンコードテーブル */
-		g_stPCG_DATA[uPCG_num].update		= TRUE;			/* 更新 */
-		g_stPCG_DATA[uPCG_num].validty		= TRUE;		/* 有効 */
-	}
-#endif
-	
-#if 0
-	for(uPCG_num = 0; uPCG_num < 14; uPCG_num++)
-	{
-		g_stPCG_DATA[uPCG_num].x				= 16 * uPCG_num;	/* x座標 */
-		g_stPCG_DATA[uPCG_num].y				= 128;	/* y座標 */
-		g_stPCG_DATA[uPCG_num].ratio			= 0;	/* 比率 */
-		g_stPCG_DATA[uPCG_num].rad			= 0;	/* 回転 */
-		g_stPCG_DATA[uPCG_num].Pat_w			= 3;	/* 横方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].Pat_h			= 3;	/* 縦方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].Pat_size		= 1;	/* パターンサイズ 0:8x8 1:16x16 */
-		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= MyMalloc(sizeof(uint32_t) * g_stPCG_DATA[uPCG_num].Pat_w * g_stPCG_DATA[uPCG_num].Pat_h);
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 0)	= SetBGcode(0, 0, 0x09, 0x40);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 1)	= SetBGcode(0, 0, 0x09, 0x41);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 2)	= SetBGcode(0, 0, 0x09, 0x42);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 3)	= SetBGcode(0, 0, 0x09, 0x50);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 4)	= SetBGcode(0, 0, 0x09, 0x51);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 5)	= SetBGcode(0, 0, 0x09, 0x52);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 6)	= SetBGcode(0, 0, 0x09, 0x60);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 7)	= SetBGcode(0, 0, 0x09, 0x61);	/* パターンコードテーブル */
-		*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + 8)	= SetBGcode(0, 0, 0x09, 0x62);	/* パターンコードテーブル */
-		g_stPCG_DATA[uPCG_num].update		= TRUE;		/* 更新 */
-		g_stPCG_DATA[uPCG_num].validty		= TRUE;		/* 有効 */
-	}
-#endif
-	
-#if 0
-	for(uPCG_num = 0; uPCG_num < PCG_NUM_MAX; uPCG_num++)
-	{
-		FILE *fp;
-
-		fp = fopen( "data/sp/BG.SP" , "rb" ) ;
-		
-		g_stPCG_DATA[uPCG_num].x			= SP_X_OFFSET + ((SP_W/2) * uPCG_num);	/* x座標 */
-		g_stPCG_DATA[uPCG_num].y			= SP_Y_OFFSET + 128;	/* y座標 */
-		g_stPCG_DATA[uPCG_num].Pat_w		= 1;	/* 横方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].Pat_h		= 1;	/* 縦方向のパターン数 */
-		g_stPCG_DATA[uPCG_num].Pat_AnimeMax	= 1;
-		/* メモリ確保 */
-		uBufSize = g_stPCG_DATA[uPCG_num].Pat_w * g_stPCG_DATA[uPCG_num].Pat_h;
-		/* スプライト定義設定 */
-		g_stPCG_DATA[uPCG_num].pPatCodeTbl	= (uint32_t*)MyMalloc(sizeof(uint32_t) * uBufSize);
-		for(j=0; j < uBufSize; j++)
-		{
-			*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, 0x00, 0xFF);	/* パターンコードテーブル */
-		}
-		/* スプライト画像データ */
-		uAnimeBuf = uBufSize * g_stPCG_DATA[uPCG_num].Pat_AnimeMax;
-		g_stPCG_DATA[uPCG_num].pPatData	= (uint16_t*)MyMalloc(SP_16_SIZE * uAnimeBuf);
-		memset(g_stPCG_DATA[uPCG_num].pPatData, 0, SP_16_SIZE * uAnimeBuf);
-		
-		fseek(fp, (0x20 * SP_16_SIZE) + (uPCG_num * (SP_16_SIZE / 2)), SEEK_SET);
-		fread( g_stPCG_DATA[uPCG_num].pPatData
-				,  (SP_16_SIZE / 2)		/* 1PCG = メモリサイズ */
-				,  uAnimeBuf			/* 何パターン使うのか？ */
-				,  fp
-				);
-		
-		fclose( fp ) ;
-		
-		g_stPCG_DATA[uPCG_num].Plane		= 0xFFFF;	/* プレーンNo. */
-		g_stPCG_DATA[uPCG_num].update		= TRUE;		/* 更新 */
-		g_stPCG_DATA[uPCG_num].validty		= TRUE;		/* 有効 */
-	}
-#endif
-	
-#if 1
-	srand(1);
 	
 	/* 自車スプライト */
 	for(uPCG_num = 0; uPCG_num < PCG_NUM_MAX; uPCG_num++)
@@ -145,13 +58,20 @@ void PCG_INIT_CHAR(void)
 		
 		switch(uPCG_num)
 		{
+			case	BG_DATA:
+			{
+				uPCG_list = 0;
+				ubOK = FALSE;
+				continue;
+			}
 			case	SP_SHIP_0	:	/* 自機 */
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[5].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[5].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[5].Pat_AnimeMax;
+				uPCG_list = 5;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[5].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;				/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
@@ -168,23 +88,17 @@ void PCG_INIT_CHAR(void)
 				}
 				ubPri = 0xFF;
 #endif
-
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
 			case SP_GAL_0:				/* キサラ */
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[6].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[6].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[6].Pat_AnimeMax;
+				uPCG_list = 6;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[6].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;				/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
@@ -198,22 +112,17 @@ void PCG_INIT_CHAR(void)
 				PCG_Load_PAL_Data("data/sp/MASUO.PAL", 0x01, 0x07);
 				ubPri = 0xFF;
 #endif
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
 			case	SP_ARROW_0:
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[7].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[7].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[7].Pat_AnimeMax;
+				uPCG_list = 7;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[7].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;				/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
@@ -227,12 +136,6 @@ void PCG_INIT_CHAR(void)
 				PCG_Load_PAL_Data("data/sp/MASUO.PAL", 0x01, 0x07);
 				ubPri = 0xFF;
 #endif
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
@@ -268,17 +171,34 @@ void PCG_INIT_CHAR(void)
 			case	SP_BALL_S_30:
 			case	SP_BALL_S_31:
 			case	SP_BALL_S_32:
+			case	SP_BALL_S_33:
+			case	SP_BALL_S_34:
+			case	SP_BALL_S_35:
+			case	SP_BALL_S_36:
+			case	SP_BALL_S_37:
+			case	SP_BALL_S_38:
+			case	SP_BALL_S_39:
+			case	SP_BALL_S_40:
+			case	SP_BALL_S_41:
+			case	SP_BALL_S_42:
+			case	SP_BALL_S_43:
+			case	SP_BALL_S_44:
+			case	SP_BALL_S_45:
+			case	SP_BALL_S_46:
+			case	SP_BALL_S_47:
+			case	SP_BALL_S_48:
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[1].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[1].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[1].Pat_AnimeMax;
+				uPCG_list = 1;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[1].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;				/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
 				ubPri = 0x20;
-				if(uPCG_num == SP_BALL_S_32)
+				if(uPCG_num == SP_BALL_S_48)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
 				}
@@ -290,12 +210,6 @@ void PCG_INIT_CHAR(void)
 				}
 				ubPri = 0xFF;
 #endif
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
@@ -316,11 +230,12 @@ void PCG_INIT_CHAR(void)
 			case	SP_BALL_M_15:
 			case	SP_BALL_M_16:
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[2].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[2].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[2].Pat_AnimeMax;
+				uPCG_list = 2;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[2].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;				/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
@@ -337,12 +252,6 @@ void PCG_INIT_CHAR(void)
 				}
 				ubPri = 0xFF;
 #endif
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
@@ -355,11 +264,12 @@ void PCG_INIT_CHAR(void)
 			case	SP_BALL_L_7:
 			case	SP_BALL_L_8:
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[3].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[3].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[3].Pat_AnimeMax;
+				uPCG_list = 3;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[3].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;				/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
@@ -376,30 +286,23 @@ void PCG_INIT_CHAR(void)
 				}				
 				ubPri = 0xFF;
 #endif				
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
 			case	SP_BALL_XL_1:
 			case	SP_BALL_XL_2:
-			case	SP_BALL_XL_3:
-			case	SP_BALL_XL_4:
 			{
-				stPCG.Pat_w			= g_stST_PCG_LIST[4].Pat_w;
-				stPCG.Pat_h			= g_stST_PCG_LIST[4].Pat_h;
-				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[4].Pat_AnimeMax;
+				uPCG_list = 4;
+				stPCG.Pat_w			= g_stST_PCG_LIST[uPCG_list].Pat_w;
+				stPCG.Pat_h			= g_stST_PCG_LIST[uPCG_list].Pat_h;
+				stPCG.Pat_AnimeMax	= g_stST_PCG_LIST[uPCG_list].Pat_AnimeMax;
 				stPCG.Pat_DataMax	= stPCG.Pat_w * stPCG.Pat_h * stPCG.Pat_AnimeMax;
-				ubPal 				= g_stST_PCG_LIST[4].Pal;					/* パレット番号 */
+				ubPal 				= g_stST_PCG_LIST[uPCG_list].Pal;					/* パレット番号 */
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
 				ubPri = 0x20;
-				if(uPCG_num == SP_BALL_XL_4)
+				if(uPCG_num == SP_BALL_XL_2)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
 				}
@@ -411,12 +314,6 @@ void PCG_INIT_CHAR(void)
 				}				
 				ubPri = 0xFF;
 #endif				
-				/* スプライト定義設定 */
-				for(j=0; j < stPCG.Pat_DataMax; j++)
-				{
-					*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
-				}
-				
 				ubOK = TRUE;
 				break;
 			}
@@ -427,9 +324,18 @@ void PCG_INIT_CHAR(void)
 				break;
 			}
 		}
-		
+				
 		if(ubOK == TRUE)
 		{
+			/* スプライト定義設定 */
+			for(j=0; j < stPCG.Pat_DataMax; j++)
+			{
+#if  CNF_XSP
+				*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetXSPinfo(0, 0, ubPal, ubPri);	/* パターンコードテーブル */
+#else
+				*(g_stPCG_DATA[uPCG_num].pPatCodeTbl + j)	= SetBGcode2(0, 0, ubPal);	/* パターンコードテーブル */
+#endif
+			}
 			g_stPCG_DATA[uPCG_num].update	= FALSE;
 			g_stPCG_DATA[uPCG_num].validty	= TRUE;
 		}
@@ -441,6 +347,7 @@ void PCG_INIT_CHAR(void)
 			g_stPCG_DATA[uPCG_num].validty	= FALSE;
 		}
 #if  CNF_XSP
+		/* なし */
 #else
 		g_stPCG_DATA[uPCG_num].Plane		= 0xFFFF;		/* プレーンNo. */
 #endif
@@ -465,7 +372,7 @@ void PCG_INIT_CHAR(void)
 //		KeyHitESC();	/* デバッグ用 */
 #endif
 	}
-#endif
+
 	if((uPCG_SP_offset + uPCG_SP_next) >= PCG_MAX)
 	{
 		printf("\nERROR:PCG定義OVER(%d >= %d)\n", (uPCG_SP_offset + uPCG_SP_next), PCG_MAX);

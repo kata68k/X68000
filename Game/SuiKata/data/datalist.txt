@@ -1,2 +1,5 @@
 0= _default_
+1= SUIKA
+2= PUYO
+3= ZFORCE
 

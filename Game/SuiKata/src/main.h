@@ -3,6 +3,10 @@
 
 #include <usr_define.h>
 
+#define MAJOR_VER   (0)
+#define MINOR_VER   (1)
+#define PATCH_VER   (0)
+
 extern int16_t	g_CpuTime;
 
 extern void App_TimerProc( void );
