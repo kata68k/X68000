@@ -75,7 +75,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;													/* プライオリティ */
+				ubPri = 0x2F;													/* プライオリティ */
 				if(uPCG_num == SP_SHIP_0)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
@@ -102,7 +102,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;
+				ubPri = 0x2E;
 				if(uPCG_num == SP_GAL_0)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
@@ -126,7 +126,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;
+				ubPri = 0x2E;
 				if(uPCG_num == SP_ARROW_0)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
@@ -197,7 +197,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;
+				ubPri = 0x2D;
 				if(uPCG_num == SP_BALL_S_48)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
@@ -239,7 +239,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;
+				ubPri = 0x2C;
 				if(uPCG_num == SP_BALL_M_16)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
@@ -273,7 +273,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;
+				ubPri = 0x2B;
 				if(uPCG_num == SP_BALL_L_8)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;
@@ -301,7 +301,7 @@ void PCG_INIT_CHAR(void)
 #if  CNF_XSP
 				PCG_Load_Data(NULL, 0x00, stPCG, uPCG_num, 3);
 				g_stPCG_DATA[uPCG_num].Plane		= uPCG_SP_offset + uPCG_SP_next;		/* スプライトNo. */
-				ubPri = 0x20;
+				ubPri = 0x2A;
 				if(uPCG_num == SP_BALL_XL_2)
 				{
 					uPCG_SP_next += stPCG.Pat_DataMax;

@@ -581,16 +581,16 @@ uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 			switch(uCount)	/* SE */
 			{
 			case 1:
-				ADPCM_Play(7);
+				ADPCM_Play(1);
 				break;
 			case 2:
-				ADPCM_Play(8);
+				ADPCM_Play(2);
 				break;
 			case 3:
-				ADPCM_Play(9);
+				ADPCM_Play(3);
 				break;
 			default:
-				ADPCM_Play(7);
+				ADPCM_Play(1);
 				break;
 			}
 #endif
@@ -616,7 +616,7 @@ uint16_t	DirectInputKeyNum(uint16_t *uVal, uint16_t uDigit)
 				}
 			}
 			uCount++;
-#if 0
+#if 1
 			switch(uCount)	/* SE */
 			{
 			case 1:

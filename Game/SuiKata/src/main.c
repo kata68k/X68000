@@ -320,6 +320,12 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 
 		/* 自分 */
 		g_stBall[i].bStatus++;
+#ifdef DEBUG	/* デバッグコーナー */
+		if( (g_uDebugNum & Bit_6) != 0u )	/* ボールのステータス強制MAX */
+		{
+			g_stBall[i].bStatus = 3;
+		}
+#endif
 		/* ボール設定 */
 		BallSize = g_stBall[i].bSize;		
 
@@ -328,22 +334,25 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 			if( BallSize >= 3 )	/* 最大サイズの最終系で合体 */
 			{
 				g_ubGameClear = TRUE;	/* ゲームクリア */
-
+				S_Set_Combo(0);			/* コンボカウンタ リセット */
 				S_GetPos(44, 136);		/* スコア表示座標更新 */
-
 				ret = S_Add_Score(1000000);	/* スコア更新 */
-				return ret;
+
+				BallSize = 0;	/* サイズ0 */ 
+				m = 0;
+				list_num = m + 1;	/* 0はBGなので */
 			}
 			else
 			{
 				S_GetPos((x >> PCG_LSB), (y >> PCG_LSB));	/* スコア表示座標更新 */
 
 				ret = S_Add_Score(1000);	/* スコア更新 */
+
+				BallSize++;	/* サイズアップ */ 
+				m = Mmin(BallSize, 3);	/* 最大値＋１ */
+				list_num = m + 1;	/* 0はBGなので */
 			}
 
-			BallSize++;	/* サイズアップ */ 
-			m = Mmin(BallSize, 3);	/* 最大値＋１ */
-			list_num = m + 1;
 
 			for(k = g_Ball_Table[m]; k < g_Ball_Table[m + 1]; k++)	/* 新しいテーブルから空きを調査する */
 			{
@@ -400,53 +409,53 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 						p_stPCG_new->dx = 0;
 #endif						
 					    Ball_mark_area(p_stPCG_new, 1, list_num); // 新しい位置をセット
-
-						/* 消す */
-						list_num = g_stBall[i].bSize + 1;
-						g_stBall[i].bStatus = (rand() % 3);	
-						g_stBall[i].bSize = 0;
-						g_stBall[i].bValidty = ball_lost;
-						Ball_mark_area(p_stPCG, 0, list_num); // 古い位置をクリア
-						p_stPCG->x = 0;
-						p_stPCG->y = 0;
-						p_stPCG->update = FALSE;
-						p_stPCG->status = FALSE;
-
-						/* 相手 */
-						list_num = g_stBall[j].bSize + 1;
-						g_stBall[j].bStatus = (rand() % 3);
-						g_stBall[j].bSize = 0;
-						g_stBall[j].bValidty = ball_lost;
-						Ball_mark_area(p_stPCG_other, 0, list_num); // 古い位置をクリア
-						p_stPCG_other->x = 0;
-						p_stPCG_other->y = 0;
-						p_stPCG_other->update = FALSE;
-						p_stPCG_other->status = FALSE;
-
 //						Ball_Point_Update(p_stPCG_new, FALSE);	/* 位置を修正 */
 						break;
 					}
 				}
 			}
 
+			/* 消す */
+			list_num = g_stBall[i].bSize + 1;
+			g_stBall[i].bStatus = (rand() % 3);	
+			g_stBall[i].bSize = 0;
+			g_stBall[i].bValidty = ball_lost;
+			Ball_mark_area(p_stPCG, 0, list_num); // 古い位置をクリア
+			p_stPCG->x = 0;
+			p_stPCG->y = 0;
+			p_stPCG->update = FALSE;
+			p_stPCG->status = FALSE;
+
+			/* 相手 */
+			list_num = g_stBall[j].bSize + 1;
+			g_stBall[j].bStatus = (rand() % 3);
+			g_stBall[j].bSize = 0;
+			g_stBall[j].bValidty = ball_lost;
+			Ball_mark_area(p_stPCG_other, 0, list_num); // 古い位置をクリア
+			p_stPCG_other->x = 0;
+			p_stPCG_other->y = 0;
+			p_stPCG_other->update = FALSE;
+			p_stPCG_other->status = FALSE;
 		}
 		else	/* カラーチェンジ */
 		{
 			if( BallSize >= 3 )	/* 最大サイズの最終系で合体 */
 			{
 				/* 自分は一旦、消える */
+				list_num = g_stBall[i].bSize + 1;
 				g_stBall[i].bStatus = (rand() % 3);
 				g_stBall[i].bSize = 0;
 				g_stBall[i].bValidty = ball_lost;
+				Ball_mark_area(p_stPCG, 0, list_num); // 古い位置をクリア
 				p_stPCG->x = 0;
 				p_stPCG->y = 0;
 				p_stPCG->update = FALSE;
 				p_stPCG->status = FALSE;
 
 				g_ubGameClear = TRUE;	/* ゲームクリア */
-
 				S_Set_Combo(0);			/* コンボカウンタ リセット */
-				ret = S_Add_Score(1);	/* スコア更新 */
+				S_GetPos(44, 136);		/* スコア表示座標更新 */
+				ret = S_Add_Score(1000000);	/* スコア更新 */
 			}
 			else
 			{
@@ -482,19 +491,19 @@ static int16_t Ball_Combine(ST_PCG *p_stPCG, int16_t mine, ST_PCG *p_stPCG_other
 #endif						
 			    Ball_mark_area(p_stPCG, 1, list_num); // 新しい位置をセット
 
-				/* 相手 */
-				list_num = g_stBall[j].bSize + 1;
-				g_stBall[j].bStatus = (rand() % 3);
-				g_stBall[j].bSize = 0;
-				g_stBall[j].bValidty = ball_lost;
-				Ball_mark_area(p_stPCG_other, 0, list_num); // 古い位置をクリア
-				p_stPCG_other->x = 0;
-				p_stPCG_other->y = 0;
-				p_stPCG_other->update = FALSE;
-				p_stPCG_other->status = FALSE;
-
 //				Ball_Point_Update(p_stPCG, FALSE);	/* 位置を修正 */
 			}
+
+			/* 相手 */
+			list_num = g_stBall[j].bSize + 1;
+			g_stBall[j].bStatus = (rand() % 3);
+			g_stBall[j].bSize = 0;
+			g_stBall[j].bValidty = ball_lost;
+			Ball_mark_area(p_stPCG_other, 0, list_num); // 古い位置をクリア
+			p_stPCG_other->x = 0;
+			p_stPCG_other->y = 0;
+			p_stPCG_other->update = FALSE;
+			p_stPCG_other->status = FALSE;
 		}
 	}
 	else if( ((g_stBall[i].bSize) == (g_stBall[j].bSize)) )
@@ -894,15 +903,30 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
 		}
 	}
 #endif
+    if ( new_x < X_POS_MIN )
+	{
+		new_x = X_POS_MIN;
+    }
+	else if ((new_x + width) > X_POS_MAX )
+	{
+		new_x = X_POS_MAX - width;
+    }
+	else
+	{
 
-	p_stPCG->x = new_x << PCG_LSB;	/* 横 更新 */
-	p_stPCG->y = new_y << PCG_LSB;	/* 縦 更新 */
+	}
 
 	if(p_stPCG->status == FALSE)
 	{
 		ret = FALSE;
 	}
-	else if( (new_y <= y ) || (new_y >= end_y) )	/* クリップ処理 */
+	else if( new_y <= y )		/* クリップ処理 */
+	{
+        p_stPCG->status = FALSE;	/* 移動停止 */
+
+		ret = FALSE;
+	}
+	else if( new_y >= end_y )	/* クリップ処理 */
 	{
         new_y = end_y;
 
@@ -928,6 +952,8 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
 //		BG_TextPut(sBuf, x, y);	/* デバッグ表示 */
 #endif
 	}
+	p_stPCG->x = new_x << PCG_LSB;	/* 横 更新 */
+	p_stPCG->y = new_y << PCG_LSB;	/* 縦 更新 */
 
 	return ret;
 }
@@ -1497,6 +1523,8 @@ static void Ball_Move(int16_t *nNum)
 	p_stPCG_ship = PCG_Get_Info(SP_SHIP_0);				/* 自機 */
 	if(p_stPCG_ship != NULL)
 	{
+		int16_t width;
+
 		if(	((g_Input_P[0] & JOY_LEFT ) != 0u )	||	/* LEFT */
 			((g_Input & KEY_LEFT) != 0 )		)	/* 左 */
 		{
@@ -1543,22 +1571,25 @@ static void Ball_Move(int16_t *nNum)
 		}
 		p_stPCG_ship->dy = 0;
 
+		p_stPCG_ship->x += p_stPCG_ship->dx;
+		p_stPCG_ship->y += p_stPCG_ship->dy;
+
+		width	= p_stPCG_ship->Pat_w * SP_W;
+		
 		if(p_stPCG_ship->x < ((X_POS_MIN) << PCG_LSB))
 		{
 			p_stPCG_ship->x = (X_POS_MIN) << PCG_LSB;
 			p_stPCG_ship->dx = 0;
 		}
-		else if(p_stPCG_ship->x > ((X_POS_MAX - 16) << PCG_LSB))
+		else if(p_stPCG_ship->x > ((X_POS_MAX - width) << PCG_LSB))
 		{
-			p_stPCG_ship->x = (X_POS_MAX - 16) << PCG_LSB;
+			p_stPCG_ship->x = (X_POS_MAX - width) << PCG_LSB;
 			p_stPCG_ship->dx = 0;
 		}
 		else
 		{
 
 		}
-		p_stPCG_ship->x += p_stPCG_ship->dx;
-		p_stPCG_ship->y += p_stPCG_ship->dy;
 		p_stPCG_ship->update	= TRUE;
 
 		if(p_stPCG_ball != NULL)
@@ -1606,6 +1637,9 @@ static void Ball_InitALL(void)
 			p_stPCG->update	= FALSE;
 		}
 	}
+	g_index = 0;
+	g_index_now = 0;
+	g_index_next = 0;
 }
 /*===========================================================================================*/
 /* 関数名	：	*/
