@@ -986,7 +986,11 @@ void G_Palette_INIT(void)
 void G_PaletteSetZero(void)
 {
 	int16_t i=0;
-	
+#if 0
+	int16_t j=0;
+	int16_t k=0;
+	int16_t pal;
+#endif
 	/* ìßâﬂêF */
 	GPALET( i++, SetRGB( 0,  0,  0));	/* 0:Black */
 	/* ÇPÅ`ÇPÇTÇã§í ÉJÉâÅ[Ç∆Ç∑ÇÈ */
@@ -1005,6 +1009,95 @@ void G_PaletteSetZero(void)
 	GPALET( i++, SetRGB(  1,  1, 21));	/* D */
 	GPALET( i++, SetRGB( 31, 18, 26));	/* E */
 	GPALET( i++, SetRGB(  9, 22, 31));	/* F */
+#if 0
+	for(j=1;j<16;j++)
+	{
+		for(k=0;k<16;k++)
+		{
+			pal = (16 * j) + k;
+			switch(j)
+			{
+				case 1:
+				{
+					GPALET( pal, SetRGB(  1,  1,  1));	/* 1 */
+					break;
+				}
+				case 2:
+				{
+					GPALET( pal, SetRGB( 15, 15, 15));	/* 2 */
+					break;
+				}
+				case 3:
+				{
+					GPALET( pal, SetRGB( 28, 28, 28));	/* 3 */
+					break;
+				}
+				case 4:
+				{
+	GPALET( pal, SetRGB( 15,  0,  0));	/* 4 */
+					break;
+				}
+				case 5:
+				{
+	GPALET( pal, SetRGB(  0, 15,  0));	/* 5 */
+					break;
+				}
+				case 6:
+				{
+	GPALET( pal, SetRGB( 15, 15,  0));	/* 6 */
+					break;
+				}
+				case 7:
+				{
+	GPALET( pal, SetRGB(  0,  0, 15));	/* 7 */
+					break;
+				}
+				case 8:
+				{
+	GPALET( pal, SetRGB( 15,  0, 15));	/* 8 */
+					break;
+				}
+				case 9:
+				{
+	GPALET( pal, SetRGB(  0, 15, 15));	/* 9 */
+					break;
+				}
+				case 10:
+				{
+	GPALET( pal, SetRGB( 30,  1,  1));	/* A */
+					break;
+				}
+				case 11:
+				{
+	GPALET( pal, SetRGB(  0, 31,  0));	/* B */
+					break;
+				}
+				case 12:
+				{
+	GPALET( pal, SetRGB( 31, 31,  0));	/* C */
+					break;
+				}
+				case 13:
+				{
+	GPALET( pal, SetRGB(  1,  1, 21));	/* D */
+					break;
+				}
+				case 14:
+				{
+	GPALET( pal, SetRGB( 31, 18, 26));	/* E */
+					break;
+				}
+				case 15:
+				{
+	GPALET( pal, SetRGB(  9, 22, 31));	/* F */
+					break;
+				}
+				
+			}
+
+		}
+	}
+#endif
 }
 
 /*===========================================================================================*/

@@ -78,9 +78,9 @@ int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsi
 		return Draw_Pset(x1, y1, color);
 	}
 	
-	stLine.x1 = Mmax(Mmin(x1, X_MAX_DRAW-1), 0);
+	stLine.x1 = Mmax(Mmin(x1, X_MAX_DRAW-1), 0);	/* 始点 */
 	stLine.y1 = Mmax(Mmin(y1, Y_MAX_DRAW-1), 0);
-	stLine.x2 = Mmax(Mmin(x2, X_MAX_DRAW-1), 0);
+	stLine.x2 = Mmax(Mmin(x2, X_MAX_DRAW-1), 0);	/* 終点 */
 	stLine.y2 = Mmax(Mmin(y2, Y_MAX_DRAW-1), 0);
 	stLine.color = color;
 	stLine.linestyle = style;

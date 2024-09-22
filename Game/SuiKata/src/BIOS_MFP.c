@@ -439,7 +439,7 @@ uint8_t Timer_D_Less_NowTime(void)
 {
 	if(g_bTimer_D == FALSE)
 	{
-		 g_NowTime++;
+		 g_NowTime += 15;	/* 15ms(1ms•ª‰ð”\) */
 	}
 
 	return	g_bTimer_D;

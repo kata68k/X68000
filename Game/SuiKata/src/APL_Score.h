@@ -3,7 +3,13 @@
 
 #include <usr_define.h>
 
-#define		COMBO_TIMEOUT				(1000)
+#define	COMBO_TIMEOUT	(1000)
+
+#define SCORE_BOARD_X	(16u)
+#define NAME_INP_X		(28u)
+#define NAME_INP_Y		(40u)
+
+#define BG_PAL			(1)
 
 /* ç\ë¢ëÃíËã` */
 typedef struct{

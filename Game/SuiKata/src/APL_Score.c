@@ -17,12 +17,6 @@
 #include "IF_PCG.h"
 #include "IF_Text.h"
 
-#define SCORE_BOARD_X	(16u)
-#define NAME_INP_X	(28u)
-#define NAME_INP_Y	(40u)
-
-#define BG_PAL		(1)
-
 /* データ */
 uint32_t	g_uScoreTable[8] = {
 	10,		/* 0 */
@@ -491,9 +485,6 @@ int16_t S_Score_Board(void)
 	x = SCORE_BOARD_X;
 	y = NAME_INP_Y;
 
-	G_CLR_AREA(0, 255, y, 255, 0);	/* ページ 0 */
-
-				
 	ret = S_Update_Score_Board();
 
 	memset(sBuf, 0, sizeof(sBuf));

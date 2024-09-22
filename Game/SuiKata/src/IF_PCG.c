@@ -202,6 +202,7 @@ void PCG_INIT(void)
 	//	BGTEXTGT(1,1,0);					/* BGテキスト読み込み */
 
 #if  CNF_XSP
+	PCG_XSP_INIT();		/* XSP初期化 */
 #else   /* CNF_XSP 0 */
 
 	puts("SP/BG mode");
@@ -248,7 +249,6 @@ void PCG_ON(void)
 {
 	if(Get_SP_Sns() == FALSE)
 	{
-	    PCG_VIEW(1);        /* SP ON */
 #if  CNF_XSP
     	xsp_on();			/* XSP ON */
 
@@ -292,8 +292,8 @@ void PCG_OFF(void)
 #endif
 		xsp_off();			/* XSP OFF */
 #else   /* CNF_XSP 0 */
+
 #endif  /*CNF_XSP*/
-	    PCG_VIEW(0);        /* SP OFF */
 	}
 }
 
