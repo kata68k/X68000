@@ -17,9 +17,11 @@
 #include "BIOS_PCG.h"
 #include "IF_MACS.h"
 #include "IF_Graphic.h"
+#include "IF_Input.h"
 #include "IF_MUSIC.h"
 #include "IF_Memory.h"
 #include "IF_PCG.h"
+#include "IF_Text.h"
 
 /* グローバル変数 */
 int8_t		g_data_list[DATA_MAX][256]	=	{0};
@@ -63,6 +65,7 @@ int16_t Init_FileList_Load(void)
 	uint8_t	sListFilePath[255] = {0};
 	uint8_t	sListFileName[255] = {0};
 	uint32_t	i;
+	int16_t ofst_y = 2;
 	
 	/* データリスト有無 */
 	if(GetFileLength("data\\datalist.txt", &i) == -1)
@@ -73,32 +76,149 @@ int16_t Init_FileList_Load(void)
 	}
 	else
 	{
-		puts("==============< datalist.txt >=============================================");
 		Load_DATA_List("data\\", "datalist.txt", g_data_list, &d_list_max);
-		puts("===========================================================================");
-		printf("Input Data Number [0 - %d] = ", d_list_max - 1);
+
 		if(d_list_max <= 1)
 		{
 			ret = 0;
 		}
 		else
 		{
-			scanf("%hd", &ret);
-			if(ret < 0)
+			static int8_t s_bFlagInput = FALSE;
+			static int8_t s_bFlagInputAB = FALSE;
+
+			T_Clear();	/* テキスト画面クリア */
+
+			_iocs_b_locate(0, 0);	/*  原点 */
+
+			puts("==============< 起動メニュー >==============================================");
+			puts("==============< datalist.txt >=============================================");
+			for(i = 0; i < d_list_max; i++)
 			{
-				ret = 0;
+				if(ret == i)
+				{
+					_iocs_b_putmes( 10, 0,	i + ofst_y, strlen(&g_data_list[i][0]), &g_data_list[i][0]);
+				}
+				else
+				{
+					_iocs_b_putmes( 3, 0,	i + ofst_y, strlen(&g_data_list[i][0]), &g_data_list[i][0]);
+				}
 			}
-			else if(ret >= d_list_max)
+			_iocs_b_locate(0, i + ofst_y);	/* 移動 */
+			puts("===========================================================================");
+			puts("==============< 上下で選択 Aボタンで決定 >===================================");
+
+			do
 			{
-				ret = d_list_max - 1;
+				Input_Main(FALSE);	/* 入力受付 */
+
+				/* 選択 */
+				if( ( GetInput() & KEY_UPPER ) != 0) { /* 上 */
+					if(s_bFlagInput == FALSE)
+					{
+						ret = Mdec(ret, 1);
+						s_bFlagInput = TRUE;
+
+						/* クリップ処理 */
+						if(ret < 0)
+						{
+							ret = 0;
+						}
+						else if(ret >= d_list_max)
+						{
+							ret = d_list_max - 1;
+						}
+						else
+						{
+							/* 何もしない */
+						}
+						for(i = 0; i < d_list_max; i++)
+						{
+							if(ret == i)
+							{
+								_iocs_b_putmes( 10, 0,	i + ofst_y, strlen(&g_data_list[i][0]), &g_data_list[i][0]);
+							}
+							else
+							{
+								_iocs_b_putmes( 3, 0,	i + ofst_y, strlen(&g_data_list[i][0]), &g_data_list[i][0]);
+							}
+						}
+					}
+				}
+				else if( ( GetInput() & KEY_LOWER ) != 0 ) { /* 下 */
+					if(s_bFlagInput == FALSE)
+					{
+						ret = Minc(ret, 1);
+						s_bFlagInput = TRUE;
+
+						/* クリップ処理 */
+						if(ret < 0)
+						{
+							ret = 0;
+						}
+						else if(ret >= d_list_max)
+						{
+							ret = d_list_max - 1;
+						}
+						else
+						{
+							/* 何もしない */
+						}
+						for(i = 0; i < d_list_max; i++)
+						{
+							if(ret == i)
+							{
+								_iocs_b_putmes( 10, 0,	i + ofst_y, strlen(&g_data_list[i][0]), &g_data_list[i][0]);
+							}
+							else
+							{
+								_iocs_b_putmes( 3, 0,	i + ofst_y, strlen(&g_data_list[i][0]), &g_data_list[i][0]);
+							}
+						}
+					}
+				}
+				else /* なし */
+				{
+					s_bFlagInput = FALSE;
+				}
+				
+				/* 決定 */
+				if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
+					((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
+					((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
+				{
+					if(s_bFlagInputAB == FALSE)
+					{
+						s_bFlagInputAB = TRUE;
+
+						break;
+					}
+				}
+				else /* なし */
+				{
+					s_bFlagInputAB = FALSE;
+				}
+
+			}
+			while(1);
+
+		}
+
+		for(i = 0; i < 1000; i++)
+		{
+			if((i % 2) == 0)
+			{
+				_iocs_b_putmes( 10 , 0,	ret + ofst_y, strlen(&g_data_list[ret][0]), &g_data_list[ret][0]);
 			}
 			else
 			{
-				/* 何もしない */
+				_iocs_b_putmes(  2 , 0,	ret + ofst_y, strlen(&g_data_list[ret][0]), &g_data_list[ret][0]);
 			}
 		}
+
 		Set_DataList_Num(ret);
 	}
+	printf("Input Data Number [0 - %d] = %d\n", d_list_max - 1, ret);
 #ifdef DEBUG
 	printf("Load_DATA_List=%s(%d)\n", Get_DataList_Path(), ret);
 //	printf("Load_DATA_List=0x%p\n", Get_DataList_Path());
@@ -867,7 +987,7 @@ int16_t Load_SP_List(int8_t *fpath, int8_t *fname, int8_t (*list)[256], uint32_t
 					}
 					else
 					{
-						g_stST_PCG_LIST[i].hit_width = width * SP_W;
+						g_stST_PCG_LIST[i].hit_width = Mmul16(width);
 					}
 
 					if(hit_height != 0)
@@ -876,7 +996,7 @@ int16_t Load_SP_List(int8_t *fpath, int8_t *fname, int8_t (*list)[256], uint32_t
 					}
 					else
 					{
-						g_stST_PCG_LIST[i].hit_height = height * SP_H;
+						g_stST_PCG_LIST[i].hit_height = Mmul16(height);
 					}
 #ifdef DEBUG
 //					printf("%d = %s %hd %hd %hd %hd %hd %hd %hd %hd\n", num, z_name,
@@ -1147,7 +1267,7 @@ int16_t Load_DATA_List(int8_t *fpath, int8_t *fname, int8_t (*data_list)[256], u
 				if(i == num)
 				{
 					sprintf(data_list[i], "%s%s", fpath, z_name);
-					printf("No.(%d) = %s\n", i, z_name);
+//					printf("No.(%d) = %s\n", i, z_name);
 				}
 				i++;
 			}

@@ -5,7 +5,7 @@
 
 #define	CNF_JOYDRV360	(0)
 
-/* ジョイスティックその１ */
+/* ジョイスティック */
 #define JOY_UP		(0x01)
 #define JOY_DOWN	(0x02)
 #define JOY_LEFT	(0x04)
@@ -14,7 +14,7 @@
 #define JOY_B		(0x40)
 #define ESC_S		(27)
 
-/* ジョイスティックその２ */
+/* キーボード */
 #define KEY_NULL		(0x0000)
 #define KEY_LEFT		(0x0001)
 #define KEY_RIGHT		(0x0002)
@@ -32,6 +32,7 @@
 #define KEY_b_TAB		(0x2000)
 #define KEY_b_G			(0x4000)
 #define KEY_b_F6		(0x8000)
+#define KEY_b_CR		(0x0020)
 
 #define KEY_TRUE	1
 #define KEY_FALSE	0
@@ -66,8 +67,6 @@ typedef struct tagANALOG {
 	int16_t	btn_data;	/* ボタンデータ */
 } JOY_ANALOG_BUF;
 
-extern	int32_t	g_Input;
-extern	int16_t	g_Input_P[2];
 extern	uint8_t	g_bAnalogStickMode;
 extern	uint8_t	g_bAnalogStickMode_flag;
 
@@ -84,5 +83,8 @@ extern int16_t	SetJoyDevMode(int32_t , int32_t , int32_t);
 extern uint16_t	DirectInputKeyNum(uint16_t *, uint16_t );
 extern uint8_t	ChatCancelSW(uint8_t , uint8_t *);
 extern int16_t	KeyHitESC(void);
+extern uint32_t	GetInput(void);
+extern uint16_t	GetInput_P1(void);
+extern uint16_t	GetInput_P2(void);
 
 #endif	/* IF_INPUT_H */

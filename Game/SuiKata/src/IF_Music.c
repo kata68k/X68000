@@ -9,6 +9,7 @@
 #include <PCM8Afnc.H>
 
 #include <usr_macro.h>
+#include "BIOS_MFP.h"
 #include "BIOS_MPU.h"
 #include "IF_Memory.h"
 #include "IF_MUSIC.h"
@@ -134,25 +135,22 @@ void Init_Music(void)
 	uint32_t	unZmusicVerNum;
 #endif
 	int8_t Ch, Trk;
-	int8_t	data_b;
 	int32_t	nSysStat;
 
 	puts("Music Init...");
 	/* 機種判別 */
-	data_b = _iocs_b_bpeek((int32_t *)0xCBC);	/* 機種判別 */
-	//printf("機種判別(MPU680%d0)\n", data_b);
-	if(data_b != 0)	/* 68000以外のMPU */
+	nSysStat = mpu_stat_chk() & 0x0F;	/* MPUの種類 */
+	if(nSysStat != 0)	/* 68000以外のMPU */
 	{
-		nSysStat = mpu_stat_chk();	/* MPUの種類 */
 		/* キャッシュクリア */
 		mpu_cache_clr();
 	}
 	else
 	{
-		nSysStat = (int32_t)data_b;	/* 0が入る */
+		/* 68000 */
 	}
 
-	if(nSysStat == 0)
+	if(nSysStat == 0)	/* 68000 */
 	{
 		/* サウンド常駐確認 */
 		puts("Music Ver chk...");
@@ -505,7 +503,14 @@ int32_t Music_Play(uint8_t bPlayNum)
 		printf("Music File %2d = %s\n", bPlayNum, music_list[bPlayNum]);
 		printf("zmd_play error %d\n", ret);
 	}
+
+	if(Get_CPU_Time() < 400 )
+	{
+		m_mute(26,27,28,29,30,31,32,9,'NASI','NASI');	/* ADPCMパートをミュート */
+//		printf("ADPCM stop %d\n", ret);
+	}
 #endif
+	
 
 #elif	ZM_V3 == 1
 	ret = zm_play_zmd(music_dat_size[bPlayNum], &music_dat[bPlayNum][0]);

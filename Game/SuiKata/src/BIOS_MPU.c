@@ -283,22 +283,33 @@ int32_t	mpu_stat_chk(void)
 {
 	struct	_regs	stInReg = {0}, stOutReg = {0};
 	int32_t	retReg;	/* d0 */
+	int8_t	data_b;
 	
 	stInReg.d0 = IOCS_SYS_STAT;	/* IOCS _SYS_STAT($AC) */
 	stInReg.d1 = 0;				/* MPUステータスの取得 */
 	
-	retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
-//	printf("SYS_STAT 0x%x\n", (retReg & 0x0F));
-    /* 060turbo.manより
-		$0000   MPUステータスの取得
-			>d0.l:MPUステータス
-					bit0～7         MPUの種類(6=68060)
-					bit14           MMUの有無(0=なし,1=あり)
-					bit15           FPUの有無(0=なし,1=あり)
-					bit16～31       クロックスピード*10
-	*/
-	
-	return (retReg & 0x0F);
+	/* 機種判別 */
+	data_b = _iocs_b_bpeek((int32_t *)0xCBC);	/* 機種判別 */
+	//printf("機種判別(MPU680%d0)\n", data_b);
+	if(data_b != 0)	/* 68000以外のMPU */
+	{
+		retReg = _iocs_trap15(&stInReg, &stOutReg);	/* Trap 15 */
+	//	printf("SYS_STAT 0x%x\n", (retReg & 0x0F));
+   		/* 060turbo.manより
+			$0000   MPUステータスの取得
+				>d0.l:MPUステータス
+						bit0～7         MPUの種類(6=68060)
+						bit14           MMUの有無(0=なし,1=あり)
+						bit15           FPUの有無(0=なし,1=あり)
+						bit16～31       クロックスピード*10
+		*/
+	}
+	else
+	{
+		retReg = data_b;
+	}
+
+	return retReg;
 }
 
 /*===========================================================================================*/

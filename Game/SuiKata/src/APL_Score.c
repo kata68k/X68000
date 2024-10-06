@@ -400,6 +400,8 @@ int16_t S_Main_Score(void)
 {
 	int16_t	ret = 0;
 
+//	printf("S_Main_Score st(%d)\n", g_index);
+
 	if(	GetPassTime(COMBO_TIMEOUT, &g_ComboTime) != 0u)	/* 1000ms経過 */
 	{
 		S_Set_Combo(0);	/* コンボカウンタ リセット */
@@ -462,6 +464,8 @@ int16_t S_Main_Score(void)
 //		BG_put_Number10(192, 0, 2, g_stScore.ulScoreMax);
 
 	}
+
+//	printf("S_Main_Score ed(%d)\n", g_index);
 
 	return ret;
 }

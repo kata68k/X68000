@@ -29,7 +29,7 @@ extern volatile uint16_t Vsync_count;
 extern int16_t MFP_INIT(void);
 extern int16_t MFP_EXIT(void);
 extern int16_t MFP_RESET(void);
-extern int16_t TimerD_INIT(void);
+extern uint16_t TimerD_INIT(void);
 extern int16_t TimerD_EXIT(void);
 extern uint8_t Timer_D_Less_NowTime(void);
 extern uint32_t Get_CPU_Time(void);

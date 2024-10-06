@@ -41,7 +41,7 @@ static uint32_t g_unTime_cal=0, g_unTime_cal_PH=0, g_unTime_min_PH=0;
 int16_t MFP_INIT(void);
 int16_t MFP_EXIT(void);
 int16_t MFP_RESET(void);
-int16_t TimerD_INIT(void);
+uint16_t TimerD_INIT(void);
 int16_t TimerD_EXIT(void);
 uint8_t GetNowTime(uint32_t *);	/* 現在の時間を取得する */
 uint8_t SetNowTime(uint32_t);		/* 現在の時間を設定する */
@@ -205,7 +205,7 @@ int16_t MFP_RESET(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t	TimerD_INIT()
+uint16_t	TimerD_INIT()
 {
 	uint16_t CpuCount=0;
 	int32_t nUse;
@@ -219,12 +219,21 @@ int16_t	TimerD_INIT()
 	{
 		g_bTimer_D =TRUE;
 		SetNowTime(g_NowTime);	/* 時間の初期化 */
-		/* マイコンクロックを計測 */
-		do
+
+		CpuCount = (uint16_t)Mdiv65536(mpu_stat_chk() & 0xFFFF0000);
+		if(CpuCount != 0)
 		{
-			CpuCount++;
+			/* bit 31～16	クロックスピード(0.1MHz単位) */
 		}
-		while(g_NowTime==0);
+		else
+		{
+			/* マイコンクロックを計測 */
+			do
+			{
+				CpuCount++;
+			}
+			while(g_NowTime==0);
+		}
 	}
 	else
 	{

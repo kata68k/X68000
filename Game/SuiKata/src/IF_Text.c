@@ -670,8 +670,10 @@ int16_t	T_SetQuarterFont(int8_t *sString, int8_t *sDst)
 /*===========================================================================================*/
 void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, uint8_t *sFormat)
 {
-	char str[64];
+	char str[256];
+#if 0	
 	volatile uint16_t *CRTC_480 = (uint16_t *)0xE80480u;	/* CRTC動作ポート */
+#endif	
 	size_t strLength;
 	memset(str, 0, sizeof(str));
 
@@ -752,6 +754,7 @@ void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, 
 		}
 		break;
 	}
+#if 0	
 	//BG_TextPut(str, x << 4, y  << 4);
 	//Text_To_Text(atoi(str), x << 4, y << 4, FALSE);
 	if((*CRTC_480 & 0x02u) == 0u)	/* クリア実行中でない */
@@ -765,6 +768,10 @@ void Message_Num(void *pNum, int16_t x, int16_t y, uint16_t nCol, uint8_t mode, 
 		//B_PRINT(str);
 		//B_CUROFF();
 	}
+#else
+	strLength = strlen(str);
+	_iocs_b_putmes( nCol, x, y, strLength + 1, str);	/* 高速クリアの処理を阻害している */
+#endif
 }
 
 /*===========================================================================================*/

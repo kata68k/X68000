@@ -36,7 +36,9 @@
 #include "APL_Score.h"
 
 //#define 	W_BUFFER	/* ダブルバッファリングモード */
-//#define	FPS_MONI	/* FPS計測 */ 
+#define	FPS_MONI	/* FPS計測 */
+//#define	CPU_MONI	/* CPU計測 */
+#define	MEM_MONI	/* MEM計測 */
 
 enum
 {
@@ -194,6 +196,10 @@ static void Boder_line(void)
 
 	ST_PCG	*p_stPCG = NULL;
 
+#ifdef DEBUG	/* デバッグコーナー */
+//	printf("Boder_line st(%d)\n", g_index);
+#endif
+
 	p_stPCG = PCG_Get_Info(SP_ARROW_0);		/* 矢印 */
 	if(p_stPCG != NULL)
 	{
@@ -270,7 +276,9 @@ static void Boder_line(void)
 		}
 	}
 #endif
-
+#ifdef DEBUG	/* デバッグコーナー */
+//	printf("Boder_line ed(%d)\n", g_index);
+#endif
 }
 
 /*===========================================================================================*/
@@ -554,26 +562,22 @@ static uint8_t Ball_check_collision(uint16_t* new_x, uint16_t* new_y, uint16_t w
     if ( *new_x <= X_POS_MIN )
 	{
 		*new_x = X_POS_MIN;
-		bFlag |= Bit_0;	/* X方向 */
-		bFlag |= Bit_6;	/* X方向 */
+		bFlag |= Bit_4;	/* X方向 */
     }
     if ((*new_x + width) >= X_POS_MAX )
 	{
 		*new_x = X_POS_MAX - width;
-		bFlag |= Bit_1;	/* X方向 */
-		bFlag |= Bit_7;	/* X方向 */
+		bFlag |= Bit_5;	/* X方向 */
     }
     if (*new_y <= 0)
 	{
 		*new_y = 0;
-		bFlag |= Bit_3;	/* Y方向 */
-		bFlag |= Bit_4;	/* Y方向 */
+		bFlag |= Bit_6;	/* Y方向 */
     }
     if ((*new_y + height) >= g_TB_GameLevel[g_nGameLevel]) 
 	{
 		*new_y = g_TB_GameLevel[g_nGameLevel] - height;
-		bFlag |= Bit_2;	/* Y方向 */
-		bFlag |= Bit_5;	/* Y方向 */
+		bFlag |= Bit_7;	/* Y方向 */
     }
 
 #if 1
@@ -593,27 +597,27 @@ static uint8_t Ball_check_collision(uint16_t* new_x, uint16_t* new_y, uint16_t w
     bottom = *new_y + height;
 #endif
 	
-	x_OK = left + Mdiv4(width);
-	x_Ofst_s = x_OK;
-	x_Ofst_e = x_OK + Mdiv2(width);
+#if 1
+	x_OK = left;
+	x_Ofst_s = left;
+	x_Ofst_e = right;
 
-	y_OK = bottom - 1;
-	y_Ofst_s = bottom - Mdiv2(height);
+	y_OK = bottom;
+	y_Ofst_s = bottom;
 	y_Ofst_e = top;
+#else
+	x_OK = left;
+	x_Ofst_s = x_OK + Mdiv4(width);
+	x_Ofst_e = x_Ofst_s + Mdiv2(width);
+
+	y_OK = bottom;
+	y_Ofst_s = y_OK - Mdiv2(height);	/* 半分から上へ */
+	y_Ofst_e = top;
+#endif
 
 #if 1
-	y = y_OK;
-	for ( x = x_Ofst_s; x < x_Ofst_e; x++ )
-	{
-		if (g_bAREA[y][x] != 0) /* ボールが存在する */
-		{
-			bFlag |= Bit_2;	/* Y方向 */
-			break;
-		}
-	}
-
-	x = left;
-    for (y = y_Ofst_s; y >= y_Ofst_e; y--)
+	x = x_Ofst_s;
+    for (y = y_Ofst_s; y >= y_Ofst_e; y--)	/* 左線 */
 	{
 		if (g_bAREA[y][x] != 0) /* ボールが存在する */
 		{
@@ -622,8 +626,8 @@ static uint8_t Ball_check_collision(uint16_t* new_x, uint16_t* new_y, uint16_t w
 		}
 	}
 
-	x = Mmax(right - 1, left);
-    for (y = y_Ofst_s; y >= y_Ofst_e; y--)
+	x = x_Ofst_e;
+    for (y = y_Ofst_s; y >= y_Ofst_e; y--)	/* 右線 */
 	{
 		if (g_bAREA[y][x] != 0) /* ボールが存在する */
 		{
@@ -632,8 +636,18 @@ static uint8_t Ball_check_collision(uint16_t* new_x, uint16_t* new_y, uint16_t w
 		}
 	}
 
-	y = top;
-	for ( x = left; x < right; x++ )
+	y = y_Ofst_e;
+	for ( x = x_Ofst_s; x < x_Ofst_e; x++ )	/* 上線 */
+	{
+		if (g_bAREA[y][x] != 0) /* ボールが存在する */
+		{
+			bFlag |= Bit_2;	/* Y方向 */
+			break;
+		}
+	}
+
+	y = y_Ofst_s;
+	for ( x = x_Ofst_s; x < x_Ofst_e; x++ )	/* 下線 */
 	{
 		if (g_bAREA[y][x] != 0) /* ボールが存在する */
 		{
@@ -647,6 +661,46 @@ static uint8_t Ball_check_collision(uint16_t* new_x, uint16_t* new_y, uint16_t w
 		*pbStat = Mbset(*pbStat, 0xFF, bFlag);	/* フラグセット */
 		ret = TRUE;
 	}
+
+#ifdef DEBUG	/* デバッグコーナー */
+	
+	if( (g_uDebugNum & Bit_7) != 0u )	/* 接触部分 */
+	{
+		if((*pbStat & Bit_0) != 0u)	/* 左方向にあり */
+		{
+			Draw_Line(x_Ofst_s+1, y_Ofst_e, x_Ofst_s+1, y_Ofst_s, G_L_PINK, 0xFFFF);
+		}
+		if((*pbStat & Bit_1) != 0u)	/* 右方向にあり */
+		{
+			Draw_Line(x_Ofst_e -1 , y_Ofst_e, x_Ofst_e -1, y_Ofst_s, G_L_PINK, 0xFFFF);
+		}
+		if((*pbStat & Bit_2) != 0u)	/* 上方向にあり */
+		{
+			Draw_Line(x_Ofst_s, y_Ofst_e+1, x_Ofst_e, y_Ofst_e+1, G_L_PINK, 0xFFFF);
+		}
+		if((*pbStat & Bit_3) != 0u)	/* 下方向にあり */
+		{
+			Draw_Line(x_Ofst_s, y_Ofst_s -1, x_Ofst_e, y_Ofst_s - 1, G_L_PINK, 0xFFFF);
+		}
+		if((*pbStat & Bit_4) != 0u)	/* 左端方向にあり */
+		{
+			Draw_Line(x_Ofst_s, y_Ofst_e, x_Ofst_s, y_Ofst_s, G_L_BLUE, 0xFFFF);
+		}
+		if((*pbStat & Bit_5) != 0u)	/* 右方向にあり */
+		{
+			Draw_Line(x_Ofst_e, y_Ofst_e, x_Ofst_e, y_Ofst_s, G_L_BLUE, 0xFFFF);
+		}
+		if((*pbStat & Bit_6) != 0u)	/* 上端方向にあり */
+		{
+			Draw_Line(x_Ofst_s, y_Ofst_e, x_Ofst_e, y_Ofst_e, G_L_BLUE, 0xFFFF);
+		}
+		if((*pbStat & Bit_7) != 0u)	/* 下端方向にあり */
+		{
+			Draw_Line(x_Ofst_s, y_Ofst_s, x_Ofst_e, y_Ofst_s, G_L_BLUE, 0xFFFF);
+		}
+	}
+#endif
+	
 #else
     for (y = y_OK; y >= top; y--)
 	{
@@ -717,6 +771,40 @@ static void Ball_mark_area(ST_PCG* p_stPCG, int8_t bValue, uint8_t bListNum)
 
     for ( y = top; y < bottom; y++ ) 
 	{
+        for ( x = left; x < right; x += SP_W2 ) 
+		{
+			if(g_bAREA[y][x] == 0)
+			{
+				if(bValue > 0)
+				{
+		            g_bAREA[y][x] += bValue;
+				}
+			}
+			else
+			{
+	            g_bAREA[y][x] += bValue;
+			}
+        }
+    }
+	
+	x = right;
+    for ( y = top; y < bottom; y++ ) 
+	{
+		if(g_bAREA[y][x] == 0)
+		{
+			if(bValue > 0)
+			{
+				g_bAREA[y][x] += bValue;
+			}
+		}
+		else
+		{
+			g_bAREA[y][x] += bValue;
+		}
+	}
+
+    for ( y = top; y < bottom; y += SP_H2 ) 
+	{
         for ( x = left; x < right; x++ ) 
 		{
 			if(g_bAREA[y][x] == 0)
@@ -732,6 +820,22 @@ static void Ball_mark_area(ST_PCG* p_stPCG, int8_t bValue, uint8_t bListNum)
 			}
         }
     }
+
+	y = bottom;
+	for ( x = left; x < right; x++ ) 
+	{
+		if(g_bAREA[y][x] == 0)
+		{
+			if(bValue > 0)
+			{
+				g_bAREA[y][x] += bValue;
+			}
+		}
+		else
+		{
+			g_bAREA[y][x] += bValue;
+		}
+	}
 }
 
 /*===========================================================================================*/
@@ -834,127 +938,103 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
 		if((bStat & (Bit_0 | Bit_1 | Bit_2 | Bit_3)) == (Bit_0 | Bit_1 | Bit_2 | Bit_3))	/* 全てに障害物があった */
 		{
 			p_stPCG->dx = 0; // 止める
-			p_stPCG->dy = -Y_ACC2;	/* 上方向へ */
+			p_stPCG->dy = 0; // 止める
 		}
 		/* -------------------- < 3 > -------------------- */
-		else if((bStat & (Bit_0 | Bit_1 | Bit_2 )) == (Bit_0 | Bit_1 | Bit_2 ))	/* 上が開いていた */
+		else if((bStat & (Bit_0 | Bit_1 | Bit_3 )) == (Bit_0 | Bit_1 | Bit_3 ))	/* 上が開いていた */
 		{
 			p_stPCG->dx = 0; // 止める
 			p_stPCG->dy = -Y_ACC2;	/* 上方向へ */
 		}
-		else if((bStat & (Bit_0 | Bit_1 | Bit_3 )) == (Bit_0 | Bit_1 | Bit_3 ))	/* 下が開いていた */
+		else if((bStat & (Bit_0 | Bit_1 | Bit_2 )) == (Bit_0 | Bit_1 | Bit_2 ))	/* 下が開いていた */
 		{
 			p_stPCG->dx = 0; // 止める
+			/* 下へ */
 		}
 		else if((bStat & (Bit_1 | Bit_2 | Bit_3)) == (Bit_1 | Bit_2 | Bit_3))	/* 左が開いていた */
 		{
-			if(p_stPCG->dy > Y_ACC2)p_stPCG->dx = -X_ACC;
-			else p_stPCG->dx = 0; // 止める
-
+			if(p_stPCG->dx >= 0)p_stPCG->dx = -X_ACC;	/* 左へ */
 			p_stPCG->dy = 0; // 止める
 		}
 		else if((bStat & (Bit_0 | Bit_2 | Bit_3)) == (Bit_0 | Bit_2 | Bit_3))	/* 右が開いていた */
 		{
-			if(p_stPCG->dy > Y_ACC2)p_stPCG->dx = X_ACC;
-			else p_stPCG->dx = 0; // 止める
-
+			if(p_stPCG->dx <= 0)p_stPCG->dx = X_ACC;	/* 右へ */
 			p_stPCG->dy = 0; // 止める
 		}
 		/* -------------------- < 2 > -------------------- */
 		else if((bStat & (Bit_2 | Bit_3)) == (Bit_2 | Bit_3))	/* 上下に障害物があった */
 		{
+			/* 左右 */
 			p_stPCG->dy = 0; // 止める
 		}
 		else if((bStat & (Bit_0 | Bit_1)) == (Bit_0 | Bit_1))	/* 左右に障害物があった */
 		{
 			p_stPCG->dx = 0; // 止める
+			/* 上下 */
 		}
-#if 1		
-		else if((bStat & (Bit_0 | Bit_2)) == (Bit_0 | Bit_2))	/* 左下に障害物があった */
+		else if((bStat & (Bit_0 | Bit_3)) == (Bit_0 | Bit_3))	/* 左下に障害物があった */
 		{
-			if(p_stPCG->dy > Y_ACC2)p_stPCG->dx = X_ACC;	/* 右へ */
-			else p_stPCG->dx = 0; // 止める
-
+			if(p_stPCG->dx <= 0)p_stPCG->dx = X_ACC;	/* 右へ */
 			p_stPCG->dy = 0; // 止める
 		}
-		else if((bStat & (Bit_1 | Bit_2)) == (Bit_1 | Bit_2))	/* 右下に障害物があった */
+		else if((bStat & (Bit_1 | Bit_3)) == (Bit_1 | Bit_3))	/* 右下に障害物があった */
 		{
-			if(p_stPCG->dy > Y_ACC2)p_stPCG->dx = -X_ACC;	/* 左へ */
-			else p_stPCG->dx = 0; // 止める
-
+			if(p_stPCG->dx >= 0)p_stPCG->dx = -X_ACC;	/* 左へ */
 			p_stPCG->dy = 0; // 止める
 		}
-#endif
+		else if((bStat & (Bit_0 | Bit_2)) == (Bit_0 | Bit_2))	/* 左上に障害物があった */
+		{
+			if(p_stPCG->dx <= 0)p_stPCG->dx = X_ACC;	/* 右へ */
+			/* 下へ */
+		}
+		else if((bStat & (Bit_1 | Bit_2)) == (Bit_1 | Bit_2))	/* 右上に障害物があった */
+		{
+			if(p_stPCG->dx >= 0)p_stPCG->dx = -X_ACC;	/* 左へ */
+			/* 下へ */
+		}
 		/* -------------------- < 1 > -------------------- */
-		else if(bStat == (Bit_0 | Bit_6) )	/* 左端のみ */
+		else if((bStat & Bit_3) == Bit_3)	/* 下に障害物があった */
 		{
-			p_stPCG->dx = 0; // 止める
-		}
-		else if(bStat == (Bit_1 | Bit_7) )	/* 右端のみ */
-		{
-			p_stPCG->dx = 0; // 止める
-		}
-		else if((bStat & (Bit_2 | Bit_5)) == (Bit_2 | Bit_5))	/* 底辺に障害物があった */
-		{
+			/* 左右 */
 			p_stPCG->dy = 0; // 止める
 		}
-		else if((bStat & Bit_2) != 0u)	/* 下に障害物があった */
+		else
 		{
-#if 1
-			p_stPCG->dy = 0; // 止める
-#else
-			if(old_y < new_y)
-			{
-				p_stPCG->dy = 0; // 止める
-			}
 
-			if(old_x == new_x)
-			{
-				p_stPCG->dy = 0; // 止める
-			}
-			else
-			{
-				p_stPCG->dy -= Y_ACC;	/* 上方向へ */
-			}
-#endif
+		}
+
+		/* -------------------- < 端の処理 > -------------------- */
+		if((bStat & Bit_4) == Bit_4)	/* 左端のみ */
+		{
+			if(p_stPCG->dx < 0)p_stPCG->dx = X_ACC;	// 反転
+			else p_stPCG->dx = 0; // 止める
+			/* 下へ */
+		}
+		else if((bStat & Bit_5) == Bit_5)	/* 右端のみ */
+		{
+			if(p_stPCG->dx > 0)p_stPCG->dx = -X_ACC;	// 反転
+			else p_stPCG->dx = 0; // 止める
+			/* 下へ */
+		}
+		else
+		{
+
+		}
+
+		if((bStat & Bit_6) == Bit_6)	/* 天井に障害物があった */
+		{
+			/* 左右 */
+			/* 下へ */
+		}
+		else if((bStat & Bit_7) == Bit_7)	/* 底辺に障害物があった */
+		{
+			/* 左右 */
+			if(p_stPCG->dy > 0)p_stPCG->dy = 0; // 止める
 		}
 		else	/* どちらかに障害物があった */
 		{
-		}
-
-		if((bStat & (Bit_6 | Bit_7)) != 0u)	/* 左右に壁があった */
-		{
-			if((bStat & Bit_6) != 0u)	/* 左に壁があった */
-			{
-				if(p_stPCG->dx < 0)
-				{
-					p_stPCG->dx = 0; // 止める
-				}
-			}
-
-			if((bStat & Bit_7) != 0u)	/* 右に壁があった */
-			{
-				if(p_stPCG->dx > 0)
-				{
-					p_stPCG->dx = 0; // 止める
-				}
-			}
-		}
-
-		if((bStat & (Bit_0 | Bit_1)) == 0u)	/* 左右に障害物がなかった */
-		{
-			if(p_stPCG->dx == 0)
-			{
-				/* 何もしない */
-			}
-			else if(old_x < new_x)
-			{
-				p_stPCG->dx -= X_DEC;	/* 減速 */
-			}
-			else
-			{
-				p_stPCG->dx += X_DEC;	/* 減速 */
-			}
+			/* 左右 */
+			/* 下へ */
 		}
 
 		/* 再計算 */
@@ -967,26 +1047,9 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
     }
 	else
 	{
-		if(p_stPCG->dx == 0)
-		{
-			/* 何もしない */
-		}
-		else if(old_x < new_x)
-		{
-			p_stPCG->dx -= X_DEC;		/* 減速 */
-		}
-		else
-		{
-			p_stPCG->dx += X_DEC;		/* 減速 */
-		}
-
-		/* 再計算 */
-		new_x = (x + p_stPCG->dx) >> PCG_LSB;
-		new_y = (y + p_stPCG->dy) >> PCG_LSB;
-
 		if(new_y < old_y)	/* 当たり判定のない上昇を止める */
 		{
-			p_stPCG->dy = 0;
+			p_stPCG->dy = Y_ACC;
 			new_y = old_y;
 		}
 	}
@@ -995,7 +1058,7 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
 	{
 		if((new_y - old_y) > 200)
 		{
-			p_stPCG->dy = 0;
+			p_stPCG->dy = Y_ACC;
 			new_y = 0;
 		}
 	}
@@ -1013,15 +1076,19 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
 		p_stPCG->status = FALSE;	/* 移動停止 */
 		ret = FALSE;
 	}
-
-	if((bStat & Bit_2) != 0u)	/* 下方向にあり */
+	
+	/* 次回用 */
+	if(p_stPCG->dx == 0)
 	{
-		ret = FALSE;
+		/* 何もしない */
 	}
-
-	if((bStat & Bit_5) != 0u)	/* 下端方向にあり */
+	else if(old_x < new_x)
 	{
-		ret = FALSE;
+		p_stPCG->dx -= X_DEC;		/* 減速 */
+	}
+	else
+	{
+		p_stPCG->dx += X_DEC;		/* 減速 */
 	}
 
 #ifdef DEBUG	/* デバッグコーナー */
@@ -1032,42 +1099,6 @@ static int8_t Ball_Point_Update(ST_PCG* p_stPCG, uint8_t list_num)
 		memset(sBuf, 0, sizeof(sBuf));
 		sprintf(sBuf, "%d,%d", (int8_t)(p_stPCG->dx >> PCG_LSB), (int8_t)(p_stPCG->dy >> PCG_LSB));
 		PutGraphic_To_Symbol12(sBuf, x, y, F_MOJI );	
-	}
-	
-	if( (g_uDebugNum & Bit_7) != 0u )	/* 接触部分 */
-	{
-		if((bStat & Bit_0) != 0u)	/* 左方向にあり */
-		{
-			Draw_Line(new_x+1, new_y, new_x+1, new_y + height, G_L_PINK, 0xFFFF);
-		}
-		if((bStat & Bit_1) != 0u)	/* 右方向にあり */
-		{
-			Draw_Line(new_x + width -1 , new_y, new_x + width -1, new_y + height, G_L_PINK, 0xFFFF);
-		}
-		if((bStat & Bit_2) != 0u)	/* 下方向にあり */
-		{
-			Draw_Line(new_x, new_y + height -1, new_x + width, new_y + height - 1, G_L_PINK, 0xFFFF);
-		}
-		if((bStat & Bit_3) != 0u)	/* 上方向にあり */
-		{
-			Draw_Line(new_x, new_y+1, new_x + width, new_y+1, G_L_PINK, 0xFFFF);
-		}
-		if((bStat & Bit_4) != 0u)	/* 上端方向にあり */
-		{
-			Draw_Line(new_x, new_y, new_x + width, new_y, G_L_BLUE, 0xFFFF);
-		}
-		if((bStat & Bit_5) != 0u)	/* 下端方向にあり */
-		{
-			Draw_Line(new_x, new_y + height, new_x + width, new_y + height, G_L_BLUE, 0xFFFF);
-		}
-		if((bStat & Bit_6) != 0u)	/* 左端方向にあり */
-		{
-			Draw_Line(new_x, new_y, new_x, new_y + height, G_L_BLUE, 0xFFFF);
-		}
-		if((bStat & Bit_7) != 0u)	/* 右方向にあり */
-		{
-			Draw_Line(new_x + width, new_y, new_x + width, new_y + height, G_L_BLUE, 0xFFFF);
-		}
 	}
 #endif
 
@@ -1129,6 +1160,7 @@ static int8_t Ball_Check(int16_t nBallCount)
 	static uint16_t s_Resume = 0;
 	static uint16_t s_Resume_old = 0;
 	static uint32_t s_AbortTime = PASSTIME_INIT;
+	static uint32_t s_AbortTime_old = PASSTIME_INIT;
 
 //	uint8_t allRectanglesNonOverlapping;
 #if 0
@@ -1138,10 +1170,9 @@ static int8_t Ball_Check(int16_t nBallCount)
 	ST_PCG	*p_stPCG_other = NULL;
 
 #ifdef DEBUG	/* デバッグコーナー */
-//	Level_meter(FALSE);	/* 処理負荷計測 */
-#endif
-#ifdef DEBUG	/* デバッグコーナー */
 //	static int16_t count = 0;
+
+//	printf("Ball_Check st(%d)\n", g_index);
 #endif
 
 #if 0
@@ -1157,17 +1188,21 @@ static int8_t Ball_Check(int16_t nBallCount)
 		memset(sBuf, 0, sizeof(sBuf));
 		sprintf(sBuf, "%08b  ", g_uDebugNum);
 		BG_TextPut(sBuf, 178, 247);	/* デバッグ表示 */
+
+		Draw_Fill(X_POS_MIN, Y_MIN_DRAW, X_POS_MAX, Y_MAX_DRAW-1, G_BG);		/* ビンの中は塗りつぶし */
 	}
 
 	if( (g_uDebugNum & Bit_5) != 0u )	/* 当たり判定 */
 	{
-		Draw_Fill(X_POS_MIN, Y_MIN_DRAW, X_POS_MAX, Y_MAX_DRAW-1, G_BG);		/* ビンの中は塗りつぶし */
 		print_area();	/* 塗りつぶし */
 	}
 #endif
-	if((s_bErase == TRUE) || ((s_bErase == FALSE) && (s_bErase_old == TRUE)))	/* 消去中は座標やステータスを更新しない */
+	if(g_GameSpeed > 3)
 	{
-		T_Clear();		/* テキストクリア */
+		if((s_bErase == TRUE) || ((s_bErase == FALSE) && (s_bErase_old == TRUE)))	/* 消去中は座標やステータスを更新しない */
+		{
+			T_Clear();		/* テキストクリア */
+		}
 	}
 	s_bErase_old = s_bErase;
 
@@ -1179,8 +1214,8 @@ static int8_t Ball_Check(int16_t nBallCount)
 	{
 		uint8_t bEraseTmp = FALSE;
 
-#ifdef DEBUG	/* デバッグコーナー */
-//		Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+		Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 		bValid = g_stBall[i].bValidty;
 		if( bValid != ball_exist )		/* 存在するボール以外 */
@@ -1204,27 +1239,31 @@ static int8_t Ball_Check(int16_t nBallCount)
 			}
 			else
 			{
-				/* アニメーション */
-				T_Circle(ef_x, ef_y, e_w, e_h, 0xA5A5, rand()%15 + 1);
-				T_Circle(ef_x1, ef_y1, e_w, e_h, 0xA5A5, rand()%15 + 1);
-//				return;
+				if(g_GameSpeed > 3)
+				{
+					/* アニメーション */
+					T_Circle(ef_x, ef_y, e_w, e_h, 0xA5A5, rand()%15 + 1);
+					T_Circle(ef_x1, ef_y1, e_w, e_h, 0xA5A5, rand()%15 + 1);
+				}
 			}
 			continue;
 		}
-
+#if 1
 		if(s_Resume_old != s_Resume)
 		{
-			if(	GetPassTime(FRAME_RATIO_TIME, &s_AbortTime) != 0u  )	/* フレームレート重視 */
+			s_AbortTime_old = s_AbortTime;
+			if(	GetPassTime(FRAME_RATIO_TIME, &s_AbortTime) != 0u )	/* フレームレート重視 */
 			{
 				bNoMoreMove = FALSE;	/* 移動完了していない */
 #ifdef DEBUG	/* デバッグコーナー */
 //				memset(sBuf, 0, sizeof(sBuf));
-//				sprintf(sBuf, "%2d(%2d)%ld", s_Resume, s_Resume_old, s_AbortTime);
+//				sprintf(sBuf, "%2d(%2d)%ld", s_Resume, s_Resume_old, s_AbortTime - s_AbortTime_old);
 //				Draw_Message_To_Graphic(sBuf, 0, 20, F_MOJI, F_MOJI_BAK);	/* デバッグ */
 #endif
 				break;
 			}
 		}
+#endif
 
 		dx = p_stPCG->dx;
 		dy = p_stPCG->dy;
@@ -1232,8 +1271,8 @@ static int8_t Ball_Check(int16_t nBallCount)
 		x = p_stPCG->x >> PCG_LSB;
 		y = p_stPCG->y >> PCG_LSB;
 
-		width	= p_stPCG->Pat_w * SP_W;
-		height	= p_stPCG->Pat_h * SP_H;
+		width	= Mmul16(p_stPCG->Pat_w);
+		height	= Mmul16(p_stPCG->Pat_h);
 
 		w = Mdiv2(width);
 		h = Mdiv2(height);
@@ -1276,8 +1315,8 @@ static int8_t Ball_Check(int16_t nBallCount)
 
 			x1 = p_stPCG_other->x >> PCG_LSB;
 			y1 = p_stPCG_other->y >> PCG_LSB;
-			width1	= p_stPCG_other->Pat_w * SP_W;
-			height1	= p_stPCG_other->Pat_h * SP_H;
+			width1	= Mmul16(p_stPCG_other->Pat_w);
+			height1	= Mmul16(p_stPCG_other->Pat_h);
 			w1 = Mdiv2(width1); 
 			h1 = Mdiv2(height1);
 
@@ -1330,10 +1369,12 @@ static int8_t Ball_Check(int16_t nBallCount)
 					e_w = width;
 					e_h = height;
 
-					/* アニメーション */
-					T_Circle(ef_x, ef_y, e_w, e_h, 0xA5A5, rand()%15 + 1);
-					T_Circle(ef_x1, ef_y1, e_w, e_h, 0xA5A5, rand()%15 + 1);
-
+					if(g_GameSpeed > 3)
+					{
+						/* アニメーション */
+						T_Circle(ef_x, ef_y, e_w, e_h, 0xA5A5, rand()%15 + 1);
+						T_Circle(ef_x1, ef_y1, e_w, e_h, 0xA5A5, rand()%15 + 1);
+					}
 					s_bErase = TRUE;
 					bEraseTmp = TRUE;
 					break;
@@ -1391,8 +1432,8 @@ static int8_t Ball_Check(int16_t nBallCount)
 			{
 				x = p_stPCG->x >> PCG_LSB;
 				y = p_stPCG->y >> PCG_LSB;
-				width	= p_stPCG->Pat_w * SP_W;
-				height	= p_stPCG->Pat_h * SP_H;
+				width	= Mmul16(p_stPCG->Pat_w);
+				height	= Mmul16(p_stPCG->Pat_h);
 				Draw_Box(x, y, x + width, y + height, G_L_PINK, 0xFFFF);
 			}
 #endif
@@ -1429,8 +1470,8 @@ static int8_t Ball_Check(int16_t nBallCount)
 				{
 					x = p_stPCG->x >> PCG_LSB;
 					y = p_stPCG->y >> PCG_LSB;
-					width	= p_stPCG->Pat_w * SP_W;
-					height	= p_stPCG->Pat_h * SP_H;
+					width	= Mmul16(p_stPCG->Pat_w);
+					height	= Mmul16(p_stPCG->Pat_h);
 					Draw_Box(x, y, x + width, y + height, G_YELLOW, 0xFFFF);
 				}
 			}
@@ -1501,6 +1542,14 @@ static int8_t Ball_Check(int16_t nBallCount)
 			/* 保持 */
 		}
 		
+		if(S_IsUpdate_Combo() != 0)
+		{
+			if(S_Get_Combo() >= COMBO_RECOVER_COUNT)
+			{
+				g_bBoder_count = Mdec(g_bBoder_count, S_Get_Combo());
+			}
+		}
+
 		ret = TRUE;
 	}
 	else
@@ -1532,6 +1581,7 @@ static int8_t Ball_Check(int16_t nBallCount)
 //	memset(sBuf, 0, sizeof(sBuf));
 //	sprintf(sBuf, "(%2d)(%d)(%d)(%d)", nBallCount, g_bShot_OK, num_pairs, num_non_overlapping);
 //	Draw_Message_To_Graphic(sBuf, 0, 24, F_MOJI, F_MOJI_BAK);	/* スコア表示 */
+//	printf("Ball_Check ed(%d)\n", g_index);
 #endif
 	return ret;
 }
@@ -1644,9 +1694,9 @@ static void Ball_Move(int16_t *nNum)
 //	Draw_Message_To_Graphic(sBuf, 0, 112, F_MOJI, F_MOJI_BAK);	/* スコア表示 */
 #endif
 
-	if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-		((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
-		((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
+	if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
+		((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
+		((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
 	{
 		if(s_bFlag == FALSE)
 		{
@@ -1689,7 +1739,7 @@ static void Ball_Move(int16_t *nNum)
 		s_bFlag = FALSE;
 	}
 #if 0		
-		printf("0x%X, 0x%X\n", g_Input_P[0], g_Input);
+		printf("0x%X, 0x%X\n", GetInput_P1(), GetInput());
 #endif
 //	PCG_PUT_1x1(p_stPCG_ship->x, p_stPCG_ship->y, nNum, SetXSPinfo(0, 0, 0x0A, 0x30));
 	
@@ -1698,11 +1748,11 @@ static void Ball_Move(int16_t *nNum)
 	{
 		int16_t width;
 
-		if(	((g_Input_P[0] & JOY_LEFT ) != 0u )	||	/* LEFT */
-			((g_Input & KEY_LEFT) != 0 )		)	/* 左 */
+		if(	((GetInput_P1() & JOY_LEFT ) != 0u )	||	/* LEFT */
+			((GetInput() & KEY_LEFT) != 0 )		)	/* 左 */
 		{
-			if(	((g_Input_P[0] & JOY_B ) != 0u)	||		/* B */
-				((g_Input & KEY_b_X) != 0u)		)		/* B(x) */
+			if(	((GetInput_P1() & JOY_B ) != 0u)	||		/* B */
+				((GetInput() & KEY_b_X) != 0u)		)		/* B(x) */
 			{
 				p_stPCG_ship->dx = (-2) << PCG_LSB;
 			}
@@ -1717,11 +1767,11 @@ static void Ball_Move(int16_t *nNum)
 				p_stPCG_ship->Anime = 0;
 			}
 		}
-		else if( ((g_Input_P[0] & JOY_RIGHT ) != 0u )	||	/* RIGHT */
-				((g_Input & KEY_RIGHT) != 0 )			)	/* 右 */
+		else if( ((GetInput_P1() & JOY_RIGHT ) != 0u )	||	/* RIGHT */
+				((GetInput() & KEY_RIGHT) != 0 )			)	/* 右 */
 		{
-			if(	((g_Input_P[0] & JOY_B ) != 0u)	||		/* B */
-				((g_Input & KEY_b_X) != 0u)		)		/* B(x) */
+			if(	((GetInput_P1() & JOY_B ) != 0u)	||		/* B */
+				((GetInput() & KEY_b_X) != 0u)		)		/* B(x) */
 			{
 				p_stPCG_ship->dx = (2) << PCG_LSB;
 			}
@@ -1747,7 +1797,7 @@ static void Ball_Move(int16_t *nNum)
 		p_stPCG_ship->x += p_stPCG_ship->dx;
 		p_stPCG_ship->y += p_stPCG_ship->dy;
 
-		width	= p_stPCG_ship->Pat_w * SP_W;
+		width	= Mmul16(p_stPCG_ship->Pat_w);
 		
 		if(p_stPCG_ship->x < ((X_POS_MIN) << PCG_LSB))
 		{
@@ -2173,6 +2223,9 @@ int16_t main_Task(void)
 		GetGameMode(&bMode);
 		GetCRT(&stCRT, bMode);	/* 画面座標取得 */
 
+#ifdef CPU_MONI	/* デバッグコーナー */
+		Level_meter(TRUE);	/* 処理負荷計測(開始) */
+#endif
 		if(Get_SP_Sns() == FALSE)
 		{
 			if(Input_Main(g_ubDemoPlay) != 0u) 	/* 入力処理 */
@@ -2186,7 +2239,7 @@ int16_t main_Task(void)
 		DirectInputKeyNum(&g_uDebugNum, 3);	/* キーボードから数字を入力 */
 #endif
 
-		if((g_Input & KEY_b_ESC ) != 0u)	/* ＥＳＣキー */
+		if((GetInput() & KEY_b_ESC ) != 0u)	/* ＥＳＣキー */
 		{
 			/* 終了 */
 			pushCount = Minc(pushCount, 1);
@@ -2203,7 +2256,7 @@ int16_t main_Task(void)
 				SetTaskInfo(SCENE_EXIT);	/* 終了シーンへ設定 */
 			}
 		}
-		else if((g_Input & KEY_b_F6 ) != 0u)	/* F6キー */
+		else if((GetInput() & KEY_b_F6 ) != 0u)	/* F6キー */
 		{
 			/* レジューム */
 			pushCount = Minc(pushCount, 1);
@@ -2218,7 +2271,7 @@ int16_t main_Task(void)
 				Ball_Output();	/* 状態を保存 */
 			}
 		}
-		else if((g_Input & KEY_b_HELP ) != 0u)	/* HELPキー */
+		else if((GetInput() & KEY_b_HELP ) != 0u)	/* HELPキー */
 		{
 			if( (stTask.bScene != SCENE_GAME_OVER_S) && (stTask.bScene != SCENE_GAME_OVER) )
 			{
@@ -2344,9 +2397,9 @@ int16_t main_Task(void)
 #if 1
 				static int8_t s_bFlip = FALSE;
 #endif
-				if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-					((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
-					((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
+				if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
+					((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
+					((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
 				{
 					if(s_bFlagInputAB == FALSE)
 					{
@@ -2419,9 +2472,12 @@ int16_t main_Task(void)
 				_iocs_window( X_MIN_DRAW, Y_MIN_DRAW, X_MAX_DRAW-1, Y_MAX_DRAW-1);	/* 描画範囲設定 */
 				/* 宇宙空間 */
 				G_PAGE_SET(0b0010);	/* GR1 */
-				for (i = 0; i < NUM_STARS; ++i)
+				if(g_GameSpeed > 3)
 				{
-					Draw_Pset(rand() % (X_MAX_DRAW/2), rand() % Y_MAX_DRAW, (i % 16) + 240);
+					for (i = 0; i < NUM_STARS; ++i)
+					{
+						Draw_Pset(rand() % (X_MAX_DRAW/2), rand() % Y_MAX_DRAW, (i % 16) + 240);
+					}
 				}
 				Draw_Fill(X_MIN_DRAW, Y_MIN_DRAW, X_POS_MIN, Y_MAX_DRAW-1, G_BG);		/* ビンの外は塗りつぶし */
 				Draw_Fill(X_POS_MAX, Y_MIN_DRAW, (X_MAX_DRAW/2)-1, Y_MAX_DRAW-1, G_BG);	/* ビンの外は塗りつぶし */
@@ -2461,7 +2517,7 @@ int16_t main_Task(void)
 				static int8_t s_bFlagInputAB = FALSE;
 				int16_t y;
 
-				if( ( g_Input & KEY_UPPER ) != 0) { /* 上 */
+				if( ( GetInput() & KEY_UPPER ) != 0) { /* 上 */
 					if(s_bFlagInput == FALSE)
 					{
 						s_bFlagInput = TRUE;
@@ -2492,7 +2548,7 @@ int16_t main_Task(void)
 						ADPCM_Play(0);	/* SELECT音 */
 					}
 				}
-				else if( ( g_Input & KEY_LOWER ) != 0 ) { /* 下 */
+				else if( ( GetInput() & KEY_LOWER ) != 0 ) { /* 下 */
 					if(s_bFlagInput == FALSE)
 					{
 						s_bFlagInput = TRUE;
@@ -2523,7 +2579,7 @@ int16_t main_Task(void)
 						ADPCM_Play(0);	/* SELECT音 */
 					}
 				}
-				else if( ( g_Input & KEY_LEFT ) != 0)	/* 左 */
+				else if( ( GetInput() & KEY_LEFT ) != 0)	/* 左 */
 				{
 					if(s_bFlagInput == FALSE)
 					{
@@ -2537,7 +2593,7 @@ int16_t main_Task(void)
 						Draw_Message_To_Graphic(&g_TB_GameDiffLevel[g_nGameDifflevel][0], 0, 8, F_MOJI, F_MOJI_BAK);
 					}
 				}
-				else if( ( g_Input & KEY_RIGHT ) != 0)	/* 右 */
+				else if( ( GetInput() & KEY_RIGHT ) != 0)	/* 右 */
 				{
 					if(s_bFlagInput == FALSE)
 					{
@@ -2556,9 +2612,9 @@ int16_t main_Task(void)
 					s_bFlagInput = FALSE;
 				}
 
-				if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-					((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
-					((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
+				if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
+					((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
+					((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
 				{
 					if(s_bFlagInputAB == FALSE)
 					{
@@ -2655,63 +2711,55 @@ int16_t main_Task(void)
 			}
 			case SCENE_GAME1:
 			{
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(TRUE);	/* 処理負荷計測 */
-#endif
 				Ball_Move(&g_index);
 
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
-//				printf("Ball_Check st(%d)\n", g_index);
 
 				Ball_Check(g_index);	/* スプライトを表示 */
 
-//				printf("Ball_Check ed(%d)\n", g_index);
-				
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
-//				printf("Boder_line st(%d)\n", g_index);
 
 				Boder_line();	/* ボーダーライン */
 
-//				printf("Boder_line ed(%d)\n", g_index);
-
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 //				printf("Set_Pallet_Shift st(%d)\n", g_index);
 
-				/* 背景処理 */
-				Set_Pallet_Shift(15, 1);
-				CRTC_G1_Scroll_8(0, s_G1_sc_y++);
+				if(g_GameSpeed > 3)
+				{
+					/* 背景処理 */
+					Set_Pallet_Shift(15, 1);
+					CRTC_G1_Scroll_8(0, s_G1_sc_y++);
+				}
 
 //				printf("Set_Pallet_Shift ed(%d)\n", g_index);
 
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
-//				printf("S_Main_Score st(%d)\n", g_index);
 
 				S_Main_Score();	/* スコアメイン処理 */
 
-//				printf("S_Main_Score ed(%d)\n", g_index);
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
+				if(g_ubGameClear == TRUE)	/* クリア条件成立 */
+				{
+					SetTaskInfo(SCENE_NEXT_STAGE_S);	/* エンディング(開始処理)へ設定 */
+				}
 
 				if(g_bBoder_count >= 64)
 				{
 					SetTaskInfo(SCENE_GAME1_E);	/* シーン(終了処理)へ設定 */
 				}
 
-				if(g_ubGameClear == TRUE)	/* クリア条件成立 */
-				{
-					SetTaskInfo(SCENE_NEXT_STAGE_S);	/* エンディング(開始処理)へ設定 */
-				}
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 				break;
 			}
@@ -2735,33 +2783,39 @@ int16_t main_Task(void)
 			}
 			case SCENE_GAME2:
 			{
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(TRUE);	/* 処理負荷計測 */
-#endif
 				Ball_Move(&g_index);
 
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 				Ball_Check(g_index);	/* スプライトを表示 */
 
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 				Boder_line();	/* ボーダーライン */
 
-				/* 背景処理 */
-				Set_Pallet_Shift(15, 1);
-				CRTC_G1_Scroll_8(0, s_G1_sc_y++);
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
+#endif
+				if(g_GameSpeed > 3)
+				{
+					/* 背景処理 */
+					Set_Pallet_Shift(15, 1);
+					CRTC_G1_Scroll_8(0, s_G1_sc_y++);
+				}
 
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
+#endif
 				S_Main_Score();	/* スコアメイン処理 */
 
-				if(S_IsUpdate_Combo() != 0)
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
+#endif
+				if(g_ubGameClear == TRUE)	/* クリア条件成立 */
 				{
-					if(S_Get_Combo() >= COMBO_RECOVER_COUNT)
-					{
-						g_bBoder_count = Mdec(g_bBoder_count, S_Get_Combo());
-					}
+					SetTaskInfo(SCENE_NEXT_STAGE_S);	/* エンディング(開始処理)へ設定 */
 				}
 
 				if(g_bBoder_count == 0)	/* 復帰 */
@@ -2777,12 +2831,8 @@ int16_t main_Task(void)
 					/* 何もしない */
 				}
 
-				if(g_ubGameClear == TRUE)	/* クリア条件成立 */
-				{
-					SetTaskInfo(SCENE_NEXT_STAGE_S);	/* エンディング(開始処理)へ設定 */
-				}
-#ifdef DEBUG	/* デバッグコーナー */
-//				Level_meter(FALSE);	/* 処理負荷計測 */
+#ifdef CPU_MONI	/* デバッグコーナー */
+				Level_meter(FALSE);	/* 処理負荷計測 */
 #endif
 				break;
 			}
@@ -2835,13 +2885,16 @@ int16_t main_Task(void)
 
 				Ball_Check(g_index);		/* スプライトを表示 */
 
+				BG_TextPut("   CONGRATULATIONS!    ", 44, 128);
+				BG_TextPut("    PUSH A BUTTON!     ", 44, 152);
+
 				/* 背景処理 */
 				Set_Pallet_Shift(15, 1);
 				CRTC_G1_Scroll_8(0, s_G1_sc_y++);
 
-				if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-					((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
-					((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
+				if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
+					((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
+					((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
 				{
 					if(s_bFlagInputAB == FALSE)
 					{
@@ -2918,16 +2971,16 @@ int16_t main_Task(void)
 			{
 				if(rank >= 0)
 				{
-					if(S_Score_Name_Main(g_Input, rank) >= 3)	/* スコアネーム入力 */
+					if(S_Score_Name_Main(GetInput(), rank) >= 3)	/* スコアネーム入力 */
 					{
 						SetTaskInfo(SCENE_HI_SCORE_E);	/* ハイスコアランキングシーン(終了処理)へ設定 */
 					}
 				}
 				else
 				{
-					if(	((g_Input_P[0] & JOY_A ) != 0u)	||		/* A */
-						((g_Input & KEY_b_Z) != 0u)		||		/* A(z) */
-						((g_Input & KEY_b_SP ) != 0u)		)	/* スペースキー */
+					if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
+						((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
+						((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
 					{
 						ADPCM_Play(4);	/* 決定音 */
 						SetTaskInfo(SCENE_HI_SCORE_E);	/* ハイスコアランキングシーン(終了処理)へ設定 */
@@ -3002,9 +3055,9 @@ int16_t main_Task(void)
 
 				if(g_ubDemoPlay == FALSE)	/* デモ以外 */
 				{
-					if(	((g_Input_P[0] & JOY_A ) != 0u)	||	/* Aボタン */
-						((g_Input & KEY_b_Z) != 0u)		||	/* KEY A(z) */
-						((g_Input & KEY_b_SP ) != 0u)	)	/* スペースキー */
+					if(	((GetInput_P1() & JOY_A ) != 0u)	||	/* Aボタン */
+						((GetInput() & KEY_b_Z) != 0u)		||	/* KEY A(z) */
+						((GetInput() & KEY_b_SP ) != 0u)	)	/* スペースキー */
 					{
 						ADPCM_Play(4);	/* 決定音 */
 						SetTaskInfo(SCENE_GAME_OVER_E);	/* シーン(終了処理)へ設定 */
@@ -3043,17 +3096,6 @@ int16_t main_Task(void)
 
 		uFreeRunCount++;	/* 16bit フリーランカウンタ更新 */
 
-#ifdef DEBUG	/* デバッグコーナー */
-		/* 処理時間計測 */
-		GetNowTime(&time_now);
-		unTime_cal = time_now - time_st;	/* LSB:1 UNIT:ms */
-		g_unTime_cal = unTime_cal;
-		if( stTask.bScene == SCENE_GAME1 )
-		{
-			unTime_cal_PH = Mmax(unTime_cal, unTime_cal_PH);
-			g_unTime_cal_PH = unTime_cal_PH;
-		}
-
 #ifdef FPS_MONI	/* デバッグコーナー */
 		if( (stTask.bScene == SCENE_GAME1) || (stTask.bScene == SCENE_GAME2) )	/* ゲーム中 */
 		{
@@ -3064,8 +3106,26 @@ int16_t main_Task(void)
 		}
 #endif
 
+#ifdef CPU_MONI	/* デバッグコーナー */
+		Level_meter(FALSE);	/* 処理負荷計測 */
+#endif
+
+#ifdef DEBUG	/* デバッグコーナー */
+		/* 処理時間計測 */
+		GetNowTime(&time_now);
+		unTime_cal = time_now - time_st;	/* LSB:1 UNIT:ms */
+		g_unTime_cal = unTime_cal;
+		if( stTask.bScene == SCENE_GAME1 )
+		{
+			unTime_cal_PH = Mmax(unTime_cal, unTime_cal_PH);
+			g_unTime_cal_PH = unTime_cal_PH;
+		}
+#endif
+
+#ifdef MEM_MONI	/* デバッグコーナー */
 		GetFreeMem();	/* 空きメモリサイズ確認 */
 #endif
+
 	}
 	while( loop );
 
@@ -3083,12 +3143,52 @@ int16_t main_Task(void)
 /*===========================================================================================*/
 static void App_Init(void)
 {
+	int16_t nNum;
 #ifdef DEBUG	/* デバッグコーナー */
 	puts("App_Init 開始");
+#endif
+#ifdef MEM_MONI	/* デバッグコーナー */
 	g_nMaxUseMemSize = GetFreeMem();
 	printf("FreeMem(%d[kb])\n", g_nMaxUseMemSize);	/* 空きメモリサイズ確認 */
 	puts("App_Init メモリ");
 #endif
+	/* MFP */
+	MFP_INIT();	/* V-Sync割り込み等の初期化処理 */
+#ifdef DEBUG	/* デバッグコーナー */
+	printf("App_Init MFP(%d)\n", Get_CPU_Time());
+#endif
+	if(SetNowTime(0) == FALSE)
+	{
+		/*  */
+	}
+	nNum = Get_CPU_Time();	/* 300 = 10MHz基準 */
+	if(nNum  < 400)
+	{
+		g_GameSpeed = 0;
+		printf("Normal Speed(%d)\n", g_GameSpeed);
+	}
+	else if(nNum < 640)
+	{
+		g_GameSpeed = 2;
+		printf("XVI Speed(%d)\n", g_GameSpeed);
+	}
+	else if(nNum < 800)
+	{
+		g_GameSpeed = 4;
+		printf("RedZone Speed(%d)\n", g_GameSpeed);
+	}
+	else if(nNum < 2000)
+	{
+		g_GameSpeed = 7;
+		printf("030 Speed(%d)\n", g_GameSpeed);
+	}
+	else
+	{
+		g_GameSpeed = 10;
+		printf("Another Speed(%d)\n", g_GameSpeed);
+	}
+	puts("App_Init Input");
+	Input_Init();			/* 入力初期化 */
 
 	puts("App_Init FileList");
 	Init_FileList_Load();	/* リストファイルの読み込み */
@@ -3155,6 +3255,8 @@ static void App_Init(void)
 	puts("App_Init スプライト／ＢＧ");
 #endif
 
+	g_Vwait = 1;
+
 #if CNF_MACS
 	/* 動画 */
 	MOV_INIT();		/* 初期化処理 */
@@ -3162,18 +3264,6 @@ static void App_Init(void)
 	puts("App_Init Movie(MACS)");
 #endif
 #endif
-
-	/* MFP */
-	MFP_INIT();	/* V-Sync割り込み等の初期化処理 */
-#ifdef DEBUG	/* デバッグコーナー */
-	printf("App_Init MFP(%d)\n", Get_CPU_Time());
-#endif
-	if(SetNowTime(0) == FALSE)
-	{
-		/*  */
-	}
-	g_GameSpeed = Mmin(Get_CPU_Time() / 300, 7);	/* 300 = 10MHz基準 */
-	g_Vwait = 1;
 
 	/* Task */
 	TaskManage_Init();
