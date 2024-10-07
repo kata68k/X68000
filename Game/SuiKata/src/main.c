@@ -36,7 +36,7 @@
 #include "APL_Score.h"
 
 //#define 	W_BUFFER	/* ダブルバッファリングモード */
-#define	FPS_MONI	/* FPS計測 */
+//#define	FPS_MONI	/* FPS計測 */
 //#define	CPU_MONI	/* CPU計測 */
 #define	MEM_MONI	/* MEM計測 */
 
