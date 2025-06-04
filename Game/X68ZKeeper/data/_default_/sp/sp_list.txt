@@ -1,0 +1,17 @@
+;パレット番号、横スプライト数、縦スプライト数、アニメーション最大数
+;文字列、スコア、背景
+0= BG.SP 0 1 1 1
+;
+1 = ANML_MSY0.SP 2 1 1 10
+2 = ANML_MSY1.SP 3 1 1 10
+3 = ANML_MSY2.SP 4 1 1 10
+4 = ANML_MSY3.SP 5 1 1 10
+5 = ANML_MSY4.SP 6 1 1 10
+6 = ANML_MSY5.SP 7 1 1 10
+7 = ANML_MSY6.SP 8 1 1 10
+8 = ANML_MSY7.SP 9 1 1 10
+9 = ANML_MSY8.SP 10 1 1 10
+10= ANML_MSY9.SP 11 1 1 10
+;
+11= CURSOR.SP 12 1 1 1
+

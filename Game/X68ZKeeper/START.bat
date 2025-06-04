@@ -1,0 +1,13 @@
+ECHO OFF
+rem JOYDRV3.X data\JOYDRV3.CNF
+PCM8A.X
+rem MACSDRV116.X
+rem MOON.x -f1 -m1024
+ZMUSIC.X -M -N -T128 -W0 -P512
+Game.x
+ZMUSIC.X -R
+rem MOON.x -r
+rem MACSDRV116.X -r
+PCM8A.X -R
+rem JOYDRV3.X -R
+
