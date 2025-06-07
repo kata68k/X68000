@@ -266,9 +266,13 @@ int16_t main_Task(void)
 
 				Set_CRT_Contrast(0);	/* 真っ暗にする */
 				G_VIDEO_PRI(3);	/* TX>SP>GR */
+				G_PAGE_SET(0b0010);	/* GR1 */
 			    PCG_VIEW(0x00);        /* SP OFF / BG0 OFF / BG1 OFF */
 
-				G_Load(1, 0, 0, 0);	/* 256色 */
+				if(G_Load(1, 0, 0, 1) < 0)	/* 256色 ページ1 */
+				{
+					T_Clear();		/* テキストクリア */
+				}
 
 				S_Init_Score();
 				S_Set_Combo(0);	/* コンボカウンタ リセット */
@@ -313,7 +317,11 @@ int16_t main_Task(void)
 				{
 					BG_TextPut("                       ", 40, 224);
 
-					G_Load(2, 0, 0, 0);	/* 256色 */
+					G_PAGE_SET(0b0010);	/* GR1 */
+					if(G_Load(2, 0, 0, 1) < 0)	/* 256色 ページ1*/
+					{
+						T_Clear();		/* テキストクリア */
+					}
 					G_Palette_HALF();	/* パレットを設定値から半分にします */
 
 					PCG_VIEW(0x07);        /* SP ON / BG0 ON / BG1 ON */
@@ -339,6 +347,15 @@ int16_t main_Task(void)
 			{
 				ADPCM_Play(SE_GAME_START);
 
+#if CNF_MACS
+				PCG_OFF();			/* SP OFF */
+				/* 動画 */
+				MOV_Play2(MOV_GAME_START, 0x64);		/* カットイン */
+				/* 画面モード再設定 */
+				CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+				PCG_ON();			/* SP ON */
+#else
+#endif
 				SetTaskInfo(SCENE_START_E);	/* シーン設定 */
 				break;
 			}
@@ -360,7 +377,8 @@ int16_t main_Task(void)
 						case 0:	/* 配置、タイマーとカウンタごとリセット */
 						{
 							APL_ZKP_init_board();
-							if (APL_ZKP_swap_if_valid(0, 0, 0, 1)) {
+							//if (APL_ZKP_swap_if_valid(0, 0, 0, 1))
+							{
 								// 成功した場合は処理を続行（消去?落下?補充）
 								APL_ZKP_process_all_matches();
 							}
@@ -380,7 +398,8 @@ int16_t main_Task(void)
 						case 2:	/* 配置リセット */
 						{
 							APL_ZKP_init_board();
-							if (APL_ZKP_swap_if_valid(0, 0, 0, 1)) {
+							//if (APL_ZKP_swap_if_valid(0, 0, 0, 1))
+							{
 								// 成功した場合は処理を続行（消去?落下?補充）
 								APL_ZKP_process_all_matches();
 							}
@@ -391,10 +410,17 @@ int16_t main_Task(void)
 							break;
 						}
 					}
-					reset = 3;
-					APL_ZKP_print_board();
 
-					SetTaskInfo(SCENE_GAME1);	/* シーン設定 */
+					if(APL_ZKP_has_valid_moves() == 0){	/* 有効手を探す */
+						reset = 2;
+					}
+					else
+					{
+						reset = 3;
+						APL_ZKP_print_board();
+
+						SetTaskInfo(SCENE_GAME1);	/* シーン設定 */
+					}
 				}
 				break;
 			}
@@ -451,6 +477,15 @@ int16_t main_Task(void)
 
 					S_Add_Score_Point((GAMEPLAY_TIME - cal) / 10);	/* 残り時間[s]*100 */
 
+#if CNF_MACS
+					PCG_OFF();			/* SP OFF */
+					/* 動画 */
+					MOV_Play2(MOV_GAME_CLEAR, 0x64);		/* カットイン */
+					/* 画面モード再設定 */
+					CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+					PCG_ON();			/* SP ON */
+#else
+#endif
 					SetTaskInfo(SCENE_GAME1_S);	/* シーン(実施処理)へ設定 */
 				}
 				else
@@ -561,14 +596,41 @@ int16_t main_Task(void)
 			}
 			case SCENE_GAME2_E:
 			{
-				S_Set_Combo(0);	/* コンボカウンタ リセット */
 
 				if(APL_ZKP_has_valid_moves() == 0){
+
+					S_Set_Combo(0);	/* コンボカウンタ リセット */
+
+					S_Add_Score_Point(1000);	/* 1000点 */
+
+#if CNF_MACS
+					PCG_OFF();			/* SP OFF */
+					/* 動画 */
+					MOV_Play2(MOV_NOMOREMOVE, 0x64);		/* カットイン */
+					/* 画面モード再設定 */
+					CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+					PCG_ON();			/* SP ON */
+#else
+#endif
 					ADPCM_Play(SE_NOMOREMOVE);
+
 					reset = 2;
 				}
 				else
 				{
+					if(S_Get_Combo() >= 3)
+					{
+#if CNF_MACS
+						PCG_OFF();			/* SP OFF */
+						/* 動画 */
+						MOV_Play2(MOV_EXCELLENT, 0x64);		/* カットイン */
+						/* 画面モード再設定 */
+						CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+						PCG_ON();			/* SP ON */
+#else
+#endif
+					}
+					S_Set_Combo(0);	/* コンボカウンタ リセット */
 					ADPCM_Play(SE_EXCELLENT);
 					APL_ZKP_print_board();
 				}
@@ -661,6 +723,7 @@ int16_t main_Task(void)
 				
 				G_PaletteSetZero();
 				G_CLR_AREA(0, 256, 0, 256, 0);	/* ページ 0 */
+				G_CLR_AREA(0, 256, 0, 256, 1);	/* ページ 1 */
 
 				rank = S_Score_Board();	/* ハイスコア表示 */
 				
@@ -728,14 +791,12 @@ int16_t main_Task(void)
 				}
 				else
 				{
-					int16_t y;
-
 					G_VIDEO_PRI(0);	/* GR>TX>SP */
 
 					G_PAGE_SET(0b0001);	/* GR0 */
 
-					y = NAME_INP_Y;
-					G_CLR_AREA(0, 255, y, 255, 0);	/* ページ 0 */
+					G_CLR_AREA(0, 255, NAME_INP_Y, 255, 0);	/* ページ 0 */
+					G_CLR_AREA(0, 256, 0, 256, 1);	/* ページ 1 */
 					
 					S_Score_Board();	/* ハイスコア表示 */
 
@@ -779,6 +840,8 @@ int16_t main_Task(void)
 			{
 				if(ADPCM_SNS() == 0)	/* 効果音停止中 */
 				{
+					G_CLR_AREA(0, 255, 0, 255, 0);	/* ページ 0 */
+					G_CLR_AREA(0, 256, 0, 256, 1);	/* ページ 1 */
 					SetTaskInfo(SCENE_TITLE_S);	/* シーン(初期化処理)へ設定 */
 				}
 				break;

@@ -139,7 +139,7 @@ int16_t S_Add_Score(uint64_t ulNum)
 
 	val64 = g_stScore.ulScore;
 
-	ret = S_Set_Combo(g_stScore.uCombo + 1);
+//	ret = S_Set_Combo(g_stScore.uCombo + 1);
 
 	g_stScore.ulScoreAdd = ulNum;
 	val64 += g_stScore.ulScoreAdd * g_stScore.uCombo;	/* ‰ÁŽZ */

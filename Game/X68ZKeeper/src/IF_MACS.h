@@ -13,6 +13,16 @@ extern int8_t	g_mov_list[MACS_MAX][256];
 extern uint32_t	g_mov_list_max;
 #endif	/* MACS_MOON */
 
+enum{
+    MOV_GAME_START,
+    MOV_GAME_END,
+    MOV_GAME_CLEAR,
+    MOV_GAME_OVER,
+    MOV_NOMOREMOVE,
+    MOV_EXCELLENT,
+    MOV_MAX
+};
+
 /* ç\ë¢ëÃíËã` */
 
 /* externêÈåæ */
