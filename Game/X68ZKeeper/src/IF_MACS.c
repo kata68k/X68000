@@ -17,7 +17,8 @@
 #ifdef 	MACS_MOON
 
 /* グローバル変数 */
-int8_t		g_mov_list[MACS_MAX][256]	=	{0};
+int8_t		g_mov_on = FALSE;
+MOV_LIST	g_mov_list[MACS_MAX];
 uint32_t	g_mov_list_max	=	0u;
 /* 構造体定義 */
 
@@ -26,7 +27,7 @@ uint32_t	g_mov_list_max	=	0u;
 /* 関数のプロトタイプ宣言 */
 void MOV_INIT(void);
 int32_t MOV_Play(uint8_t);
-int32_t MOV_Play2(uint8_t, uint8_t);
+int32_t MOV_Play2(uint8_t);
 static uint32_t moon_check(void);
 
 /* 関数 */
@@ -55,7 +56,7 @@ void MOV_INIT(void)
 	/* リストからMoon.xでメモリ登録 */
 	for(i = 0; i < g_mov_list_max; i++)
 	{
-		moon_chk = MoonRegst(g_mov_list[i]);	/* メモリへ登録 */
+		moon_chk = MoonRegst(&g_mov_list[i].bFileName[0]);	/* メモリへ登録 */
 		if(moon_chk < 0)
 		{
 			printf("MoonRegst = %d\n", moon_chk);
@@ -65,6 +66,9 @@ void MOV_INIT(void)
 			puts("error:Moonに登録できませんでした。");
 		}
 	}
+	g_mov_on = TRUE;
+#else
+	g_mov_on = FALSE;
 #endif	/* MACS_MOON */
 
 #endif	/* CNF_MACS */
@@ -82,6 +86,8 @@ int32_t MOV_Play(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
 
+	if(g_mov_on == FALSE)return ret;
+
 #if CNF_MACS
 	if(bPlayNum >= g_mov_list_max)return ret;
 
@@ -89,7 +95,7 @@ int32_t MOV_Play(uint8_t bPlayNum)
 	{
 		int32_t	moon_stat = 0;
 
-		moon_stat = MoonPlay(g_mov_list[bPlayNum]);	/* 再生 */
+		moon_stat = MoonPlay(&g_mov_list[bPlayNum].bFileName[0]);	/* 再生 */
 		if(moon_stat != 0)
 		{
 			//printf("MoonPlay  = %d\n", moon_stat);
@@ -105,7 +111,7 @@ int32_t MOV_Play(uint8_t bPlayNum)
 		int8_t	*pBuff = NULL;
 		int32_t	FileSize = 0;
 
-		if(GetFileLength(g_mov_list[bPlayNum], &FileSize) == -1)	/* ファイルのサイズ取得 */
+		if(GetFileLength(&g_mov_list[bPlayNum].bFileName[0], &FileSize) == -1)	/* ファイルのサイズ取得 */
 		{
 
 		}
@@ -137,9 +143,11 @@ int32_t MOV_Play(uint8_t bPlayNum)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int32_t MOV_Play2(uint8_t bPlayNum, uint8_t bOption)
+int32_t MOV_Play2(uint8_t bPlayNum)
 {
 	int32_t	ret=0;
+
+	if(g_mov_on == FALSE)return ret;
 
 #if CNF_MACS
 	if(bPlayNum >= g_mov_list_max)return ret;
@@ -148,7 +156,7 @@ int32_t MOV_Play2(uint8_t bPlayNum, uint8_t bOption)
 	{
 		int32_t	moon_stat = 0;
 
-		moon_stat = MoonPlay2(g_mov_list[bPlayNum], bOption);	/* 再生 */
+		moon_stat = MoonPlay2(&g_mov_list[bPlayNum].bFileName[0], 0x0F & (g_mov_list[bPlayNum].bGR << 6) | (g_mov_list[bPlayNum].bSP << 7));	/* 再生 */
 		if(moon_stat != 0)
 		{
 			//printf("MoonPlay  = %d\n", moon_stat);
@@ -164,7 +172,7 @@ int32_t MOV_Play2(uint8_t bPlayNum, uint8_t bOption)
 		int8_t	*pBuff = NULL;
 		int32_t	FileSize = 0;
 
-		if(GetFileLength(g_mov_list[bPlayNum], &FileSize) == -1)	/* ファイルのサイズ取得 */
+		if(GetFileLength(&g_mov_list[bPlayNum].bFileName[0], &FileSize) == -1)	/* ファイルのサイズ取得 */
 		{
 
 		}
@@ -176,7 +184,7 @@ int32_t MOV_Play2(uint8_t bPlayNum, uint8_t bOption)
 				pBuff = (int8_t*)MyMalloc(FileSize);	/* メモリ確保 */
 				if(pBuff != NULL)
 				{
-					File_Load(g_mov_list[bPlayNum], pBuff, sizeof(uint8_t), FileSize );	/* ファイル読み込みからメモリへ保存 */
+					File_Load(&g_mov_list[bPlayNum].bFileName[0], pBuff, sizeof(uint8_t), FileSize );	/* ファイル読み込みからメモリへ保存 */
 					MACS_Play(pBuff);	/* 再生 */
 					MyMfree(pBuff);	/* メモリ解放 */
 				}

@@ -5,6 +5,7 @@
 
 #include <usr_define.h>
 #include "IF_Graphic.h"
+#include "IF_MACS.h"
 
 #define	DATA_MAX	(128)
 
@@ -20,7 +21,7 @@ extern int16_t PCG_MAP_dataload(int8_t *);
 extern int16_t Load_Music_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 extern int16_t Load_SE_List(		int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 extern int16_t Load_CG_List(		int8_t *, int8_t *, CG_LIST *, uint32_t *);
-extern int16_t Load_MACS_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
+extern int16_t Load_MACS_List(	int8_t *, int8_t *, MOV_LIST *, uint32_t *);
 extern int16_t Load_DATA_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 extern int16_t GetFileLength(int8_t *, int32_t *);
 extern int16_t GetFilePICinfo(int8_t *, BITMAPINFOHEADER *);

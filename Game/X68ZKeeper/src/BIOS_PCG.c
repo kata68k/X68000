@@ -564,42 +564,8 @@ void PCG_SP_PAL_DataLoad(void)
 			}
 		}
 	}
-#if  CNF_XSP
 
-#else
-
-#if 0
-	fp = fopen( "data/sp/BALL.SP" , "rb" ) ;
-//	fp = fopen( "SP_DATA/SAKANA.SP" , "rb" ) ;
-	j = fread( g_pcg_dat
-			,  128		/* 1PCG = 128byte */
-			,  PCG_MAX	/* PCGの数 */
-			,  fp
-	) ;
-	fclose( fp ) ;
-	for( i = 0; i < PCG_MAX; i++ )
-	{
-		_iocs_sp_defcg( i, 1, &g_pcg_dat[i * 128] );
-	}
-#endif
-
-#endif
-	/* BGの設定用（XSP以外はSPの設定） */
-	for( i = 0; i < PCG_16x16_AREA; i++ )
-	{
-		_iocs_sp_defcg( i, 1, &g_pcg_dat[i * 128] );
-	}
-
-#if 0
-	/*-----------[ PCG データを縦画面用に 90 度回転 ]-----------*/
-
-	for (i = 0; i < 256; i++) {
-		pcg_roll90(&g_pcg_dat[i * 128], 1);
-	}
-#endif
-	
 	/*--------[ スプライトパレットデータ読み込みと定義 ]--------*/
-
 #if 1
 	for(i = 0; i < g_pal_list_max; i++)
 	{
@@ -617,37 +583,8 @@ void PCG_SP_PAL_DataLoad(void)
 			}
 		}
 	}
-
-	/* スプライトパレットに転送 */
-#if  CNF_XSP
-	for( i = 0; i < PAL_MAX ; i++ )	/* 0番はテキスト用とする */
-	{
-		PCG_Set_PAL_Data( i, i );
-	}
-#else
-	for( i = 0 ; i < 256 ; i++ )
-	{
-		_iocs_spalet( (i&15) | (1<<0x1F) , i/PAL_MAX + 1, g_pal_dat[i] ) ;
-	}
-#endif	
-#else	
-	sprintf(sBuf, "%s/sp/BALL.PAL", Get_DataList_Path());
-	fp = fopen( sBuf, "rb" ) ;
-//	fp = fopen( "data/sp/BALL.PAL" , "rb" ) ;
-//	fp = fopen( "SP_DATA/SAKANA.PAL" , "rb" ) ;
-	fread( pal_dat
-		,  2		/* 1palet = 2byte */
-		,  256		/* 16palet * 16block */
-		,  fp
-		) ;
-	fclose( fp ) ;
-	/* スプライトパレットに転送 */
-	for( i = 0 ; i < 256 ; i++ )
-	{
-		_iocs_spalet( (i&15) | (1<<0x1F) , i/16 + 1, pal_dat[i] ) ;
-	}
 #endif
-
+	
 }
 
 /*===========================================================================================*/

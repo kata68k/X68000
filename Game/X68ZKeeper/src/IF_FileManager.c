@@ -15,8 +15,6 @@
 #include "IF_FileManager.h"
 
 #include "BIOS_PCG.h"
-#include "IF_MACS.h"
-#include "IF_Graphic.h"
 #include "IF_Input.h"
 #include "IF_MUSIC.h"
 #include "IF_Memory.h"
@@ -41,7 +39,7 @@ int16_t Load_Music_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 int16_t Load_SE_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 int16_t Load_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 int16_t Load_CG_List(	int8_t *, int8_t *, CG_LIST *, uint32_t *);
-int16_t Load_MACS_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
+int16_t Load_MACS_List(	int8_t *, int8_t *, MOV_LIST *, uint32_t *);
 int16_t Load_DATA_List(	int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 int16_t Load_SP_List(int8_t *, int8_t *, int8_t (*)[256], uint32_t *);
 int16_t GetFileLength(int8_t *, int32_t *);
@@ -239,7 +237,7 @@ int16_t Init_FileList_Load(void)
 #if CNF_MACS	
  #ifdef 	MACS_MOON
  	sprintf(sListFilePath, "%s\\%s\\", Get_DataList_Path(), "mov");
-	Load_MACS_List(sListFilePath, "mov_list.txt", g_mov_list, &g_mov_list_max);	/* 動画(MACS)リストの読み込み */
+	Load_MACS_List(sListFilePath, "mov_list.txt", &g_mov_list[0], &g_mov_list_max);	/* 動画(MACS)リストの読み込み */
 	for(i = 0; i < g_mov_list_max; i++)
 	{
 		printf("MACS File %2d = %s\n", i, g_mov_list[i]);
@@ -665,10 +663,12 @@ int16_t File_Load_Course_CSV(int8_t *fname, ST_ROADDATA *st_ptr, uint16_t *Col, 
 int16_t PCG_SP_dataload(int8_t *fname)
 {
 	int16_t ret = 0;
-	uint8_t pcg_dat[PCG_MAX][SP_16_SIZE];		/* ＰＣＧデータファイル読み込みバッファ */
-
+	uint8_t *pcg_dat;		/* ＰＣＧデータファイル読み込みバッファ */
 	
 	FILE *fp;
+
+	pcg_dat = (uint8_t *)MyMalloc(PCG_MAX * SP_16_SIZE);
+
 	/*-----------------[ ＰＣＧデータ読み込み ]-----------------*/
 
 	fp = fopen( fname , "rb" ) ;
@@ -686,7 +686,7 @@ int16_t PCG_SP_dataload(int8_t *fname)
 
 		pat = pcg_size / SP_16_SIZE;
 		
-		j = fread( &pcg_dat[0][0]
+		j = fread( pcg_dat
 			,  SP_16_SIZE				/* 1PCG = 128byte */
 			,  pat	/* PCG */
 			,  fp
@@ -695,9 +695,12 @@ int16_t PCG_SP_dataload(int8_t *fname)
 
 		for( i = 0; i < pat; i++ )
 		{
-			_iocs_sp_defcg( i, 1, &pcg_dat[i][0] );
+			_iocs_sp_defcg( i, 1, pcg_dat );
+			pcg_dat = pcg_dat + (i * SP_16_SIZE);
 		}
 	}
+
+	MyMfree(pcg_dat);
 	
 	return ret;
 }
@@ -1171,6 +1174,8 @@ int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *l
 			}
 			else
 			{
+				nType = 0;
+				nTransPal = 0;
 				memset(z_name, 0, sizeof(z_name));
 				sscanf(p,"%d= %s %d %d", &num, z_name, &nType, &nTransPal);	/* format:番号 = ファイルパス＆ファイル名,グラフィックのタイプ,透過色のパレット番号 */
 #if 0
@@ -1213,13 +1218,14 @@ int16_t Load_CG_List(int8_t *fpath, int8_t *fname, CG_LIST *cg_list, uint32_t *l
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, int8_t (*macs_list)[256], uint32_t *list_max)
+int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, MOV_LIST *mov_list, uint32_t *list_max)
 {
 	FILE *fp;
 	int16_t ret = 0;
 	int8_t buf[256], *p;
 	int8_t z_name[256];
 	uint32_t i=0, num=0;
+	int32_t nGR = 0, nSP = 0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -1249,12 +1255,17 @@ int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, int8_t (*macs_list)[256], u
 			}
 			else
 			{
+				nGR = 0;
+				nSP = 0;
 				memset(z_name, 0, sizeof(z_name));
-				sscanf(p,"%d = %s", &num, z_name);
+				sscanf(p,"%d= %s %d %d", &num, z_name, &nGR, &nSP);	/* format:番号 = ファイルパス＆ファイル名,グラフィック,スプライト */
 				if(i == num)
 				{
-					sprintf(macs_list[i], "%s%s", fpath, z_name);
+					sprintf( mov_list->bFileName, "%s%s", fpath, z_name );
+					(mov_list)->bGR = (int8_t)nGR;
+					(mov_list)->bSP = (int8_t)nSP;
 				}
+				mov_list++;
 				i++;
 			}
 			memset(buf, 0, sizeof(buf));

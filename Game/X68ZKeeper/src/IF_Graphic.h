@@ -13,7 +13,7 @@ enum
 	POS_RIGHT,
 };
 
-#define G_COL_OFST	(0x00)
+#define G_COL_OFST	(0xF0)
 #define G_BG		(0x00)
 #define G_BLACK		(0x01 + G_COL_OFST)
 #define G_D_GRAY	(0x02 + G_COL_OFST)

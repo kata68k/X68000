@@ -32,6 +32,7 @@
 #include "IF_PCG.h"
 #include "IF_Text.h"
 #include "IF_Task.h"
+#include "APL_Menu.h"
 #include "APL_PCG.h"
 #include "APL_Score.h"
 
@@ -73,7 +74,6 @@ static uint16_t s_music_tempo;
 static uint16_t s_music_tempo_old;
 uint8_t		g_ubDemoPlay = FALSE;
 uint8_t		g_ubPhantomX = FALSE;
-
 
 /* グローバル構造体 */
 #ifdef DEBUG	/* デバッグコーナー */
@@ -122,7 +122,6 @@ int16_t main_Task(void)
 	int16_t	loop;
 	int16_t	pushCount = 0;
 
-	int8_t	bStage = 0;
 	uint8_t	bMode;
 	
 	ST_TASK		stTask = {0}; 
@@ -240,6 +239,7 @@ int16_t main_Task(void)
 					S_Set_Combo(0);	/* コンボカウンタ リセット */
 
 					S_Set_ScoreMode(FALSE);	/* 点数計算無効 */
+					g_ubPractice = TRUE;	/* 練習モード */
 				}
 			}
 		}		
@@ -273,6 +273,7 @@ int16_t main_Task(void)
 				{
 					T_Clear();		/* テキストクリア */
 				}
+				G_PaletteSetZero();	/* 標準パレット設定 */
 
 				S_Init_Score();
 				S_Set_Combo(0);	/* コンボカウンタ リセット */
@@ -283,7 +284,7 @@ int16_t main_Task(void)
 				BG_TextPut("X68ZKEEPER 2025", 0, 248);
 				sprintf(sStr, "VER%d.%d.%d", MAJOR_VER, MINOR_VER, PATCH_VER);
 				BG_TextPut(sStr, 192, 248);
-
+				
 				Set_CRT_Contrast(-1);	/* もとに戻す */
 
 				SetTaskInfo(SCENE_TITLE);	/* シーン(処理)へ設定 */
@@ -308,7 +309,7 @@ int16_t main_Task(void)
 						SetTaskInfo(SCENE_TITLE_E);	/* シーン設定 */
 					}
 				}
-
+				
 				break;
 			}
 			case SCENE_TITLE_E:
@@ -323,14 +324,11 @@ int16_t main_Task(void)
 						T_Clear();		/* テキストクリア */
 					}
 					G_Palette_HALF();	/* パレットを設定値から半分にします */
+					G_PaletteSetZero();	/* 標準パレット設定 */
 
-					PCG_VIEW(0x07);        /* SP ON / BG0 ON / BG1 ON */
-			
-					APL_ZKP_SP_init();
-
-					bStage = 0;
+					g_bStage = 0;
 					reset = 0;
-					APL_ZKP_set_GameLv(bStage);	/* ゲームレベルリセット */
+					APL_ZKP_set_GameLv(g_bStage);	/* ゲームレベルリセット */
 
 					SetTaskInfo(SCENE_START_S);	/* シーン設定 */
 				}
@@ -338,31 +336,145 @@ int16_t main_Task(void)
 			}
 			case SCENE_START_S:
 			{
-				Music_Play(BGM_STAGE_1);
+				APL_Menu_Init();	/* メニュー初期化 */
 
 				SetTaskInfo(SCENE_START);	/* シーン設定 */
 				break;
 			}
 			case SCENE_START:
 			{
-				ADPCM_Play(SE_GAME_START);
+				if(ADPCM_SNS() == 0)	/* 効果音停止中 */
+				{
+					int16_t sw = 0;
 
-#if CNF_MACS
-				PCG_OFF();			/* SP OFF */
-				/* 動画 */
-				MOV_Play2(MOV_GAME_START, 0x64);		/* カットイン */
-				/* 画面モード再設定 */
-				CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
-				PCG_ON();			/* SP ON */
-#else
-#endif
-				SetTaskInfo(SCENE_START_E);	/* シーン設定 */
+					sw = APL_Menu_Proc();	/* メニュー */
+					switch(sw)
+					{
+						case 0:
+						default:
+						{
+							break;
+						}
+						case 1:
+						{
+							ADPCM_Play(SE_SELECT);	/* セレクト音 */
+
+							S_Init_Score();
+							S_Set_Combo(0);	/* コンボカウンタ リセット */
+
+							if(g_ubPractice == TRUE)	/* 練習モード */
+							{
+								g_ubPractice = FALSE;
+								S_Set_ScoreMode(TRUE);	/* 点数計算有効 */
+							}
+							else
+							{
+								g_ubPractice = TRUE;
+								S_Set_ScoreMode(FALSE);	/* 点数計算無効 */
+							}
+
+							APL_Menu_Mess(sw - 1);
+							break;
+						}
+						case 2:
+						{
+							ADPCM_Play(SE_SELECT);	/* セレクト音 */
+
+							if(g_ubPractice == TRUE)	/* 練習モード */
+							{
+								g_bStage++;
+								if(g_bStage > 5)	/* 練習モード */
+								{
+									g_bStage = 0;
+								}
+							}
+							else
+							{
+								g_bStage = 0;
+							}
+							APL_ZKP_set_GameLv(g_bStage);	/* ゲームレベルリセット */
+
+							APL_Menu_Mess(sw - 1);
+							break;
+						}
+						case 3:
+						{
+							ADPCM_Play(SE_SELECT);	/* セレクト音 */
+
+							if(g_ubMACS == TRUE)	/* 練習モード */
+							{
+								g_ubMACS = FALSE;	/* カットイン無効 */
+							}
+							else
+							{
+								g_ubMACS = TRUE;	/* カットイン有効 */
+							}
+
+							APL_Menu_Mess(sw - 1);
+							break;
+						}
+						case 4:
+						{
+							int8_t sStr[12] = {0};
+
+							ADPCM_Play(SE_OK);	/* 決定音 */
+
+							BG_TextPut("          ", 0, 8);
+							if(g_ubPractice == FALSE)
+							{
+								g_bStage = 0;
+							}
+							sprintf(sStr, "LV%d", g_bStage );
+							if(g_ubPractice == TRUE)
+							{
+								strcat(sStr, "P");
+							}
+							if(g_ubMACS == TRUE)
+							{
+								strcat(sStr, "M");
+							}
+							BG_TextPut(sStr, 0, 8);
+
+							APL_ZKP_set_GameLv(g_bStage);	/* ゲームレベルリセット */
+
+							APL_Menu_Mess(2 - 1);
+
+							SetTaskInfo(SCENE_START_E);	/* シーン設定 */
+							break;
+						}
+					}
+				}
 				break;
 			}
 			case SCENE_START_E:
 			{
 				if(ADPCM_SNS() == 0)	/* 効果音停止中 */
 				{
+					APL_Menu_Exit();	/* メニュー終了 */
+
+					APL_ZKP_SP_init();	/* スプライト設定 */
+
+					PCG_VIEW(0x07);        /* SP ON / BG0 ON / BG1 ON */
+			
+					Music_Play(BGM_INIT);	/* Init */
+					Music_Play(BGM_STAGE_1);
+
+#if CNF_MACS
+					if(g_ubMACS == TRUE)
+					{
+						PCG_OFF();			/* SP OFF */
+						/* 動画 */
+						MOV_Play2(MOV_GAME_START);		/* カットイン */
+						/* 画面モード再設定 */
+						CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+						PCG_ON();			/* SP ON */
+					}
+					else
+#else
+#endif
+					{
+						ADPCM_Play(SE_GAME_START);
+					}
 					SetTaskInfo(SCENE_GAME1_S);	/* シーン設定 */
 				}
 				break;
@@ -370,7 +482,7 @@ int16_t main_Task(void)
 			//////////////////////////////////////////////////////////////////////////////
 			case SCENE_GAME1_S:
 			{
-				if(ADPCM_SNS() == 0)	/* 効果音停止中 */
+				//if(ADPCM_SNS() == 0)	/* 効果音停止中 */
 				{
 					switch(reset)
 					{
@@ -416,8 +528,22 @@ int16_t main_Task(void)
 					}
 					else
 					{
+						int8_t sStr[12] = {0};
+
 						reset = 3;
 						APL_ZKP_print_board();
+
+						BG_TextPut("          ", 0, 8);
+						sprintf(sStr, "LV%d", g_bStage );
+						if(g_ubPractice == TRUE)
+						{
+							strcat(sStr, "P");
+						}
+						if(g_ubMACS == TRUE)
+						{
+							strcat(sStr, "M");
+						}
+						BG_TextPut(sStr, 0, 8);
 
 						SetTaskInfo(SCENE_GAME1);	/* シーン設定 */
 					}
@@ -451,7 +577,7 @@ int16_t main_Task(void)
 
 				if( GetPassTime(GAMEPLAY_TIME, &s_PassTime) != 0u)	/* タイムオーバー */
 				{
-					if(bStage > 5)	/* +5面クリア(+5) */
+					if(g_bStage > 5)	/* +5面クリア(+5) */
 					{
 						Music_Play(BGM_GAME_CLEAR);
 
@@ -465,25 +591,28 @@ int16_t main_Task(void)
 				else if(APL_ZKP_stage_clear_chk() != 0u)
 				{
 					reset = 0;
-					if(bStage <= (BGM_STAGE_5 - BGM_STAGE_1))
+					if(g_bStage <= (BGM_STAGE_5 - BGM_STAGE_1))
 					{
-						bStage++;
+						g_bStage++;
 					}
-					APL_ZKP_set_GameLv(bStage);  /* 1,2,3,4*/
+					APL_ZKP_set_GameLv(g_bStage);  /* 1,2,3,4*/
 					
 					ADPCM_Play(SE_GAME_CLEAR);
 
-					Music_Play(BGM_STAGE_1 + bStage);  /* 1,2,3,4 */
+					Music_Play(BGM_STAGE_1 + g_bStage);  /* 1,2,3,4 */
 
 					S_Add_Score_Point((GAMEPLAY_TIME - cal) / 10);	/* 残り時間[s]*100 */
 
 #if CNF_MACS
-					PCG_OFF();			/* SP OFF */
-					/* 動画 */
-					MOV_Play2(MOV_GAME_CLEAR, 0x64);		/* カットイン */
-					/* 画面モード再設定 */
-					CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
-					PCG_ON();			/* SP ON */
+					if(g_ubMACS == TRUE)
+					{
+						PCG_OFF();			/* SP OFF */
+						/* 動画 */
+						MOV_Play2(MOV_GAME_CLEAR);		/* カットイン */
+						/* 画面モード再設定 */
+						CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+						PCG_ON();			/* SP ON */
+					}
 #else
 #endif
 					SetTaskInfo(SCENE_GAME1_S);	/* シーン(実施処理)へ設定 */
@@ -604,12 +733,15 @@ int16_t main_Task(void)
 					S_Add_Score_Point(1000);	/* 1000点 */
 
 #if CNF_MACS
-					PCG_OFF();			/* SP OFF */
-					/* 動画 */
-					MOV_Play2(MOV_NOMOREMOVE, 0x64);		/* カットイン */
-					/* 画面モード再設定 */
-					CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
-					PCG_ON();			/* SP ON */
+					if(g_ubMACS == TRUE)
+					{
+						PCG_OFF();			/* SP OFF */
+						/* 動画 */
+						MOV_Play2(MOV_NOMOREMOVE);		/* カットイン */
+						/* 画面モード再設定 */
+						CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+						PCG_ON();			/* SP ON */
+					}
 #else
 #endif
 					ADPCM_Play(SE_NOMOREMOVE);
@@ -621,12 +753,15 @@ int16_t main_Task(void)
 					if(S_Get_Combo() >= 3)
 					{
 #if CNF_MACS
-						PCG_OFF();			/* SP OFF */
-						/* 動画 */
-						MOV_Play2(MOV_EXCELLENT, 0x64);		/* カットイン */
-						/* 画面モード再設定 */
-						CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
-						PCG_ON();			/* SP ON */
+						if(g_ubMACS == TRUE)
+						{
+							PCG_OFF();			/* SP OFF */
+							/* 動画 */
+							MOV_Play2(MOV_EXCELLENT);		/* カットイン */
+							/* 画面モード再設定 */
+							CRTC_INIT(0x100 + 0x0A);	/* 画面モード初期化　グラフィック初期化なし */
+							PCG_ON();			/* SP ON */
+						}
 #else
 #endif
 					}
@@ -959,6 +1094,33 @@ static void App_Init(void)
 	/* スーパーバイザーモード開始 */
 	Set_SupervisorMode();
 
+	/* スプライト／ＢＧ */
+	PCG_SP_PAL_DataLoad();	/* SP & PALデータの読み込み */
+	PCG_INIT_CHAR();		/* スプライト＆ＢＧ定義セット */
+#ifdef DEBUG	/* デバッグコーナー */
+	puts("App_Init スプライト／ＢＧデータ読み込み");
+#endif
+
+#if CNF_MACS
+	/* 動画 */
+	MOV_INIT();		/* 初期化処理 */
+#ifdef DEBUG	/* デバッグコーナー */
+	puts("App_Init Movie(MACS)");
+#endif
+#endif
+
+	/* Task */
+	TaskManage_Init();
+#ifdef DEBUG	/* デバッグコーナー */
+	puts("App_Init Task");
+#endif
+	
+	/* マウス初期化 */
+	Mouse_Init();	/* マウス初期化 */
+#ifdef DEBUG	/* デバッグコーナー */
+	puts("App_Init マウス");
+#endif
+	
 	/* 画面 */
 //	g_nCrtmod = CRTC_INIT(0);	/* mode=0 512x512 col:16/16 31kHz */
 //	g_nCrtmod = CRTC_INIT(1);	/* mode=1 512x512 col:16/16 15kHz */
@@ -993,38 +1155,15 @@ static void App_Init(void)
 	puts("App_Init グラフィック");
 #endif
 
-	/* スプライト／ＢＧ */
+	/* 画面表示 */
 	PCG_INIT(PCG_NUM_MAX);	/* スプライト／ＢＧの初期化 */
-	PCG_INIT_CHAR();	/* スプライト＆ＢＧ定義セット */
     PCG_VIEW(1);        /* SP ON / BG0 OFF / BG1 OFF */
 	BG_OFF(0);				
 	BG_OFF(1);				
 #ifdef DEBUG	/* デバッグコーナー */
-	puts("App_Init スプライト／ＢＧ");
+	puts("App_Init スプライト／ＢＧデータ設定");
 #endif
 
-	g_Vwait = 1;
-
-#if CNF_MACS
-	/* 動画 */
-	MOV_INIT();		/* 初期化処理 */
-#ifdef DEBUG	/* デバッグコーナー */
-	puts("App_Init Movie(MACS)");
-#endif
-#endif
-
-	/* Task */
-	TaskManage_Init();
-#ifdef DEBUG	/* デバッグコーナー */
-	puts("App_Init Task");
-#endif
-	
-	/* マウス初期化 */
-	Mouse_Init();	/* マウス初期化 */
-#ifdef DEBUG	/* デバッグコーナー */
-	puts("App_Init マウス");
-#endif
-	
 	/* テキスト */
 	T_INIT();	/* テキストＶＲＡＭ初期化 */
 	T_PALET();	/* テキストパレット初期化 */
@@ -1039,6 +1178,8 @@ static void App_Init(void)
 	puts("App_Init S_All_Init_Score");
 #endif
 #endif
+
+	g_Vwait = 1;
 
 #ifdef DEBUG	/* デバッグコーナー */
 	puts("App_Init 終了");

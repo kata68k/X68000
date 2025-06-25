@@ -671,12 +671,18 @@ void APL_ZKP_print_valid_moves() {
                     for ( i = 0; i < SIZE; i++) {
                         if (to_clear[j][i]) {
                             p_stPCG = PCG_Get_Info(SP_Number_1 + (y * SIZE) + x);	/* SP */
-                            p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
-                            p_stPCG->y = TO_FIXED_POINT(64 + (y * 16));
+                            if(p_stPCG != NULL)
+                            {
+                                p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
+                                p_stPCG->y = TO_FIXED_POINT(64 + (y * 16));
+                            }
                             p_stPCG = PCG_Get_Info(SP_Number_1 + (y * SIZE) + (x+1));	/* SP */
-                            p_stPCG->x = TO_FIXED_POINT((64 + ((x+1) * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
-                            p_stPCG->y = TO_FIXED_POINT(64 + (y * 16));
-                            //printf("? ヒント: [%d,%d] <-> [%d,%d]\n", y, x, y, x + 1);
+                            if(p_stPCG != NULL)
+                            {
+                                p_stPCG->x = TO_FIXED_POINT((64 + ((x+1) * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
+                                p_stPCG->y = TO_FIXED_POINT(64 + (y * 16));
+                                //printf("? ヒント: [%d,%d] <-> [%d,%d]\n", y, x, y, x + 1);
+                            }
                             found = 1;
                             break;
                         }
@@ -696,12 +702,18 @@ void APL_ZKP_print_valid_moves() {
                     for ( i = 0; i < SIZE; i++) {
                         if (to_clear[j][i]) {
                             p_stPCG = PCG_Get_Info(SP_Number_1 + (y * SIZE) + x);	/* SP */
-                            p_stPCG->x = TO_FIXED_POINT(64 + (x * 16));
-                            p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
+                            if(p_stPCG != NULL)
+                            {
+                                p_stPCG->x = TO_FIXED_POINT(64 + (x * 16));
+                                p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
+                            }
                             p_stPCG = PCG_Get_Info(SP_Number_1 + ((y+1) * SIZE) + x);	/* SP */
-                            p_stPCG->x = TO_FIXED_POINT(64 + (x * 16));
-                            p_stPCG->y = TO_FIXED_POINT((64 + ((y+1) * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
-                            //printf("? ヒント: [%d,%d] <-> [%d,%d]\n", y, x, y + 1, x);
+                            if(p_stPCG != NULL)
+                            {
+                                p_stPCG->x = TO_FIXED_POINT(64 + (x * 16));
+                                p_stPCG->y = TO_FIXED_POINT((64 + ((y+1) * 16)) + Mdiv256(APL_Sin(anime_count2) * 1));
+                                //printf("? ヒント: [%d,%d] <-> [%d,%d]\n", y, x, y + 1, x);
+                            }
                             found = 1;
                             break;
                         }
@@ -787,6 +799,7 @@ void APL_ZKP_SP_init( void )
 			p_stPCG->validty = TRUE;
 			p_stPCG->update	= TRUE;
 
+            PCG_PAL_CHG_SINGLE(p_stPCG, p_stPCG->Anime + 2, p_stPCG->Anime);    /* パレット設定 */
 			PCG_PRI_CHG(p_stPCG, PCG_PRI_MID);	/* プライオリティ */
 
 		}
@@ -824,20 +837,21 @@ void APL_ZKP_SP_view() {
     for (y = 0; y < SIZE; y++) {
         for (x = 0; x < SIZE; x++) {
     		p_stPCG = PCG_Get_Info(SP_Number_1 + (y * SIZE) + x);	/* SP */
-			p_stPCG->x = TO_FIXED_POINT(64 + (x * 16));
-    		p_stPCG->y = TO_FIXED_POINT(64 + (y * 16));
-            if(board[y][x] == 0)
+            if(p_stPCG != NULL)
             {
-    			p_stPCG->update	= FALSE;
+    			p_stPCG->x = TO_FIXED_POINT(64 + (x * 16));
+                p_stPCG->y = TO_FIXED_POINT(64 + (y * 16));
+                if(board[y][x] == 0)
+                {
+                    p_stPCG->update	= FALSE;
+                }
+                else
+                {
+                    p_stPCG->Anime = board[y][x] - 1;
+                    PCG_PAL_CHG_SINGLE(p_stPCG, p_stPCG->Anime + 2, p_stPCG->Anime);    /* パレット設定 */
+                    p_stPCG->update	= TRUE;
+                }
             }
-            else
-            {
-                p_stPCG->Anime = board[y][x] - 1;
-    			p_stPCG->update	= TRUE;
-            }
-#if 0   /* テスト用 */
-            PCG_PAL_CHG( p_stPCG, 4 + board[y][x]);
-#endif
         }
     }
 
@@ -848,6 +862,7 @@ void APL_ZKP_SP_view() {
 		if(p_stPCG != NULL)
 		{
             p_stPCG->Anime = i - SP_Count_1;
+            PCG_PAL_CHG_SINGLE(p_stPCG, p_stPCG->Anime + 2, p_stPCG->Anime);    /* パレット設定 */
 			p_stPCG->update	= TRUE;
 		}
         memset(sBuf, 0, sizeof(sBuf));
@@ -881,66 +896,70 @@ int32_t APL_ZKP_SP_Swap_view(int8_t bHit) {
     y = anime_y1;
 
     p_stPCG = PCG_Get_Info(SP_Number_1 + (y * SIZE) + x);	/* SP */
-
-    if(bHit == FALSE)
+    if(p_stPCG != NULL)
     {
-        if(s_bVertical == 0)
+        if(bHit == FALSE)
         {
-            p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) + Mdiv256(APL_Sin(anime_count) * SP_W));
+            if(s_bVertical == 0)
+            {
+                p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) + Mdiv256(APL_Sin(anime_count) * SP_W));
+            }
+            else
+            {
+                p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) + Mdiv256(APL_Sin(anime_count) * SP_H));
+            }
         }
         else
         {
-            p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) + Mdiv256(APL_Sin(anime_count) * SP_H));
+            x = anime_x2;
+            y = anime_y2;
+            if(s_bVertical == 0)
+            {
+                p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) - Mdiv256(APL_Sin(anime_count) * SP_W));
+            }
+            else
+            {
+                p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) - Mdiv256(APL_Sin(anime_count) * SP_H));
+            }
         }
-    }
-    else
-    {
-        x = anime_x2;
-        y = anime_y2;
-        if(s_bVertical == 0)
-        {
-            p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) - Mdiv256(APL_Sin(anime_count) * SP_W));
-        }
-        else
-        {
-            p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) - Mdiv256(APL_Sin(anime_count) * SP_H));
-        }
-    }
 
-    p_stPCG->update	= TRUE;
+        p_stPCG->update	= TRUE;
+    }
 
     x = anime_x2;
     y = anime_y2;
 
     p_stPCG = PCG_Get_Info(SP_Number_1 + (y * SIZE) + x);	/* SP */
-
-    if(bHit == FALSE)
+    if(p_stPCG != NULL)
     {
-        if(s_bVertical == 0)
+        if(bHit == FALSE)
         {
-            p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) - Mdiv256(APL_Sin(anime_count) * SP_W));
+            if(s_bVertical == 0)
+            {
+                p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) - Mdiv256(APL_Sin(anime_count) * SP_W));
+            }
+            else
+            {
+                p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) - Mdiv256(APL_Sin(anime_count) * SP_H));
+            }
         }
         else
         {
-            p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) - Mdiv256(APL_Sin(anime_count) * SP_H));
+            x = anime_x1;
+            y = anime_y1;
+            if(s_bVertical == 0)
+            {
+                p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) + Mdiv256(APL_Sin(anime_count) * SP_W));
+            }
+            else
+            {
+                p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) + Mdiv256(APL_Sin(anime_count) * SP_H));
+            }
         }
-    }
-    else
-    {
-        x = anime_x1;
-        y = anime_y1;
-        if(s_bVertical == 0)
-        {
-            p_stPCG->x = TO_FIXED_POINT((64 + (x * 16)) + Mdiv256(APL_Sin(anime_count) * SP_W));
-        }
-        else
-        {
-            p_stPCG->y = TO_FIXED_POINT((64 + (y * 16)) + Mdiv256(APL_Sin(anime_count) * SP_H));
-        }
+
+        p_stPCG->update	= TRUE;
     }
 
-    p_stPCG->update	= TRUE;
-    
     anime_count+=5;
     if(anime_count >= nCountMax)
     {
@@ -962,16 +981,22 @@ void APL_ZKP_SP_cursor_view(int32_t y1, int32_t x1, int32_t y2, int32_t x2) {
    	ST_PCG	*p_stPCG = NULL;
     
     p_stPCG = PCG_Get_Info(SP_CURSOR1);	/* SP */
-    p_stPCG->x = TO_FIXED_POINT(64 + (x1 * 16) );
-    p_stPCG->y = TO_FIXED_POINT(64 + (y1 * 16) );
-    p_stPCG->Anime = 0;
-    p_stPCG->update	= TRUE;
+    if(p_stPCG != NULL)
+    {
+        p_stPCG->x = TO_FIXED_POINT(64 + (x1 * 16) );
+        p_stPCG->y = TO_FIXED_POINT(64 + (y1 * 16) );
+        p_stPCG->Anime = 0;
+        p_stPCG->update	= TRUE;
+    }
 
     p_stPCG = PCG_Get_Info(SP_CURSOR2);	/* SP */
-    p_stPCG->x = TO_FIXED_POINT(64 + (x2 * 16) );
-    p_stPCG->y = TO_FIXED_POINT(64 + (y2 * 16) );
-    p_stPCG->Anime = 0;
-    p_stPCG->update	= TRUE;
+    if(p_stPCG != NULL)
+    {
+        p_stPCG->x = TO_FIXED_POINT(64 + (x2 * 16) );
+        p_stPCG->y = TO_FIXED_POINT(64 + (y2 * 16) );
+        p_stPCG->Anime = 0;
+        p_stPCG->update	= TRUE;
+    }
 }
 /*===========================================================================================*/
 /* 関数名	：	*/
@@ -985,10 +1010,16 @@ void APL_ZKP_SP_cursor_view_off() {
    	ST_PCG	*p_stPCG = NULL;
     
     p_stPCG = PCG_Get_Info(SP_CURSOR1);	/* SP */
-    p_stPCG->update	= FALSE;
-
+    if(p_stPCG != NULL)
+    {
+        p_stPCG->update	= FALSE;
+    }
+    
     p_stPCG = PCG_Get_Info(SP_CURSOR2);	/* SP */
-    p_stPCG->update	= FALSE;
+    if(p_stPCG != NULL)
+    {
+        p_stPCG->update	= FALSE;
+    }
 }
 /*===========================================================================================*/
 /* 関数名	：	*/

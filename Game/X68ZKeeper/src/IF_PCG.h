@@ -28,6 +28,7 @@ extern void PCG_PUT_2x2(int16_t, int16_t, int16_t, int16_t);
 extern void PCG_PUT_3x3(int16_t, int16_t, int16_t, int16_t);
 extern void PCG_PRI_CHG(ST_PCG	*, int16_t);
 extern void PCG_PAL_CHG(ST_PCG	*, int16_t);
+extern void PCG_PAL_CHG_SINGLE(ST_PCG *, int16_t, int16_t);
 extern void PCG_PAL_GET(ST_PCG	*, int16_t *);
 extern void PCG_INFO_CHG(ST_PCG *, int8_t, int8_t, int8_t, int8_t);
 extern void PCG_SET_ANIME(ST_PCG *, int16_t);

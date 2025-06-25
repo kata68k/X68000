@@ -47,6 +47,11 @@ void PCG_INIT_CHAR(void)
 #endif
 
 	puts("SP PCG_INIT_CHAR");
+	/* スプライト管理用バッファのクリア */
+	for(uPCG_num = 0; uPCG_num < PCG_MAX; uPCG_num++)
+	{
+		memset(&g_stPCG_DATA[uPCG_num], 0, sizeof(ST_PCG) );
+	}
 	
 	/* 自車スプライト */
 	for(uPCG_num = 0; uPCG_num < PCG_NUM_MAX; uPCG_num++)

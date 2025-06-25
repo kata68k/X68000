@@ -13,13 +13,13 @@
 #include "IF_Graphic.h"
 #include "IF_Memory.h"
 
-int Draw_Pset(short x, short y, unsigned short color);
-int Draw_Pget(short x, short y, unsigned short *color);
-int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style);
-int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style);
-int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color);
-int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat);
-int Draw_FillCircle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat);
+int32_t Draw_Pset(int16_t , int16_t, uint16_t);
+int32_t Draw_Pget(int16_t, int16_t, uint16_t *);
+int32_t Draw_Line(int16_t, int16_t, int16_t, int16_t, uint16_t, uint16_t );
+int32_t Draw_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint16_t );
+int32_t Draw_Fill(int16_t, int16_t, int16_t, int16_t, uint16_t);
+int32_t Draw_Circle(int16_t, int16_t, uint16_t , uint16_t, int16_t , int16_t, uint16_t );
+int32_t Draw_FillCircle(int16_t, int16_t, uint16_t , uint16_t, int16_t , int16_t, uint16_t );
 int16_t Draw_Message_To_Graphic(uint8_t *, uint16_t, uint16_t, int16_t, int16_t);
 
 /*===========================================================================================*/
@@ -29,7 +29,7 @@ int16_t Draw_Message_To_Graphic(uint8_t *, uint16_t, uint16_t, int16_t, int16_t)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_Pset(short x, short y, unsigned short color)
+int32_t Draw_Pset(int16_t x, int16_t y, uint16_t color)
 {
 	struct _psetptr stPset;
 
@@ -47,10 +47,10 @@ int Draw_Pset(short x, short y, unsigned short color)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_Pget(short x, short y, unsigned short *color)
+int32_t Draw_Pget(int16_t x, int16_t y, uint16_t *color)
 {
 	struct _pointptr stPget;
-	int ret;
+	int32_t ret;
 	
 	stPget.x  = x;
 	stPget.y  = y;
@@ -69,7 +69,7 @@ int Draw_Pget(short x, short y, unsigned short *color)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
+int32_t Draw_Line(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color, uint16_t style)
 {
 	struct _lineptr stLine;
 
@@ -95,7 +95,7 @@ int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsi
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style)
+int32_t Draw_Box(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color, uint16_t style)
 {
 	struct _boxptr stBox;
 
@@ -121,7 +121,7 @@ int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsig
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
+int32_t Draw_Fill(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
 {
 	struct _fillptr stFill;
 
@@ -146,7 +146,7 @@ int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat)
+int32_t Draw_Circle(int16_t x, int16_t y, uint16_t rad, uint16_t color, int16_t st, int16_t ed, uint16_t rat)
 {
 	struct _circleptr stCircle;
 
@@ -168,7 +168,7 @@ int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, shor
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-int Draw_FillCircle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat)
+int32_t Draw_FillCircle(int16_t x, int16_t y, uint16_t rad, uint16_t color, int16_t st, int16_t ed, uint16_t rat)
 {
 	struct _circleptr stCircle;
 	int16_t *pBuf;

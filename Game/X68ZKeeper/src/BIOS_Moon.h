@@ -3,8 +3,8 @@
 
 #include <usr_define.h>
 
-#define	CNF_MACS	(0)
-//#define	MACS_MOON	/* MACSDRVとMOONを使うときは定義する */
+#define	CNF_MACS	(1)
+#define	MACS_MOON	/* MACSDRVとMOONを使うときは定義する */
 
 /* 構造体定義 */
 /* extern宣言 */

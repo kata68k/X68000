@@ -1,13 +1,15 @@
 #ifndef	IF_DRAW_H
 #define	IF_DRAW_H
 
-extern int Draw_Pset(short x, short y, unsigned short color);
-extern int Draw_Pget(short x, short y, unsigned short *color);
-extern int Draw_Line(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style);
-extern int Draw_Box(short x1, short y1, short x2, short y2, unsigned short color, unsigned short style);
-extern int Draw_Fill(short x1, short y1, short x2, short y2, unsigned short color);
-extern int Draw_Circle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat);
-extern int Draw_FillCircle(short x, short y, unsigned short rad, unsigned short color, short st, short ed, unsigned short rat);
+#include <usr_define.h>
+
+extern int32_t Draw_Pset(int16_t , int16_t, uint16_t);
+extern int32_t Draw_Pget(int16_t, int16_t, uint16_t *);
+extern int32_t Draw_Line(int16_t, int16_t, int16_t, int16_t, uint16_t, uint16_t );
+extern int32_t Draw_Box(int16_t, int16_t, int16_t, int16_t, uint16_t, uint16_t );
+extern int32_t Draw_Fill(int16_t, int16_t, int16_t, int16_t, uint16_t);
+extern int32_t Draw_Circle(int16_t, int16_t, uint16_t , uint16_t, int16_t , int16_t, uint16_t );
+extern int32_t Draw_FillCircle(int16_t, int16_t, uint16_t , uint16_t, int16_t , int16_t, uint16_t );
 extern int16_t Draw_Message_To_Graphic(uint8_t *, uint16_t, uint16_t, int16_t, int16_t);
 
 #endif	/* IF_DRAW_H */

@@ -59,8 +59,8 @@ void BG_TEXT_SET(int8_t *, int16_t, int16_t, int16_t, int16_t);
 void PCG_INIT(int16_t num)
 {
 	uint32_t	i, j;
-	uint32_t	uPCG_num;
-#if  CNF_XSP
+
+	#if  CNF_XSP
 #else   /* CNF_XSP 0 */
 #endif  /*CNF_XSP*/
 
@@ -71,12 +71,6 @@ void PCG_INIT(int16_t num)
 #ifdef DEBUG	/* デバッグコーナー */
 	printf("PCG_INIT(%d)\n", g_PCG_Num_MAX);
 #endif
-	/* スプライト管理用バッファのクリア */
-	for(uPCG_num = 0; uPCG_num < PCG_MAX; uPCG_num++)
-	{
-		memset(&g_stPCG_DATA[uPCG_num], 0, sizeof(ST_PCG) );
-	}
-
 	/* スプライトの初期化 */
 	_iocs_sp_init();			/* スプライトの初期化 */
 	
@@ -97,7 +91,63 @@ void PCG_INIT(int16_t num)
 	_iocs_bgtextcl(1,SetBGcode(0,0,0,0));	/* BGテキストクリア */
 	//	BGTEXTGT(1,1,0);					/* BGテキスト読み込み */
 	
-	PCG_SP_PAL_DataLoad();	/* SP & PALデータの読み込み */
+	/* スプライトパレットに転送 */
+#if  CNF_XSP
+	for( i = 0; i < PAL_MAX ; i++ )	/* 0番はテキスト用とする */
+	{
+		PCG_Set_PAL_Data( i, i );
+	}
+#else
+	for( i = 0 ; i < 256 ; i++ )
+	{
+		_iocs_spalet( (i&15) | (1<<0x1F) , i/PAL_MAX + 1, g_pal_dat[i] ) ;
+	}
+#endif	
+	
+#if 0
+	fp = fopen( "data/sp/BALL.SP" , "rb" ) ;
+//	fp = fopen( "SP_DATA/SAKANA.SP" , "rb" ) ;
+	j = fread( g_pcg_dat
+			,  128		/* 1PCG = 128byte */
+			,  PCG_MAX	/* PCGの数 */
+			,  fp
+	) ;
+	fclose( fp ) ;
+	for( i = 0; i < PCG_MAX; i++ )
+	{
+		_iocs_sp_defcg( i, 1, &g_pcg_dat[i * 128] );
+	}
+
+	sprintf(sBuf, "%s/sp/BALL.PAL", Get_DataList_Path());
+	fp = fopen( sBuf, "rb" ) ;
+//	fp = fopen( "data/sp/BALL.PAL" , "rb" ) ;
+//	fp = fopen( "SP_DATA/SAKANA.PAL" , "rb" ) ;
+	fread( pal_dat
+		,  2		/* 1palet = 2byte */
+		,  256		/* 16palet * 16block */
+		,  fp
+		) ;
+	fclose( fp ) ;
+	/* スプライトパレットに転送 */
+	for( i = 0 ; i < 256 ; i++ )
+	{
+		_iocs_spalet( (i&15) | (1<<0x1F) , i/16 + 1, pal_dat[i] ) ;
+	}
+#endif
+
+	/* BGの設定用（XSP以外はSPの設定） */
+	for( i = 0; i < PCG_16x16_AREA; i++ )
+	{
+		_iocs_sp_defcg( i, 1, &g_pcg_dat[i * 128] );
+	}
+
+#if 0
+	/*-----------[ PCG データを縦画面用に 90 度回転 ]-----------*/
+
+	for (i = 0; i < 256; i++) {
+		pcg_roll90(&g_pcg_dat[i * 128], 1);
+	}
+#endif
 
 #if  CNF_XSP
 	puts("XSP mode");
@@ -487,6 +537,25 @@ void PCG_PAL_CHG(ST_PCG	*p_stPCG, int16_t pal)
 		*(p_stPCG->pPatCodeTbl + i) &= 0xF0FF;
 		*(p_stPCG->pPatCodeTbl + i) |= (pal << 8);	/* カラーテーブルをリセット */
 	}
+#else   /* CNF_XSP 0 */
+#endif  /* CNF_XSP */
+}
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+void PCG_PAL_CHG_SINGLE(ST_PCG	*p_stPCG, int16_t pal, int16_t DataNum )
+{
+#if  CNF_XSP
+	if(pal > 15)return;
+
+	if(DataNum >= p_stPCG->Pat_DataMax)return;
+
+	*(p_stPCG->pPatCodeTbl + DataNum) &= 0xF0FF;
+	*(p_stPCG->pPatCodeTbl + DataNum) |= (pal << 8);	/* カラーテーブルをリセット */
 #else   /* CNF_XSP 0 */
 #endif  /* CNF_XSP */
 }
