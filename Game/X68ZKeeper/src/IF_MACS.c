@@ -156,7 +156,7 @@ int32_t MOV_Play2(uint8_t bPlayNum)
 	{
 		int32_t	moon_stat = 0;
 
-		moon_stat = MoonPlay2(&g_mov_list[bPlayNum].bFileName[0], 0x0F & (g_mov_list[bPlayNum].bGR << 6) | (g_mov_list[bPlayNum].bSP << 7));	/* Ä¶ */
+		moon_stat = MoonPlay2(&g_mov_list[bPlayNum].bFileName[0], 0x64 & (g_mov_list[bPlayNum].bKey << 2) | (g_mov_list[bPlayNum].bGR << 5) | (g_mov_list[bPlayNum].bSP << 6));	/* Ä¶ */
 		if(moon_stat != 0)
 		{
 			//printf("MoonPlay  = %d\n", moon_stat);

@@ -11,6 +11,7 @@
 #include "APL_ZooKeeper.h"
 #include "IF_Input.h"
 #include "IF_Math.h"
+#include "IF_Mouse.h"
 #include "IF_PCG.h"
 #include "APL_PCG.h"
 #include "APL_Score.h"
@@ -1038,12 +1039,33 @@ int32_t APL_ZKP_KEY_Input(int32_t *y1, int32_t *x1, int32_t *y2, int32_t *x2) {
     static int8_t s_b_B;
     int32_t lx1,ly1,lx2,ly2;
     int32_t ret = 0;
+    int8_t ms_x;
+    int8_t ms_y;
+    int8_t ms_left;
+    int8_t ms_right;
+    int32_t ms_pos_x;
+    int32_t ms_pos_y;
 
     lx1 = *x1;
     ly1 = *y1;
     lx2 = *x2;
     ly2 = *y2;
 
+    /* マウス操作 */
+    Mouse_GetDataPos(&ms_x, &ms_y, &ms_left, &ms_right);
+
+    Mouse_GetPos(&ms_pos_x, &ms_pos_y);
+
+    if(ms_left != 0)
+    {
+        SetInput(KEY_b_Z);
+    }
+    if(ms_right != 0)
+    {
+        SetInput(KEY_b_X);
+    }
+
+    /* ジョイスティック操作 */
     if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
         ((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
         ((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
@@ -1167,6 +1189,20 @@ int32_t APL_ZKP_KEY_Input(int32_t *y1, int32_t *x1, int32_t *y2, int32_t *x2) {
     {
         s_b_LEFT = FALSE;
         s_b_RIGHT = FALSE;
+
+        if((ms_x != 0) || (ms_y != 0))
+        {
+            if(s_bVertical == 0)
+            {
+                lx1 = Mmax(0,Mmin(6, ((ms_pos_x - 64) / 16)));
+                lx2 = lx1 + 1;
+            }
+            else
+            {
+                lx1 = Mmax(0,Mmin(7, ((ms_pos_x - 64) / 16)));
+                lx2 = lx1;
+            }
+        }
     }
 
     if(	((GetInput_P1() & JOY_UP ) != 0u )	||	/* UP */
@@ -1241,6 +1277,20 @@ int32_t APL_ZKP_KEY_Input(int32_t *y1, int32_t *x1, int32_t *y2, int32_t *x2) {
     {
         s_b_UP = FALSE;
         s_b_DOWN = FALSE;
+
+        if((ms_x != 0) || (ms_y != 0))
+        {
+            if(s_bVertical == 0)
+            {
+                ly1 = Mmax(0,Mmin(7, ((ms_pos_y - 64) / 16)));
+                ly2 = ly1;
+            }
+            else
+            {
+                ly1 = Mmax(0,Mmin(6, ((ms_pos_y - 64) / 16)));
+                ly2 = ly1 + 1;
+            }
+        }
     }
 
     *x1 = lx1;

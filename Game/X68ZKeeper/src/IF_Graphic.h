@@ -132,7 +132,7 @@ extern	void	G_HOME(uint8_t);
 extern	void	G_VIEW(uint8_t);
 extern	void	G_Palette_INIT(void);
 extern	void	G_PaletteSetZero(void);
-extern	void	G_PaletteSet(int16_t, int16_t);
+extern	void	G_PaletteSet(int16_t, int32_t);
 extern	void	G_Palette_HALF(void);
 extern	int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
 extern	int16_t G_Stretch_Pict_toVRAM(	int16_t, int16_t, uint8_t, uint8_t, uint8_t , uint8_t , uint16_t *, uint16_t, uint16_t, int8_t, uint8_t);
@@ -157,5 +157,6 @@ extern	int16_t	PutGraphic_To_Symbol16(uint8_t *, uint16_t , uint16_t , uint16_t 
 extern	int16_t	PutGraphic_To_Symbol24(uint8_t *, uint16_t , uint16_t , uint16_t );
 extern	int16_t PutGraphic_To_Symbol24_Xn(uint8_t *, uint16_t, uint16_t, uint16_t, uint16_t);
 extern	int16_t	G_Scroll(int16_t, int16_t, uint8_t);
+extern	int16_t G_SP_to_GR_Load(int8_t* , uint32_t , int16_t* , uint32_t , int16_t , int16_t , uint16_t );
 
 #endif	/* IF_GRAPHIC_H */

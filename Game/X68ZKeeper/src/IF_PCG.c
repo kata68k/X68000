@@ -60,7 +60,7 @@ void PCG_INIT(int16_t num)
 {
 	uint32_t	i, j;
 
-	#if  CNF_XSP
+#if  CNF_XSP
 #else   /* CNF_XSP 0 */
 #endif  /*CNF_XSP*/
 

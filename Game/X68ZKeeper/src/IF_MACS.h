@@ -12,6 +12,7 @@ typedef struct tagMOV_LIST {
 	int8_t	bFileName[256];		/* パス */
 	int8_t	bGR;				/* 0:CG OFF、1:CG ON */
 	int8_t	bSP;			    /* 0:スプライトOFF、1:スプライトON */
+	int8_t	bKey;			    /* 0:待たない、1:待つ */
 } MOV_LIST;
 
 /* extern宣言 */

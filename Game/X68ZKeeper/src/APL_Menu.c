@@ -13,6 +13,7 @@
 #include "IF_Input.h"
 #include "IF_Graphic.h"
 #include "IF_Math.h"
+#include "IF_Mouse.h"
 #include "IF_PCG.h"
 #include "APL_Menu.h"
 #include "APL_PCG.h"
@@ -372,8 +373,30 @@ int16_t APL_Menu_Proc(void)
     static int8_t s_b_A;
     static int8_t s_b_B;
     
+    int8_t ms_x;
+    int8_t ms_y;
+    int8_t ms_left;
+    int8_t ms_right;
+    int32_t ms_pos_x;
+    int32_t ms_pos_y;
+
     ST_MENU  *p_stMenuWork = (ST_MENU *)&stMenu;
 
+    /* マウス操作 */
+    Mouse_GetDataPos(&ms_x, &ms_y, &ms_left, &ms_right);
+
+    Mouse_GetPos(&ms_pos_x, &ms_pos_y);
+
+    if(ms_left != 0)
+    {
+        SetInput(KEY_b_Z);
+    }
+    if(ms_right != 0)
+    {
+        SetInput(KEY_b_X);
+    }
+
+    /* ジョイスティック操作 */
     if(	((GetInput_P1() & JOY_A ) != 0u)	||		/* A */
         ((GetInput() & KEY_b_Z) != 0u)		||		/* A(z) */
         ((GetInput() & KEY_b_SP ) != 0u)		)	/* スペースキー */
@@ -487,6 +510,15 @@ int16_t APL_Menu_Proc(void)
     {
         s_b_UP = FALSE;
         s_b_DOWN = FALSE;
+
+        if((ms_x != 0) || (ms_y != 0))
+        {
+            p_stMenuWork->nSelectMenu_Old = p_stMenuWork->nSelectMenu;
+            p_stMenuWork->nSelectMenu = Mmax(0,Mmin(Menu_INDEX-1, ((ms_pos_y - Menu_POS_Y) / 12)));
+            
+            APL_Menu_HELP();    /* ヘルプメッセージ更新 */
+            APL_Menu_CURSOR();  /* カーソル更新 */
+        }
     }
 
     if( (s_b_UP == TRUE)    ||

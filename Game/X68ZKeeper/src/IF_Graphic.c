@@ -104,7 +104,7 @@ void G_VIDEO_PRI(uint8_t);
 void G_HOME(uint8_t);
 void G_Palette_INIT(void);
 void G_PaletteSetZero(void);
-void G_PaletteSet(int16_t, int16_t);
+void G_PaletteSet(int16_t, int32_t);
 int16_t	G_Stretch_Pict( int16_t , uint16_t , int16_t , uint16_t , uint8_t , int16_t , uint16_t, int16_t, uint16_t, uint8_t );
 int16_t G_Stretch_Pict_toVRAM(int16_t, int16_t, uint8_t, uint8_t, uint8_t, uint8_t, uint16_t *, uint16_t, uint16_t, int8_t, uint8_t);
 int16_t G_Stretch_Pict_To_Mem( uint16_t	*, uint16_t, uint16_t, uint16_t	*, uint16_t, uint16_t);
@@ -137,6 +137,7 @@ void G_Img_V_H_Cnv(uint16_t *, uint16_t *, uint16_t, uint16_t, uint16_t);
 void G_Mem_Cnv_Pal(uint16_t *, uint16_t , uint16_t , int16_t);
 int16_t G_Pal_Set(uint8_t);
 int16_t G_Pal_Get(uint8_t);
+int16_t G_SP_to_GR_Load(int8_t* , uint32_t , int16_t* , uint32_t , int16_t , int16_t , uint16_t );
 
 /* 関数 */
 /*===========================================================================================*/
@@ -1056,7 +1057,7 @@ void G_PaletteSetZero(void)
 /*-------------------------------------------------------------------------------------------*/
 /* 機能		：	*/
 /*===========================================================================================*/
-void G_PaletteSet(int16_t nPalNum, int16_t nCol)
+void G_PaletteSet(int16_t nPalNum, int32_t nCol)
 {
 	GPALET( nPalNum, nCol);
 }
@@ -3632,4 +3633,116 @@ int16_t G_Pal_Get(uint8_t ubImgNum)
 	
     return ret;
 }
+/*===========================================================================================*/
+/* 関数名	：	*/
+/* 引数		：	*/
+/* 戻り値	：	*/
+/*-------------------------------------------------------------------------------------------*/
+/* 機能		：	*/
+/*===========================================================================================*/
+int16_t G_SP_to_GR_Load(int8_t* pSP, uint32_t nSP_Size, int16_t* pPAL, uint32_t nPAL_Size, int16_t posX, int16_t posY, uint16_t uArea)
+{
+	int16_t	ret = 0;
+
+	uint32_t	DstGR_H;
+	uint16_t	*pDstGR;
+	int8_t		*pSrc;
+	int16_t		x, y, y_ofst;
+	uint32_t	uWidth, uHeight;
+	uint16_t	uSize8x = 0;
+
+	/* アドレス算出 */
+	if(uArea == 0)
+	{
+		DstGR_H		= 0xC00000;	/* Screen0 */
+	}
+	else{
+		DstGR_H		= 0xC80000;	/* Screen1 */
+	}
+
+	uHeight = (nSP_Size / 128);
+	if(uHeight < 16)
+	{
+		uWidth = uHeight * 16;
+		uSize8x = uWidth;
+	}
+	else
+	{
+		uWidth = 256;
+		uSize8x = 256;
+	}
+#ifdef DEBUG
+//	printf("nSP_Size %d uWidth %d uHeight %d uSize8x %d\n", nSP_Size, uWidth, uHeight, uSize8x );
+#endif
+	
+	for(y = 0; y < 16; y++)
+	{
+//		printf("0x%X,", (uint32_t)pPAL[y]);
+		G_PaletteSet(y, (uint16_t)pPAL[y]);
+	}
+	printf("\n");
+
+	for(y = 0; y < uHeight; y++)
+	{
+		if( ((posY + y) >= Y_MIN_DRAW) && ((posY + y) < Y_MAX_DRAW) )
+		{
+			/* アドレス算出 */
+			pDstGR = (uint16_t *)( DstGR_H + Mmul2(Mmul512(posY + y) + posX) );
+		}
+		else
+		{
+			continue;
+		}
+
+		pSrc = pSP + ((y % 16) * 4) + ((y / 16) * 2048);
+
+		for(x = 0; x < uSize8x; x+=8)
+		{
+		
+//			printf("(%d, %d(%x))=0x%p\n", x, y, *pSrc, pDstGR);
+
+			if( ((posX + x) >= X_MIN_DRAW) && ((posX + x) < X_MAX_DRAW) )
+			{
+				*pDstGR = (*pSrc >> 4) & 0xF;
+				pDstGR++;
+				*pDstGR = (*pSrc) & 0xF;
+				pDstGR++;
+
+				pSrc++;
+
+				*pDstGR = (*pSrc >> 4) & 0xF;
+				pDstGR++;
+				*pDstGR = (*pSrc) & 0xF;
+				pDstGR++;
+
+				pSrc++;
+				
+				*pDstGR = (*pSrc >> 4) & 0xF;
+				pDstGR++;
+				*pDstGR = (*pSrc) & 0xF;
+				pDstGR++;
+
+				pSrc++;
+				
+				*pDstGR = (*pSrc >> 4) & 0xF;
+				pDstGR++;
+				*pDstGR = (*pSrc) & 0xF;
+				pDstGR++;
+
+				pSrc++;
+
+				pSrc+=60;
+			}
+			else
+			{
+				pDstGR+=8;
+				pSrc+=4;
+			}
+		}
+//		printf("\n");
+	}
+	
+	return	ret;
+}
+
 #endif	/* IF_GRAPHIC_C */

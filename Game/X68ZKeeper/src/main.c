@@ -852,7 +852,7 @@ int16_t main_Task(void)
 			{
 				T_Clear();	/* テキストクリア */
 
-				G_VIDEO_PRI(0);	/* GR>TX>SP */
+				G_VIDEO_PRI(2);	/* TX>GR>SP */
 
 				G_PAGE_SET(0b0001);	/* GR0 */
 				
@@ -926,7 +926,7 @@ int16_t main_Task(void)
 				}
 				else
 				{
-					G_VIDEO_PRI(0);	/* GR>TX>SP */
+					G_VIDEO_PRI(2);	/* TX>GR>SP */
 
 					G_PAGE_SET(0b0001);	/* GR0 */
 
@@ -1438,8 +1438,8 @@ void App_TimerProc( void )
 				GetNowTime(&time_now);
 				cal = (time_now - s_PassTime);
 				cal = Mmax(0, cal);
-				T_Fill(48, 40, 160 - ((160 * cal) / GAMEPLAY_TIME), 4, 0xFFFF, T_YELLOW);
-				T_Fill(Mmax(48,(208 - ((160 * cal) / GAMEPLAY_TIME))), 40, ((160 * cal) / GAMEPLAY_TIME), 4, 0xFFFF, T_RED);
+				T_Fill(48, 40, Mmax(0, 160 - ((160 * cal) / GAMEPLAY_TIME)), 4, 0xFFFF, T_YELLOW);
+				T_Fill(Mmax(48,(208 - ((160 * cal) / GAMEPLAY_TIME))), 40, Mmin(GAMEPLAY_TIME, ((160 * cal) / GAMEPLAY_TIME)), 4, 0xFFFF, T_RED);
 
 #ifdef FPS_MONI	/* デバッグコーナー */
 				memset(sBuf, 0, sizeof(sBuf));
@@ -1469,7 +1469,7 @@ int16_t App_RasterProc( uint16_t *pRaster_cnt )
 {
 	int16_t	ret = 0;
 #if CNF_RASTER
-	RasterProc(pRaster_cnt);	/*　ラスター割り込み処理 */
+	RasterProc(pRaster_cnt);	/* ラスター割り込み処理 */
 #endif /* CNF_RASTER */
 	return ret;
 }
@@ -1483,14 +1483,18 @@ int16_t App_RasterProc( uint16_t *pRaster_cnt )
 /*===========================================================================================*/
 void App_VsyncProc( void )
 {
-	ST_TASK stTask;
-//	puts("App_VsyncProc");
 #if CNF_VDISP
+	ST_TASK stTask;
+	int8_t x;
+	int8_t y;
+	int8_t left;
+	int8_t right;
+
+//	puts("App_VsyncProc");
 	Timer_D_Less_NowTime();
 
 	GetTaskInfo(&stTask);	/* タスク取得 */
 	/* ↓↓↓ この間に処理を書く ↓↓↓ */
-
 	if(GetJoyAnalogMode() == TRUE)	/* アナログ入力 */
 	{
 	}
@@ -1507,52 +1511,42 @@ void App_VsyncProc( void )
 	switch(stTask.bScene)
 	{
 		case SCENE_TITLE:
+		case SCENE_GAME_OVER:
 		{
+			Mouse_GetDataPos(&x, &y, &left, &right);
+
+			if(x == 0)
 			{
-				int8_t x;
-				int8_t y;
-				int8_t left;
-				int8_t right;
-				
-				Mouse_Cur_Off();
-				Mouse_GetDataPos(&x, &y, &left, &right);
 
-				if(x == 0)
-				{
+			}
+			else if(x > 0)
+			{
+				SetInput(KEY_RIGHT);
+			}
+			else{
+				SetInput(KEY_LEFT);
+			}
 
-				}
-				else if(x > 0)
-				{
-					SetInput(KEY_RIGHT);
-				}
-				else{
-					SetInput(KEY_LEFT);
-				}
+			if(y == 0)
+			{
 
-				if(y == 0)
-				{
+			}
+			else if(y > 0)
+			{
+				SetInput(KEY_LOWER);
+			}
+			else{
+				SetInput(KEY_UPPER);
+			}
 
-				}
-				else if(y > 0)
-				{
-					SetInput(KEY_LOWER);
-				}
-				else{
-					SetInput(KEY_UPPER);
-				}
+			if(left != 0)
+			{
+				SetInput(KEY_b_Z);
+			}
 
-				if(left != 0)
-				{
-					SetInput(KEY_b_X);
-				}
-
-				if(right != 0)
-				{
-					SetInput(KEY_b_Z);
-				}
-
-
-				//Mouse_SetPos(g_stPlayer.x, g_stPlayer.y);
+			if(right != 0)
+			{
+				SetInput(KEY_b_X);
 			}
 			break;
 		}
@@ -1561,6 +1555,7 @@ void App_VsyncProc( void )
 			break;
 		}
 	}
+
 	/* ↑↑↑ この間に処理を書く ↑↑↑ */
 	
 	App_FlipProc();	/* 画面切り替え */

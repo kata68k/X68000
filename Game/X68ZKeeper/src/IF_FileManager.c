@@ -1225,7 +1225,7 @@ int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, MOV_LIST *mov_list, uint32_
 	int8_t buf[256], *p;
 	int8_t z_name[256];
 	uint32_t i=0, num=0;
-	int32_t nGR = 0, nSP = 0;
+	int32_t nGR = 0, nSP = 0, nKey = 0;
 	
 	sprintf(z_name, "%s%s", fpath, fname);
 	fp = fopen(z_name, "r");
@@ -1257,13 +1257,15 @@ int16_t Load_MACS_List(int8_t *fpath, int8_t *fname, MOV_LIST *mov_list, uint32_
 			{
 				nGR = 0;
 				nSP = 0;
+				nKey = 0;
 				memset(z_name, 0, sizeof(z_name));
-				sscanf(p,"%d= %s %d %d", &num, z_name, &nGR, &nSP);	/* format:番号 = ファイルパス＆ファイル名,グラフィック,スプライト */
+				sscanf(p,"%d= %s %d %d %d", &num, z_name, &nGR, &nSP, &nKey);	/* format:番号 = ファイルパス＆ファイル名,グラフィック,スプライト */
 				if(i == num)
 				{
 					sprintf( mov_list->bFileName, "%s%s", fpath, z_name );
 					(mov_list)->bGR = (int8_t)nGR;
 					(mov_list)->bSP = (int8_t)nSP;
+					(mov_list)->bKey = (int8_t)nKey;
 				}
 				mov_list++;
 				i++;

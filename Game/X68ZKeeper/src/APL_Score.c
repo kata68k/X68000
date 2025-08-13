@@ -13,6 +13,7 @@
 #include "IF_Graphic.h"
 #include "IF_Input.h"
 #include "IF_Math.h"
+#include "IF_Mouse.h"
 #include "IF_Music.h"
 #include "IF_PCG.h"
 #include "IF_Text.h"
@@ -731,6 +732,28 @@ int16_t S_Score_Name_Main(int16_t rank)
 	static int8_t bFlagInputAB = FALSE;
 	int16_t nColSin, nColCos;
 	
+    int8_t ms_x;
+    int8_t ms_y;
+    int8_t ms_left;
+    int8_t ms_right;
+    int32_t ms_pos_x;
+    int32_t ms_pos_y;
+
+    /* マウス操作 */
+    Mouse_GetDataPos(&ms_x, &ms_y, &ms_left, &ms_right);
+
+    Mouse_GetPos(&ms_pos_x, &ms_pos_y);
+
+    if(ms_left != 0)
+    {
+        SetInput(KEY_b_Z);
+    }
+    if(ms_right != 0)
+    {
+        SetInput(KEY_b_X);
+    }
+
+
 	nColSin = Mdiv256(31 * APL_Sin(nCol++));
 	nColCos = Mdiv256(31 * APL_Cos(nCol++));
 	G_PaletteSet(G_RED, SetRGB(nColCos, nColSin, nColCos));	/* パレットアニメ */
@@ -766,6 +789,11 @@ int16_t S_Score_Name_Main(int16_t rank)
 	else /* なし */
 	{
 		bFlagInput = FALSE;
+
+		if((ms_x != 0) || (ms_y != 0))
+        {
+			bMoji = Mmax(0, Mmin(26 + 6, ms_pos_y / 8));
+        }
 	}
 
     if(	((GetInput_P1() & JOY_A ) != 0u)	||	/* A */
